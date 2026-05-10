@@ -9,6 +9,7 @@ Don't be scared. Although it may look like a very long guide, it's actually just
 
 >**NOTES:**
 >* **If you are a total beginner and are curious to understand the concepts around Stremio** and how it works, go to [**🔰 Beginner Concepts**](docs/guide/0-Beginner-Concepts.md).
+>* **✨ NEW:** If you want to use this setup with **Nuvio** instead of Stremio, or you want a good **Nuvio Collections** setup, including dynamic backdrops, title logos, and assets, check out the new [**🟣 Nuvio**](docs/guide/Nuvio.md) page.
 >* If you already followed this guide and would like to **update to the latest template** (check out the version number on the title), go to [**🔔 Updates**](docs/guide/Updates.md).
 >* **If you followed this guide and are encountering issues or have configuration questions**, go to [**❓ Configuration Q&A**](docs/guide/8-Configuration-QA.md). If you're just starting, remember this for later in case you need it. **PLEASE avoid asking questions that are already answered there**.
 >* **🙏 A very explicit special THANKS** to the **Stremio** developers which goes without saying, and all the community collaborators without which we wouldn't be able to enjoy any of it: [**TamTaro**](https://ko-fi.com/tamtaro) for the template base and SEL filters, [**Vidhin**](https://ko-fi.com/vidhin) for the Regexes, and the addon developers [**Viren**](https://ko-fi.com/Viren070) for AIOStreams, [**Cedya**](https://buymeacoffee.com/cedya) for AIOMetadata, [**Sanopandit**](https://ko-fi.com/timilsinabimal) for Watchly, [**Sonic**](https://ko-fi.com/sonicx161) for AIOManager, the public addon instance hosters which make everything so much simpler for most, and anyone else I may have failed to mention. All of these people continue to develop and improve them actively together with the Stremio community, so shout out to all of them for their wonderful work, and consider buying them a coffee if you agree with me! Since a few of you have also asked about tipping me for helping, even though I did it for fun and an very happy if my guide helped you, [**here**](https://ko-fi.com/luckynumb3rs) is my coffee link :)
@@ -42,4 +43,5 @@ So, now that you know, it's up to you, but if you're up for it, let's do it 💪
 - [❓ Configuration Q&A](docs/guide/8-Configuration-QA.md)
 - [🎛️ AIOManager [Power Users]](docs/guide/AIOManager-Setup.md)
 - [📜 Changelog](docs/guide/Changelog.md)
+- [🟣 Nuvio](docs/guide/Nuvio.md)
 - [🔔 Updates](docs/guide/Updates.md)
