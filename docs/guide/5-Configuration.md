@@ -47,61 +47,52 @@ Go to [**this**](https://cinebye.elfhosted.com/) **Cinebye** instance and:
 ---
 ## **🚀 Nuvio**
 
-### 1. Install Addons
+1. **Install Addons**: Once you have the Manifest URLs ready, go back to Nuvio in your browser:
+   1. Open [**nuvioapp.space**](https://nuvioapp.space/).
+   2. Go to your **Account** section.
+   3. If you have more than one profile, make sure the profile you want to configure is selected from the top header menu.
+      * *This is important because addons and collections can be profile-specific. If you configure the wrong profile, you may open the app later and think nothing worked, even though you simply added everything to another profile.*
+   4. Click on **Addons**.
+   5. Remove any existing addons if you want a clean setup.
+      * *This is optional, but recommended if you are starting fresh.*
+      * *At the very least, I recommend removing **Cinemeta**, because the whole point of this setup is to let AIOMetadata handle metadata and catalogs instead.*
+      * *If you already have addons you intentionally want to keep, then you can keep them, but for beginners a clean setup is usually easier to troubleshoot.*
+   6. Click on **Add Addon**.
+   7. Paste the first **Manifest URL** into the addon URL field.
+   8. Leave the **Enabled** toggle selected.
+   9. Leave the **Name** field empty.
+      * *Nuvio should autofill the addon name automatically from the manifest, so you normally don't need to type anything here.*
+   10. Press **Save**.
+   11. Repeat the same process for each addon.
+      * *Ideally, add them directly in this order:*
+         1. **Watchly** *(optional)*
+         2. **AIOMetadata**
+         3. **AIOStreams**
+   12. **For 🌐 HTTP Users**: Go [**here**](https://nuvio-plugin-library.vercel.app/) to choose the *Plugins* that are suitable for you and to learn how to install them on Nuvio.
+      * *In addition to supporting Stremio addons, such as **AIOStreams** you installed above, which also includes HTTP sources that are properly filtered and formatted, Nuvio also supports **Plugins**, which can provide many additional HTTP sources. They don't go through AIOStreams unfortunately, so you won't get the optimized sources list like that addon does, but you would get additional stream sources. This is not necessary if you go for the **P2P** or **Debrid** configuration on AIOStreams above, but recommended for **HTTP** if you notice you are not getting enough streams from it.*
 
-Once you have the Manifest URLs ready, go back to Nuvio in your browser:
+2. **Collections Pack**: Now let's add the collections pack with *Dynamic Backdrops*, as described in [**🚀 Nuvio**](Nuvio.md), that organizes the installed *AIOMetadata* catalogs together into the groups described in [**🔎 AIOMetadata**](4-AIOMetadata.md):
+   1. Go to [**this**](https://nuvioapp.space/community-collections/nuvio-perfect-collections-incl-dynamic-backdrops-2) **Nuvio Collections Pack**.
+   2. Click **Add Pack**.
+   3. Make sure the correct profile is selected.
+      * *Again, if you have more than one profile, double-check this. Otherwise you may install the pack on the wrong profile.*
+   4. Under **Install Mode**, choose the option you prefer.
+      * **Merge by matching IDs** is usually the safest option if you already have some collections and want to keep them.
+      * **Replace profile collections** is probably the cleanest option if your Nuvio account is new and you do not have existing collections you care about.
+      * *If you are starting fresh, I would suggest choosing **Replace profile collections**, because it gives you a cleaner result and avoids duplicate or messy rows.*
+   5. Click **Add Pack**/**Merge Pack**/**Replace Profile**, depending on the mode you selected.
+      * *The exact button name may change depending on the install mode.*
 
-1. Open [**nuvioapp.space**](https://nuvioapp.space/).
-2. Go to your **Account** section.
-3. If you have more than one profile, make sure the profile you want to configure is selected from the top header menu.
-   * *This is important because addons and collections can be profile-specific. If you configure the wrong profile, you may open the app later and think nothing worked, even though you simply added everything to another profile.*
-4. Click on **Addons**.
-5. Remove any existing addons if you want a clean setup.
-   * *This is optional, but recommended if you are starting fresh.*
-   * *At the very least, I recommend removing **Cinemeta**, because the whole point of this setup is to let AIOMetadata handle metadata and catalogs instead.*
-   * *If you already have addons you intentionally want to keep, then you can keep them, but for beginners a clean setup is usually easier to troubleshoot.*
-6. Click on **Add Addon**.
-7. Paste the first **Manifest URL** into the addon URL field.
-8. Leave the **Enabled** toggle selected.
-9. Leave the **Name** field empty.
-   * *Nuvio should autofill the addon name automatically from the manifest, so you normally don't need to type anything here.*
-10. Press **Save**.
-11. Repeat the same process for each addon.
-   * *Ideally, add them directly in this order:*
-      1. **Watchly** *(optional)*
-      2. **AIOMetadata**
-      3. **AIOStreams**
-12. **For 🌐 HTTP Users**: Go [**here**](https://nuvio-plugin-library.vercel.app/) to choose the *Plugins* that are suitable for you and to learn how to install them on Nuvio.
-   * *In addition to supporting Stremio addons, such as **AIOStreams** you installed above, which also includes HTTP sources that are properly filtered and formatted, Nuvio also supports **Plugins**, which can provide many additional HTTP sources. They don't go through AIOStreams unfortunately, so you won't get the optimized sources list like that addon does, but you would get additional stream sources. This is not necessary if you go for the **P2P** or **Debrid** configuration on AIOStreams above, but recommended for **HTTP** if you notice you are not getting enough streams from it.*
-
-### 2. Collections Pack
-
-Now let's add the collections pack with *Dynamic Backdrops*, as described in [**🚀 Nuvio**](Nuvio.md), that organizes the installed *AIOMetadata* catalogs together into the groups described in [**🔎 AIOMetadata**](4-AIOMetadata.md):
-
-1. Go to [**this**](https://nuvioapp.space/community-collections/nuvio-perfect-collections-incl-dynamic-backdrops-2) **Nuvio Collections Pack**.
-2. Click **Add Pack**.
-3. Make sure the correct profile is selected.
-   * *Again, if you have more than one profile, double-check this. Otherwise you may install the pack on the wrong profile.*
-4. Under **Install Mode**, choose the option you prefer.
-   * **Merge by matching IDs** is usually the safest option if you already have some collections and want to keep them.
-   * **Replace profile collections** is probably the cleanest option if your Nuvio account is new and you do not have existing collections you care about.
-   * *If you are starting fresh, I would suggest choosing **Replace profile collections**, because it gives you a cleaner result and avoids duplicate or messy rows.*
-5. Click **Add Pack**/**Merge Pack**/**Replace Profile**, depending on the mode you selected.
-   * *The exact button name may change depending on the install mode.*
-
-### 3. App Settings
-
-Lastly, open the **Nuvio** app and adjust a few settings to make the setup behave properly:
-
-1. Open the **Addons** tab.
-2. Go to **Reorder home catalogs** and enable the **Follow addons order** toggle.
-   * *This keeps the catalog order consistent with the order configured in the addons for them, avoiding any confusion.*
-3. Go to **Settings**.
-4. Go to the **Trakt** tab and follow the steps to integrate your Trakt account.
-   * *This is recommended if you want watch history, progress, and recommendations to work better across the setup. If you do not use Trakt, you can skip this, but some personalization features may be less useful.*
-5. Go to **Layout**, **Detail Page**, and enable the **Prefer meta from external addon** toggle.
-   * *This tells Nuvio to prefer the metadata coming from your external metadata addon, which in this setup is AIOMetadata.*
-6. Go to **Integrations**, then **TMDB**.
-7. Enable all toggles in the **TMDB** integration section.
-   * *This helps Nuvio use all TMDB-related features across the interface.*
-8. Configure the rest of the settings however you like.
+3. **App Settings**: Lastly, open the **Nuvio** app and adjust a few settings to make the setup behave properly:
+   1. Open the **Addons** tab.
+   2. Go to **Reorder home catalogs** and enable the **Follow addons order** toggle.
+      * *This keeps the catalog order consistent with the order configured in the addons for them, avoiding any confusion.*
+   3. Go to **Settings**.
+   4. Go to the **Trakt** tab and follow the steps to integrate your Trakt account.
+      * *This is recommended if you want watch history, progress, and recommendations to work better across the setup. If you do not use Trakt, you can skip this, but some personalization features may be less useful.*
+   5. Go to **Layout**, **Detail Page**, and enable the **Prefer meta from external addon** toggle.
+      * *This tells Nuvio to prefer the metadata coming from your external metadata addon, which in this setup is AIOMetadata.*
+   6. Go to **Integrations**, then **TMDB**.
+   7. Enable all toggles in the **TMDB** integration section.
+      * *This helps Nuvio use all TMDB-related features across the interface.*
+   8. Configure the rest of the settings however you like.
