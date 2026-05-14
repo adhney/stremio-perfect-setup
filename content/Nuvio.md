@@ -31,9 +31,9 @@ This collections pack is based the *AIOMetadata* catalogs included in the guide
    * **⭐ Top Rated**: Highest user-rated titles from TMDB.
 * **🎬 Streaming**: Titles grouped by streaming provider or platform source.
 * **🎭 Genres**: Catalogs grouped by genre and content type.
-* **🍥 Anime**: Anime-focused catalogs across different styles and themes (Partially disabled initially).
+* **🍥 Anime**: Anime-focused catalogs across different styles and themes.
 * **🎨 Themes**: Collections built around moods, topics, and story patterns.
-* **🏰 Studios**: Catalogs grouped by well-known studios or franchises (Disabled initially).
+* **🏰 Studios**: Catalogs grouped by well-known studios or franchises.
 * **🎥 Decades**: Titles grouped by release decade and era.
 * **🕒 Runtime**: Titles filtered by length, from short watches to longer sessions.
 

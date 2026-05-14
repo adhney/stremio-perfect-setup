@@ -28,7 +28,7 @@ So, now that you know, it's up to you, but if you're up for it, let's do it 💪
 
 - [🔰 Beginner Concepts](docs/guide/0-Beginner-Concepts.md)
 - [📝 1. Accounts Preparation](docs/guide/1-Accounts.md)
-- [⚙️ 2. Stremio/Nuvio Account Initialization](docs/guide/2-Initialization.md)
+- [⚙️ 2. Setup Initialization](docs/guide/2-Initialization.md)
 - [📚 3. AIOStreams [Find Streams]](docs/guide/3-AIOStreams.md)
 - [🔎 4. AIOMetadata [Metadata & Catalogs]](docs/guide/4-AIOMetadata.md)
 - [🧹 5. Configuration [Install & Clean-Up]](docs/guide/5-Configuration.md)

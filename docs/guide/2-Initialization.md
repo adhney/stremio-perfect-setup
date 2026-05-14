@@ -1,11 +1,11 @@
 ---
 layout: guide
-title: "⚙️ 2. Stremio/Nuvio Account Initialization"
+title: "⚙️ 2. Setup Initialization"
 ---
 
-# ⚙️ 2. Stremio/Nuvio Account Initialization
+# ⚙️ 2. Setup Initialization
 
-## **▶︎ Stremio**
+## **🎞️ Stremio**
 
 1. Create an account on [**Stremio**](https://www.stremio.com/) if you haven't created one yet.
 2. Open [**Stremio Web**](https://web.stremio.com) and **MAKE SURE** you're signed in with your account.

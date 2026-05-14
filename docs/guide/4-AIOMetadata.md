@@ -65,13 +65,13 @@ Select an **AIOMetadata** instance from [**this**](https://uptime.ibbylabs.dev/a
    * **ALWAYS SAVE IN THIS TAB EVERY TIME YOU MAKE CHANGES LATER.**
    * *If you didn't want to get an API key for Gemini, go to the **Search** tab and disable **AI-Powered Search** to be able to save.*
    * *Copy and store the **UUID** that is shown and the **Password** you set for later to access the configuration again. This is basically your AIOMetadata account.*
-7. **For Stremio:**
+7. **🎞️ Stremio:**
    * Click "**Install**" and install the addon on **Stremio Web** (recommended, but you can also install on Stremio app if you want, but make sure you're signed in to your Stremio account wherever you install it).
    * *If you get a "AddonsPushedToAPI Max descriptor size reached" error when installing, you probably have too many catalogs on AIOMetadata. Disable some, save the configuration, and try to install it again.*
 
    ![Install Addon](../images/4.7.png)
 
-8. **For Nuvio**:
+8. **🚀 Nuvio**:
    * Copy the **Manifest URL** shown when you click *Save* and proceed to [**🧹 5. Configuration**](5-Configuration.md#nuvio) to install them.
 
 >**NOTES FOR LATER:**
