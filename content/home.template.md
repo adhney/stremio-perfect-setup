@@ -1,4 +1,4 @@
-# 🎬 STREMIO/NUVIO BEGINNER'S GUIDE
+# 🎬 STREMIO/NUVIO TOTAL BEGINNER'S GUIDE
 **[⚡ DEBRID / 🧲 P2P / 🌐 HTTP]** (*v2.0*)
 
 ![Stremio (left) / Stream Sources (center) / Nuvio (right)]({{IMAGE_PATH}}/home.jpg)
