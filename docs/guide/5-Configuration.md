@@ -5,7 +5,7 @@ title: "🧹 5. Configuration [Install & Clean-Up]"
 
 # 🧹 5. Configuration [Install & Clean-Up]
 
-## **Stremio**
+## **▶︎ Stremio**
 
 Cinebye is the addon order and patch management layer for Stremio. It lets you apply cleanup patches and control addon priority so AIOMetadata and AIOStreams are used in the right order.
 
@@ -43,9 +43,9 @@ Go to [**this**](https://cinebye.elfhosted.com/) **Cinebye** instance and:
 
 
 ---
-## **Nuvio**
+## **🚀 Nuvio**
 
-### ➕ 1. Install Addons
+### 1. Install Addons
 
 Once you have the Manifest URLs ready, go back to Nuvio in your browser:
 
@@ -72,7 +72,7 @@ Once you have the Manifest URLs ready, go back to Nuvio in your browser:
 12. **For 🌐 HTTP Users**: Go [**here**](https://nuvio-plugin-library.vercel.app/) to choose the *Plugins* that are suitable for you and to learn how to install them on Nuvio.
    * *In addition to supporting Stremio addons, such as **AIOStreams** you installed above, which also includes HTTP sources that are properly filtered and formatted, Nuvio also supports **Plugins**, which can provide many additional HTTP sources. They don't go through AIOStreams unfortunately, so you won't get the optimized sources list like that addon does, but you would get additional stream sources. This is not necessary if you go for the **P2P** or **Debrid** configuration on AIOStreams above, but recommended for **HTTP** if you notice you are not getting enough streams from it.*
 
-## 🍿 2. Collections Pack
+### 2. Collections Pack
 
 Now let's add the collections pack with *Dynamic Backdrops*, as described in [**🚀 Nuvio**](Nuvio.md), that organizes the installed *AIOMetadata* catalogs together into the groups described in [**🔎 AIOMetadata**](4-AIOMetadata.md):
 
@@ -87,7 +87,7 @@ Now let's add the collections pack with *Dynamic Backdrops*, as described in [**
 5. Click **Add Pack**/**Merge Pack**/**Replace Profile**, depending on the mode you selected.
    * *The exact button name may change depending on the install mode.*
 
-## 🛠️ 3. App Settings
+### 3. App Settings
 
 Lastly, open the **Nuvio** app and adjust a few settings to make the setup behave properly:
 

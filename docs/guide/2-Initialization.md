@@ -5,7 +5,7 @@ title: "⚙️ 2. Stremio/Nuvio Account Initialization"
 
 # ⚙️ 2. Stremio/Nuvio Account Initialization
 
-## **Stremio**
+## **▶︎ Stremio**
 
 1. Create an account on [**Stremio**](https://www.stremio.com/) if you haven't created one yet.
 2. Open [**Stremio Web**](https://web.stremio.com) and **MAKE SURE** you're signed in with your account.
@@ -27,7 +27,7 @@ title: "⚙️ 2. Stremio/Nuvio Account Initialization"
 
 
 ---
-## **Nuvio**
+## **🚀 Nuvio**
 
 1. Create an account on [**Nuvio**](https://nuvioapp.space/) if you haven't created one yet.
    * *This will be the account that stores your Nuvio profiles, addon setup, collections, and app settings.*
