@@ -66,12 +66,12 @@ Select an **AIOMetadata** instance from [**this**](https://uptime.ibbylabs.dev/a
    * *If you didn't want to get an API key for Gemini, go to the **Search** tab and disable **AI-Powered Search** to be able to save.*
    * *Copy and store the **UUID** that is shown and the **Password** you set for later to access the configuration again. This is basically your AIOMetadata account.*
 7. **Installation**:
-   * **🎞️ Stremio**: Click "**Install**" and install the addon on **Stremio Web** (recommended, but you can also install on Stremio app if you want, but make sure you're signed in to your Stremio account wherever you install it).
+   * **🎞️ Stremio**: Click "**Install**" and install the addon on *Stremio Web* (recommended, but you can also install on Stremio app if you want, but make sure you're signed in to your Stremio account wherever you install it).
       * *If you get a "AddonsPushedToAPI Max descriptor size reached" error when installing, you probably have too many catalogs on AIOMetadata. Disable some, save the configuration, and try to install it again.*
 
          ![Install Addon](../images/4.7.png)
 
-   * **🚀 Nuvio**: Copy the **Manifest URL** shown when you click *Save* and proceed to [**🧹 5. Configuration**](5-Configuration.md#-nuvio) to install them.
+   * **🚀 Nuvio**: Copy the *Manifest URL* shown when you click *Save* and proceed to [**🧹 5. Configuration**](5-Configuration.md#-nuvio) to install them.
 
 >**📢 NOTES FOR LATER:**
 >* *Keep in mind for later that if you change catalog structure in AIOMetadata after you installed it on Stremio, or if you add the CouchMoney lists from Step 6 below, then go to Cinebye, authenticate again with Stremio credentials, and click the **Refresh** icon to the right of AIOMetadata in the "**Manage Addons**" section.*

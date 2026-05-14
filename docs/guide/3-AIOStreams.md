@@ -93,8 +93,8 @@ Select an **AIOStreams** instance from [**this**](https://uptime.ibbylabs.dev/ai
    * *If you get an error when saving that says "Failed to fetch manifest..." and/or "502 - Bad Gateway", it means the addons mentioned there are temporarily offline. Go to **Addons → Installed Addons**, disable the problematic addons mentioned, and proceed with saving. Go back at a later time to re-enable the addons and save again.*
 
 11. **Installation**:
-   * **🎞️ Stremio**: Click "**Install**" and install the addon on **Stremio Web** (recommended, but you can also install on Stremio app if you want, but make sure you're signed in to your Stremio account wherever you install it).
-   * **🚀 Nuvio**: Copy the **Manifest URL** shown when you click *Save* and proceed to the [**4. 🔎 AIOMetadata**](4-AIOMetadata.md) step.
+   * **🎞️ Stremio**: Click "**Install**" and install the addon on *Stremio Web* (recommended, but you can also install on Stremio app if you want, but make sure you're signed in to your Stremio account wherever you install it).
+   * **🚀 Nuvio**: Copy the *Manifest URL* shown when you click *Save* and proceed to the [**4. 🔎 AIOMetadata**](4-AIOMetadata.md) step.
 
 
 >**📢 NOTES FOR LATER:**
