@@ -34,5 +34,5 @@ For **AIOMetadata**, there's normally not as many changes as AIOStreams so you s
 4. On the same "**Configuration**" tab, click "**Save Configuration**". No need to install the addon on Stremio/Nuvio again.
 5. **For Stremio**: Keep in mind that if you change catalog structure in AIOMetadata after you installed it on Stremio, you need to go to Cinebye, authenticate again with Stremio credentials, and click the **Refresh** icon to the right of AIOMetadata in the "**Manage Addons**" section.*
 
-![Refresh Addons](../images/5.6.png)
+   ![Refresh Addons](../images/5.6.png)
 
