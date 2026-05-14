@@ -9,7 +9,7 @@ At this point you are done, YAY!, so you can start enjoying it already OR you ca
 
 **Watchly** is a full-blown recommendations addon that provides real Netflix-like suggestions, and multiple dynamic catalogs depending on what you watch and like. Here are the steps to set it up:
 
-**Nuvio support is coming soon, so check here later for updates.**
+>**Nuvio support is coming soon, so check here later for updates.**
 
 1. Go to [**this**](https://watchly.elfhosted.com/) **Watchly** instance.
 2. Click on "**Get Started**".

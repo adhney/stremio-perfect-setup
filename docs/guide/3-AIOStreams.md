@@ -95,7 +95,7 @@ Select an **AIOStreams** instance from [**this**](https://uptime.ibbylabs.dev/ai
 11. **🎞️ Stremio**:
    * Click "**Install**" and install the addon on **Stremio Web** (recommended, but you can also install on Stremio app if you want, but make sure you're signed in to your Stremio account wherever you install it).
 
-   ![Install Addon](../images/3.11.png)
+      ![Install Addon](../images/3.11.png)
 
 12. **🚀 Nuvio**:
    * Copy the **Manifest URL** shown when you click *Save* and proceed to the [**4. 🔎 AIOMetadata**](4-AIOMetadata.md) step.
