@@ -3,11 +3,11 @@
 
 <table class="home-showcase" role="presentation">
   <tr>
-    <td>
+    <td align="center">
       <img src="docs/images/stremio.webp" alt="Stremio">
       <div><strong>🎞️ Stremio</strong></div>
     </td>
-    <td>
+    <td align="center">
       <img src="docs/images/collections.webp" alt="Nuvio">
       <div><strong>🚀 Nuvio</strong></div>
     </td>

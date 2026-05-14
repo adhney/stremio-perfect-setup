@@ -8,11 +8,11 @@ title: Home
 
 <table class="home-showcase" role="presentation">
   <tr>
-    <td>
+    <td align="center">
       <img src="images/stremio.webp" alt="Stremio">
       <div><strong>🎞️ Stremio</strong></div>
     </td>
-    <td>
+    <td align="center">
       <img src="images/collections.webp" alt="Nuvio">
       <div><strong>🚀 Nuvio</strong></div>
     </td>
