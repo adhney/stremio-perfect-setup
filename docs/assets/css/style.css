@@ -275,6 +275,32 @@ img {
   box-shadow: var(--shadow);
 }
 
+.home-showcase {
+  width: 100%;
+  margin: 1rem 0 1.35rem;
+  border-collapse: separate;
+  border-spacing: 0.9rem 0;
+  table-layout: fixed;
+}
+
+.home-showcase td {
+  width: 50%;
+  vertical-align: top;
+  text-align: center;
+}
+
+.home-showcase img {
+  display: block;
+  width: 100%;
+  margin: 0 auto 0.6rem;
+}
+
+.home-showcase td > div {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
 .doc-card a[href*="ko-fi.com"] img,
 .sidebar-footer a[href*="ko-fi.com"] img {
   width: auto !important;
@@ -391,6 +417,22 @@ pre {
 }
 
 @media (max-width: 640px) {
+  .home-showcase,
+  .home-showcase tbody,
+  .home-showcase tr,
+  .home-showcase td {
+    display: block;
+    width: 100%;
+  }
+
+  .home-showcase {
+    border-spacing: 0;
+  }
+
+  .home-showcase td + td {
+    padding-top: 1rem;
+  }
+
   .topbar {
     height: 66px;
     padding: 0 0.7rem;

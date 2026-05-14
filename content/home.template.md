@@ -1,9 +1,18 @@
 # 🎬 STREMIO/NUVIO FULL & EASY TOTAL BEGINNER'S GUIDE
 **[⚡ DEBRID / 🧲 P2P / 🌐 HTTP]** (*v2.0*)
 
-![Stremio]({{IMAGE_PATH}}/stremio.webp)
-
-![Nuvio]({{IMAGE_PATH}}/collections.webp)
+<table class="home-showcase" role="presentation">
+  <tr>
+    <td>
+      <img src="{{IMAGE_PATH}}/stremio.webp" alt="Stremio">
+      <div><strong>🎞️ Stremio</strong></div>
+    </td>
+    <td>
+      <img src="{{IMAGE_PATH}}/collections.webp" alt="Nuvio">
+      <div><strong>🚀 Nuvio</strong></div>
+    </td>
+  </tr>
+</table>
 
 This is a full beginner-friendly guide for building a clean, reliable, and highly organized setup for both **Stremio** and **Nuvio**, using all community best practices and including streams, metadata, catalogs, recommendations, collections, and the extra tweaks that make the whole experience feel much more polished.
 
