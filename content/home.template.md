@@ -16,7 +16,7 @@
 
 This is a full beginner-friendly guide for building a clean, reliable, and highly organized setup for both [**🎞️ Stremio**](https://www.stremio.com/) and [**🚀 Nuvio**](https://nuvioapp.space/), using all community best practices and including streams, metadata, catalogs, recommendations, collections, and the extra tweaks that make the whole experience feel much more polished.
 
-**Through this guide, you will be able to configure the following stream types (will be selected in step [**📚 3. AIOStreams**](3-AIOStreams.md)):**
+**Through this guide, you will be able to configure the following stream types (will be selected in step [📚 3. AIOStreams](3-AIOStreams.md)):**
 * **⚡ DEBRID** is paid, but fast, safest and most reliable. Activated by selecting a Debrid service when you import the *AIOStreams* template.
 * **🧲 P2P** is free, but slower and risky depending on the laws of your country. Activated automatically if you don't select a Debrid when you import the *AIOStreams* template.
 * **🌐 HTTP** is free and safe, but slower and less reliable than Debrid. Activated if you enable the *HTTP Addons* option when you import the *AIOStreams* template. For **Nuvio** there's additional sources through *Plugins*, which can be added in step [**🧹 5. Configuration**](5-Configuration.md).
