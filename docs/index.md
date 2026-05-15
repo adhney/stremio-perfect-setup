@@ -23,7 +23,7 @@ This is a full beginner-friendly guide for building a clean, reliable, and highl
 
 **If this guide helps you, PLEASE UPVOTE the Reddit post for [🎞️ Stremio](https://www.reddit.com/r/StremioAddons/comments/1stc6f6/stremio_perfect_setup_beginners_guide/) / [🚀 Nuvio](https://www.reddit.com/r/Nuvio/comments/1t9yub7/nuvio_perfect_setup_beginners_guide/) so it remains relevant for others to find it and also benefit from it.** 😊
 
-Don't be scared. Although it may look like a very long guide, it's actually just a few simple steps and very easy. I just wanted to be thorough and describe everything totally step-by-step so you understand what you're doing.
+*Don't be scared. Although it may look like a very long guide, it's actually just a few simple steps and very easy. I just wanted to be thorough and describe everything totally step-by-step so you understand what you're doing.*
 
 In case you are wondering whether it's worth the effort, or you already have a Torrentio + RD setup and want to know what's better if you use this guide, here's a summary:
 
