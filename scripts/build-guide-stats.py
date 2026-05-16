@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT_DIR / "docs" / "assets" / "js" / "guide-completion-config.js"
 OUTPUT_PATH = ROOT_DIR / "docs" / "assets" / "data" / "guide-stats.json"
+GA4_EARLIEST_VALID_DATE = "2026-01-01"
 
 
 def load_completion_config() -> dict:
@@ -48,7 +49,7 @@ def fetch_analytics_totals(property_id: str, service_account_json: str, event_na
         property=f"properties/{property_id}",
         dimensions=[Dimension(name="eventName")],
         metrics=[Metric(name="totalUsers"), Metric(name="eventCount")],
-        date_ranges=[DateRange(start_date="2000-01-01", end_date="today")],
+        date_ranges=[DateRange(start_date=GA4_EARLIEST_VALID_DATE, end_date="today")],
         dimension_filter=FilterExpression(
             filter=Filter(
                 field_name="eventName",

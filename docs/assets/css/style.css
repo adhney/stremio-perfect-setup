@@ -147,10 +147,11 @@ body {
 .sidebar-footer a[href*="ko-fi.com"] {
   display: flex;
   justify-content: center;
+  margin-bottom: 0.9rem;
 }
 
 .sidebar-stat-card {
-  margin-bottom: 0.9rem;
+  margin-bottom: 0;
   padding: 0.9rem 0.95rem 1rem;
   border: 1px solid var(--border);
   border-radius: 14px;
