@@ -5,7 +5,7 @@ title: "🔰 Beginner Concepts"
 
 # 🔰 Beginner Concepts
 
-This guide assumes you are aiming for a Stremio setup that is **clean**, **reliable**, and **consistent across devices**. The concepts below explain what each component is doing, why it matters, and why the combination used in this guide tends to work better than a basic "single addon" setup.
+This guide assumes you are aiming for a Stremio/Nuvio setup that is **clean**, **reliable**, and **consistent across devices**. The concepts below explain what each component is doing, why it matters, and why the combination used in this guide tends to work better than a basic "single addon" setup.
 
 ## **What is Stremio?**
 * Stremio is a media center that unifies **discovery** and **playback** under one interface. You search for a title once, and Stremio can show you the title page (metadata, seasons, episodes) and the available sources (streams) through addons.
@@ -16,18 +16,18 @@ This guide assumes you are aiming for a Stremio setup that is **clean**, **relia
 * Windows, macOS, Linux, Android (phones/tablets), Android TV and TV boxes, Web (Stremio Web), and iPhone/iPad (currently via sideloading since it's not on the App Store anymore).
 * The key point is not just availability. It is that your Stremio account acts as the "anchor" so your setup is portable across devices.
 
-## **How does Stremio work, conceptually?**
-* Stremio has three practical layers:
+## **How does Stremio/Nuvio work, conceptually?**
+* Stremio/Nuvio has three practical layers:
    * **Interface layer**: search, title pages, seasons/episodes, library, continue watching.
    * **Metadata layer**: posters, descriptions, cast, ratings, episode structure.
    * **Streams layer**: actual sources you can select and play.
-* The interface is Stremio. The metadata and streams are mostly defined by the addons you choose (e.g. Cinemeta is integrated from the start and is for providing metadata). That is why two people using Stremio can have completely different experiences.
+* The interface is Stremio/Nuvio. The metadata and streams are mostly defined by the addons you choose (e.g. Cinemeta is integrated from the start and is for providing metadata). That is why two people using Stremio/Nuvio can have completely different experiences.
 
-## **What does "synced everywhere" mean in Stremio?**
-* Your Stremio account stores your core setup and usage state. When you sign in on another device, you generally inherit:
+## **What does "synced everywhere" mean in Stremio/Nuvio?**
+* Your Stremio/Nuvio account stores your core setup and usage state. When you sign in on another device, you generally inherit:
    * **Installed addons**
    * **Library and watchlist**
-   * **Continue watching / progress inside Stremio**
+   * **Continue watching / progress inside Stremio/Nuvio**
 * However, "synced" does not guarantee identical playback behavior. Device/platform constraints can matter, especially for torrent playback on some platforms.
 
 ## **What is the addon ecosystem? What do addons actually provide?**
@@ -38,8 +38,8 @@ This guide assumes you are aiming for a Stremio setup that is **clean**, **relia
 * A basic setup often mixes these responsibilities without control. A strong setup separates concerns: you use dedicated addons for metadata/catalogs, and dedicated addons for stream aggregation and quality control.
 
 ## **What does "an addon instance" mean?**
-* An addon is the software. An **instance** is a specific hosted deployment of that addon that Stremio communicates with.
-* When you install an addon, you are effectively registering its **instance URL** in your Stremio account. When you browse a title or press play, Stremio queries that instance to retrieve catalogs, metadata, or streams.
+* An addon is the software. An **instance** is a specific hosted deployment of that addon that Stremio/Nuvio communicates with.
+* When you install an addon, you are effectively registering its **instance URL** in your Stremio/Nuvio account. When you browse a title or press play, Stremio/Nuvio queries that instance to retrieve catalogs, metadata, or streams.
 * There can be multiple instances of the same addon hosted by different community providers. They are functionally similar but operationally independent:
    * Different uptime and performance
    * Different rate limits and load profiles
@@ -51,13 +51,13 @@ This guide assumes you are aiming for a Stremio setup that is **clean**, **relia
 * Use **[this](https://status.stremio-status.com/)** or **[this](https://status.dinsden.top/status/stremio-addons)** link to quickly verify outages and pick alternatives if a popular instance is having issues.
 * In this guide, I link solid default instances, but you should treat them as "recommended", not permanent truths.
 
-## **What is torrenting (P2P), and how does Stremio support it?**
+## **What is torrenting (P2P), and how does Stremio/Nuvio support it?**
 * Torrenting is **peer-to-peer distribution**. A file is shared by a swarm of peers, and your client downloads pieces from multiple peers in parallel.
-* In Stremio, torrent-based stream addons can return torrent sources. When you select one, playback depends on the availability and health of that swarm.
+* In Stremio/Nuvio, torrent-based stream addons can return torrent sources. When you select one, playback depends on the availability and health of that swarm.
 * The key tradeoff is reliability. Torrent playback quality is determined by peers. If a torrent has weak or unstable swarm health, buffering and failures are expected.
 * This is why many setups prioritize cached sources (via Debrid) and treat direct P2P as fallback.
 
-## **What is a Debrid service, and why do people use it with Stremio?**
+## **What is a Debrid service, and why do people use it with Stremio/Nuvio?**
 * A Debrid service acts as an intermediate layer that can fetch torrents (and often hoster links) on its own infrastructure, then serve the result to you via standard HTTPS streaming.
 * The practical benefit is caching. If a file is already cached on the Debrid provider, you get fast start times and stable throughput that is not dependent on swarm health.
 * In other words: instead of you relying on random peers, you rely on the Debrid provider's servers. That usually improves consistency significantly.
@@ -71,7 +71,7 @@ This guide assumes you are aiming for a Stremio setup that is **clean**, **relia
 ## **TorBox: what is it, and why would you pick it?**
 * [**TorBox**](https://torbox.app/subscription?referral=19c21001-d6fe-4b66-952c-8adf4832dd66) is also a Debrid-style service, but it is very practical for **multiple simultaneous streams**.
 * Even the basic paid tier supports **multiple parallel connections** (up to **3** in the Essential tier, and Pro tier up to **10** parallel streams).
-* That matters if you want to use the same API key across **family members**, **friends**, or even **multiple Stremio accounts** streaming at the same time.
+* That matters if you want to use the same API key across **family members**, **friends**, or even **multiple Stremio/Nuvio accounts** streaming at the same time.
 * **Tradeoff**: TorBox may not always have as large an "immediately cached" library as Real-Debrid. If something is not cached yet, you might see sources that require TorBox to fetch it first. In the stream list this shows up as an **hourglass icon**.
 * That does not mean it will not work. It means it may need time to download the file first, and the speed depends on available **seeders**, though it is often reasonably fast. If there's enough seeders, it's a matter of seconds or minutes.
 * In most cases, TorBox still has plenty of cached options. You only need one good cached source per title.
@@ -100,9 +100,9 @@ This guide assumes you are aiming for a Stremio setup that is **clean**, **relia
    * **🌐 HTTP** is free and safe, but slower and less reliable than Debrid. Activated if you enable the *HTTP Addons* option when you import the template.
 * *In case **P2P** is an issue in your country: If you use **Debrid** (paid) or **HTTP** (free) streams, you are generally safe and don't need a VPN. **Debrid** however is still the safest and most reliable solution.*
 
-## **What is Trakt, and why do people connect it to Stremio?**
+## **What is Trakt, and why do people connect it to Stremio/Nuvio?**
 * Trakt is a watch-state and history platform. It stores what you watched, where you stopped, and can keep progress consistent across devices and apps.
-* In Stremio setups, Trakt is mainly used for:
+* In Stremio/Nuvio setups, Trakt is mainly used for:
    * **Progress syncing** across devices
    * **Library enrichment** (depending on the addon workflow)
    * **Recommendation-style catalogs** when an addon uses your Trakt data
@@ -121,15 +121,15 @@ This guide assumes you are aiming for a Stremio setup that is **clean**, **relia
    * **Filtering** (remove junk, enforce language preferences, remove unwanted formats)
    * **Sorting** (cached-first, quality-first, reliability-first, or scoring-based)
    * **Formatting** (make the stream list readable and informative)
-* This is how you avoid the classic Stremio problem where the stream list is a noisy mix of inconsistent labels and unreliable ordering.
+* This is how you avoid the classic Stremio/Nuvio problem where the stream list is a noisy mix of inconsistent labels and unreliable ordering.
 
 ## **What does AIOMetadata do, and why include it?**
-* AIOMetadata is a metadata and catalog layer that gives you more control over what appears in Stremio's browsing experience.
+* AIOMetadata is a metadata and catalog layer that gives you more control over what appears in Stremio/Nuvio's browsing experience.
 * It can provide alternative metadata sources, richer artwork handling, and additional catalogs (including anime-focused flows depending on configuration).
 * In practice: AIOStreams fixes the stream list, AIOMetadata improves the browsing layer and catalog structure.
 
 ## **What is Cinemeta, and why do people say AIOMetadata can replace it?**
-* Cinemeta is Stremio's default metadata provider and it cannot be removed.
+* Cinemeta is Stremio/Nuvio's default metadata provider and it cannot be removed.
 * "Replace" in practice means you keep Cinemeta installed, but you rely primarily on AIOMetadata catalogs/metadata for browsing. Cinemeta becomes the fallback, not the main layer.
 
 ## **What does Watchly do, and why is it good in this setup?**
@@ -146,8 +146,51 @@ This guide assumes you are aiming for a Stremio setup that is **clean**, **relia
 ## **What is an API key, in plain English?**
 * An API key is a credential that lets a service identify you and authorize requests. Many metadata and artwork providers require it to prevent abuse and apply usage limits.
 
-## **What is a Gemini API key, what does it do, and why might it appear in Stremio-related setups?**
+## **What is a Gemini API key, what does it do, and why might it appear in Stremio/Nuvio-related setups?**
 * A **Gemini** API key authorizes requests to Google's Gemini models.
 * In this ecosystem, it is typically relevant when a tool/addon has AI-assisted features (specifically for AI-powered search through AIOMetadata).
 
+## **What is Nuvio?**
+* **Nuvio** is another streaming app/interface that can use the same Stremio addon ecosystem, but with more customization options.
+* It supports addons like **AIOStreams** and **AIOMetadata**, so the core logic of this setup stays the same:
+   * **AIOMetadata** gives you metadata, posters, descriptions, catalogs, search, etc.
+   * **AIOStreams** gives you the actual stream results, filtering, sorting, and source formatting.
+   * **Nuvio** is the app where you browse and watch everything.
+* The important difference is that **Nuvio has its own account system**. It does not use your Stremio account, and installing something on Stremio does not automatically install it on Nuvio.
+* So, if you want to use both Stremio and Nuvio, you configure the same addons once, but install them separately in each app.
 
+## **How is Nuvio different from Stremio?**
+* **Stremio** is simpler and more established. You install addons on your Stremio account, clean the setup with Cinebye, and then your setup syncs across Stremio devices.
+* **Nuvio** is more customizable. It has its own profiles, addons, collections, layout settings, plugins, and more control over how the home screen looks.
+* In simple words:
+   * **Stremio** is more straightforward.
+   * **Nuvio** gives you more control and can look much more polished if configured properly.
+* This is why the guide supports both. If you want something simple and reliable, Stremio is great. If you want a more customized and Netflix-like interface, Nuvio is very interesting.
+
+## **What does profile-specific mean in Nuvio?**
+* Nuvio supports multiple profiles, and this is very important when installing addons or collections.
+* Addons and collections can be linked to the selected profile. So if you install something while the wrong profile is selected, you might later open the app and think nothing worked, even though everything was installed on another profile.
+* Before adding addons, plugins, collections, or changing settings in Nuvio, always check that the correct profile is selected.
+
+## **What is a Manifest URL?**
+* A **Manifest URL** is the direct install link of an addon.
+* In **Stremio**, you usually click "**Install**" from the addon page and it opens Stremio automatically.
+* In **Nuvio**, you usually copy the **Manifest URL** manually and paste it inside **Nuvio → Account → Addons → Add Addon**.
+* That is why, in the AIOStreams and AIOMetadata steps, I tell you to copy the Manifest URL for Nuvio instead of simply clicking the normal Stremio install button.
+
+## **What are Nuvio Collections?**
+* **Collections** are one of the main reasons Nuvio can feel more polished than a normal Stremio setup.
+* They let you organize catalogs into cleaner groups and rows, similar to what you see in streaming apps.
+* So, AIOMetadata provides the catalogs, and the Nuvio Collections organize them into a cleaner home screen experience.
+
+## **What are Dynamic Backdrops?**
+* **Dynamic Backdrops** are an exclusive feature of this setup, developed by me for the Nuvio collections.
+* Normally, backdrop images are static. In this setup, the backdrop images are generated based on the actual titles inside the related catalogs, and they are refreshed over time.
+* This means that a streaming catalog, genre catalog, decade catalog, or theme catalog can have a backdrop that better reflects what is currently inside it.
+* If you use the AIOMetadata catalogs and Nuvio Collections from this guide, the setup can benefit from these monthly refreshed assets.
+
+## **What is the difference between Nuvio Addons and Nuvio Plugins?**
+* **Addons** are the normal Stremio-style addons, installed through a Manifest URL. In this guide, **AIOMetadata** and **AIOStreams** are installed like this.
+* **Plugins** are a separate Nuvio-specific feature. They can provide additional sources or functionality inside Nuvio, but they do not go through AIOStreams.
+* For most users, especially if you use **Debrid** or **P2P** through AIOStreams, plugins are optional.
+* If you are trying to use a free **HTTP**-only setup and you are not getting enough results, Nuvio plugins can be useful as an additional source layer. Just keep in mind that they will not have the same AIOStreams filtering, sorting, and formatting.

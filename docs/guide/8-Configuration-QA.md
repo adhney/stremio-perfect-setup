@@ -191,4 +191,82 @@ I am including this section for anyone who has any additional questions or is en
 * **AIOStreams:** ALWAYS save in **Save & Install → Save**.
 * **AIOMetadata:** ALWAYS save in **Configuration → Save Configuration**.
 
+## **I installed the setup in Stremio. Does it automatically work in Nuvio too?**
+* No. **Stremio** and **Nuvio** are separate apps with separate accounts.
+* If you installed AIOStreams or AIOMetadata in Stremio, they will not automatically appear in Nuvio.
+* For Nuvio, you need to copy the **Manifest URL** from AIOStreams and AIOMetadata after saving each configuration, then install those URLs inside **Nuvio → Account → Addons → Add Addon**.
+* However, you can reuse the same configuration you did for Stremio and install it directly on Nuvio, you don't need to reconfigure the addons.
 
+## **Do I need Cinebye for Nuvio?**
+* No. **Cinebye is only for Stremio**.
+* In Stremio, Cinebye is used to remove Cinemeta clutter and control addon order.
+* Nuvio has its own system for addons, profiles, collections, layout settings, and catalog behavior.
+* For Nuvio, as instructed in step [**🧹 5. Configuration**](5-Configuration.md#-nuvio), the important parts are:
+   * Install the addon **Manifest URLs** directly in Nuvio.
+   * Add the **Nuvio Collections Pack** if you want the organized home screen.
+   * Enable **Follow addons order**.
+   * Enable **Prefer meta from external addon**.
+
+## **Should I remove Cinemeta in Nuvio?**
+* If you want to follow this setup cleanly, yes, I recommend removing **Cinemeta** from Nuvio if it is installed and removable.
+* The point of this setup is to let **AIOMetadata** handle metadata and catalogs.
+* If Cinemeta stays active, you might see duplicate catalogs, wrong metadata priority, or a less clean setup.
+
+## **My Nuvio metadata looks wrong or different from AIOMetadata. What should I change?**
+* In the **Nuvio app**, go to **Settings → Layout → Detail Page**.
+* Enable **Prefer meta from external addon**.
+* This tells Nuvio to prefer metadata from addons like **AIOMetadata**, instead of falling back to its internal/default metadata behavior.
+* Also make sure AIOMetadata is installed and enabled on the correct Nuvio profile.
+
+## **My Nuvio home catalogs are not in the order I expected.**
+* In the **Nuvio app**, go to the **Addons** tab.
+* Open **Reorder home catalogs**.
+* Enable **Follow addons order**.
+* This should make Nuvio follow the addon/catalog order more consistently.
+
+## **I added the Collections Pack on Nuvio, but they are not showing any titles.**
+* The most likely reason is that **AIOMetadata** was not configured and installed in Nuvio first.
+* The Nuvio Collections Pack does not magically create the catalogs by itself. It organizes and groups the catalogs that already exist in your Nuvio setup, which in this setup are provided by *AIOMetadata*.
+* So, before adding the Collections Pack, you need to complete the [**4. 🔎 AIOMetadata**](4-AIOMetadata.md) step:
+   1. Import the [**configuration**](https://raw.githubusercontent.com/luckynumb3rs/stremio-perfect-setup/refs/heads/main/templates/AIOMetadata-All.json) file from this guide into *AIOMetadata*, which includes the catalogs needed for the collections.
+   2. Save the AIOMetadata configuration.
+   3. Copy the **Manifest URL**.
+   4. Install that Manifest URL in **Nuvio → Account → Addons → Add Addon**.
+   5. Then add the **🍿 Nuvio Perfect Collections** Pack.
+* The collections need to find the matching *AIOMetadata* catalogs inside Nuvio. If those catalogs are not installed first, there is nothing for the collections to connect to.
+* Also check that both *AIOMetadata* and the collections were added to the correct **Nuvio profile**.
+
+## **Should I choose Merge or Replace when adding the Nuvio Collections Pack?**
+* Choose **Replace profile collections** if you are starting fresh and want the cleanest result.
+* Choose **Merge by matching IDs** if you already have collections and do not want to lose them.
+* For most beginners following this guide from zero, **Replace profile collections** is probably the better option.
+
+## **What are Dynamic Backdrops, and do I need to update them manually?**
+* **Dynamic Backdrops** are an exclusive feature of this setup, developed by me for the Nuvio collections.
+* Instead of using random static collection images, the backdrops are generated based on the actual titles inside the related catalogs.
+* For example, a streaming provider, genre, decade, or theme collection can have a backdrop that better matches its current content.
+* If your Nuvio collections use the image URLs from this guide, you normally do not need to manually replace them every time. When the assets are refreshed in the repository, your setup can benefit from the updated images.
+
+## **Should I use Nuvio Plugins or AIOStreams HTTP Addons?**
+* Start with **AIOStreams** first.
+* If you use **Debrid** or **P2P**, you probably do not need Nuvio plugins.
+* If you use only **HTTP** streams and you are not getting enough results, then Nuvio plugins can help as an extra source layer.
+* Just keep in mind that plugins do not go through AIOStreams, so they will not have the same filtering, sorting, language handling, or stream formatting.
+
+## **Can I share my setup with friends or family?**
+* Yes, but it depends what exactly you want to share.
+* You can share or reuse the same **AIOStreams** and **AIOMetadata** configuration and install them as-is on other accounts, but keep in mind that those configurations may include your API keys or connected accounts. If you **ONLY** share the Manifest URL for others to install on their accounts, then your API keys are safe, since they don't have access to the internal addon configurations.
+* However also keep in mind that if you have personalized lists, such as **Trakt Recommendations** in *AIOMetadata*, then the other accounts will also get those lists shown.
+* If you use **TorBox**, sharing is more practical because it supports multiple parallel usage depending on your plan.
+* If you use **Real-Debrid**, be careful because it is much more restrictive with simultaneous usage.
+
+## **Do I still need Trakt in Nuvio if I already connected Trakt in Stremio?**
+* Yes, if you want Trakt features inside Nuvio too.
+* Stremio Trakt Scrobbling is connected to your **Stremio account**.
+* Nuvio has its own account and app settings, so you should also connect Trakt inside Nuvio if you want watch history, progress, and recommendations there.
+
+## **I use Nuvio. Do the Stremio-specific Q&A answers still apply to me?**
+* Some of them do, some of them don't.
+* Anything related to **AIOStreams**, **AIOMetadata**, Debrid, P2P, HTTP, subtitles, language filters, matching, sorting, and scraper behavior still applies, because those settings are inside the addons.
+* Anything related to **Stremio Web**, **Cinebye**, **Trakt Scrobbling in Stremio**, or **Sync to Stremio** is Stremio-specific.
+* For Nuvio, think in terms of **Manifest URLs**, **profiles**, **addons**, **collections**, **plugins**, and **app settings**.
