@@ -1,14 +1,18 @@
 (function () {
+  var completionConfig = window.GUIDE_COMPLETION_CONFIG || {};
   var docsData = document.getElementById("docs-data");
   var pages = [];
   var currentPath = "";
   var homeUrl = "/";
+  var statsUrl = "";
+  var guideCompletionState = null;
 
   if (docsData) {
     try {
       var parsed = JSON.parse(docsData.textContent || "{}");
       currentPath = parsed.currentPath || "";
       homeUrl = parsed.homeUrl || "/";
+      statsUrl = parsed.statsUrl || "";
       pages = Array.isArray(parsed.pages) ? parsed.pages : [];
     } catch (_) {}
   }
@@ -22,6 +26,37 @@
   function normalizePath(path) {
     return String(path || "").replace(/^\/+|\/+$/g, "");
   }
+
+  function normalizeRequiredPaths(paths) {
+    var seen = Object.create(null);
+    return (Array.isArray(paths) ? paths : []).map(function (path) {
+      return normalizePath(path);
+    }).filter(function (path) {
+      if (!path || seen[path]) return false;
+      seen[path] = true;
+      return true;
+    });
+  }
+
+  function formatNumber(value) {
+    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value);
+  }
+
+  function asNonNegativeInteger(value) {
+    var parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) return 0;
+    return Math.floor(parsed);
+  }
+
+  var guideCompletionRequiredPaths = normalizeRequiredPaths(completionConfig.requiredPaths);
+  var guideCompletionEventName = String(completionConfig.completionEventName || "guide_completed");
+  var guideCompletionBaseline = asNonNegativeInteger(completionConfig.baselineCompletions);
+  var guideCompletionStorageVersion = asNonNegativeInteger(completionConfig.storageVersion) || 1;
+  var guideCompletionStorageKey = [
+    "guide-completion",
+    guideCompletionEventName,
+    "v" + guideCompletionStorageVersion
+  ].join("::");
 
   function isGuidePath(path) {
     return /^guide\/.+\.md$/.test(path);
@@ -272,9 +307,119 @@
     });
   }
 
+  function canUseLocalStorage() {
+    try {
+      var probe = "__guide_completion_probe__";
+      window.localStorage.setItem(probe, "1");
+      window.localStorage.removeItem(probe);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function loadGuideCompletionState() {
+    if (!canUseLocalStorage()) {
+      return { seenPaths: Object.create(null), eventSent: false };
+    }
+
+    try {
+      var parsed = JSON.parse(window.localStorage.getItem(guideCompletionStorageKey) || "{}");
+      var state = {
+        seenPaths: Object.create(null),
+        eventSent: parsed.eventSent === true
+      };
+
+      Object.keys(parsed.seenPaths || {}).forEach(function (path) {
+        var normalized = normalizePath(path);
+        if (normalized) {
+          state.seenPaths[normalized] = true;
+        }
+      });
+
+      return state;
+    } catch (_) {
+      return { seenPaths: Object.create(null), eventSent: false };
+    }
+  }
+
+  function saveGuideCompletionState() {
+    if (!canUseLocalStorage() || !guideCompletionState) return;
+
+    try {
+      window.localStorage.setItem(guideCompletionStorageKey, JSON.stringify({
+        seenPaths: guideCompletionState.seenPaths,
+        eventSent: guideCompletionState.eventSent
+      }));
+    } catch (_) {}
+  }
+
+  function sendGuideCompletionEvent() {
+    if (typeof window.gtag !== "function") return;
+
+    window.gtag("event", guideCompletionEventName, {
+      required_page_count: guideCompletionRequiredPaths.length,
+      completion_storage_version: guideCompletionStorageVersion
+    });
+  }
+
+  function trackGuideCompletion() {
+    var normalizedCurrentPath = normalizePath(currentPath);
+    if (!guideCompletionRequiredPaths.length || !normalizedCurrentPath) return;
+
+    guideCompletionState = loadGuideCompletionState();
+    if (guideCompletionRequiredPaths.indexOf(normalizedCurrentPath) === -1) return;
+
+    guideCompletionState.seenPaths[normalizedCurrentPath] = true;
+
+    var isComplete = guideCompletionRequiredPaths.every(function (path) {
+      return guideCompletionState.seenPaths[path] === true;
+    });
+
+    if (isComplete && !guideCompletionState.eventSent) {
+      sendGuideCompletionEvent();
+      guideCompletionState.eventSent = true;
+    }
+
+    saveGuideCompletionState();
+  }
+
+  function applyGuideCompletionCount(total, updatedAt) {
+    var nodes = document.querySelectorAll("[data-guide-completion-count]");
+    if (!nodes.length) return;
+
+    var formatted = formatNumber(asNonNegativeInteger(total));
+    Array.prototype.forEach.call(nodes, function (node) {
+      node.textContent = formatted;
+      if (updatedAt) {
+        node.setAttribute("title", "Updated " + updatedAt);
+      }
+    });
+  }
+
+  function loadGuideCompletionCount() {
+    var nodes = document.querySelectorAll("[data-guide-completion-count]");
+    if (!nodes.length) return;
+
+    applyGuideCompletionCount(guideCompletionBaseline);
+
+    if (!statsUrl || typeof window.fetch !== "function") return;
+
+    window.fetch(statsUrl, { cache: "no-store" }).then(function (response) {
+      if (!response.ok) {
+        throw new Error("Failed to load guide stats");
+      }
+      return response.json();
+    }).then(function (stats) {
+      applyGuideCompletionCount(stats.totalCompletions, stats.updatedAt);
+    }).catch(function () {});
+  }
+
   renderSidebar();
   renderQuickNav();
   renderPager();
   setupThemeToggle();
   setupMobileNav();
+  trackGuideCompletion();
+  loadGuideCompletionCount();
 })();

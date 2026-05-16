@@ -35,6 +35,11 @@
     <div class="sidebar__inner">
       <nav id="sidebar-nav"></nav>
       <div class="sidebar-footer">
+        <section class="sidebar-stat-card" aria-label="Guide completion count">
+          <span class="sidebar-stat-card__eyebrow">Guide completed by</span>
+          <strong class="sidebar-stat-card__value"><span data-guide-completion-count>0</span></strong>
+          <span class="sidebar-stat-card__suffix">readers</span>
+        </section>
         <a href="https://ko-fi.com/luckynumb3rs" target="_blank" rel="noopener noreferrer" aria-label="Support on Ko-fi">
           <img src="{{ '/images/kofi.png' | relative_url }}" alt="Ko-fi tipping button">
         </a>
@@ -61,6 +66,7 @@
     {
       "homeUrl": {{ '/' | relative_url | jsonify }},
       "currentPath": {{ page.path | jsonify }},
+      "statsUrl": {{ '/assets/data/guide-stats.json' | relative_url | jsonify }},
       "pages": [
         {% assign all_pages = site.pages | sort: 'path' %}
         {% assign first_guide = true %}
@@ -78,6 +84,7 @@
       ]
     }
   </script>
+  <script src="{{ '/assets/js/guide-completion-config.js' | relative_url }}"></script>
   <script src="{{ '/assets/js/main.js' | relative_url }}"></script>
 </body>
 </html>
