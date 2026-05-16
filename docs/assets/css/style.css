@@ -179,6 +179,7 @@ body {
   margin: 0.4rem 0 0.2rem;
   color: var(--accent);
   font-size: clamp(1.7rem, 1.1rem + 1.6vw, 2.3rem);
+  font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 

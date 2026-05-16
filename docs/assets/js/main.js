@@ -384,13 +384,63 @@
     saveGuideCompletionState();
   }
 
-  function applyGuideCompletionCount(total, updatedAt) {
+  function animateGuideCompletionCount(node, target, duration) {
+    var prefersReducedMotion = window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    target = asNonNegativeInteger(target);
+    duration = asNonNegativeInteger(duration) || 1400;
+
+    if (prefersReducedMotion) {
+      node.textContent = formatNumber(target);
+      node.setAttribute("data-guide-count-current", String(target));
+      return;
+    }
+
+    var start = asNonNegativeInteger(node.getAttribute("data-guide-count-current"));
+    var startTime = window.performance && window.performance.now
+      ? window.performance.now()
+      : Date.now();
+
+    function frame(now) {
+      var currentTime = typeof now === "number" ? now : Date.now();
+      var elapsed = currentTime - startTime;
+      var progress = Math.min(elapsed / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var current = Math.floor(start + (target - start) * eased);
+
+      node.textContent = formatNumber(current);
+
+      if (progress < 1) {
+        window.requestAnimationFrame(frame);
+      } else {
+        node.textContent = formatNumber(target);
+        node.setAttribute("data-guide-count-current", String(target));
+      }
+    }
+
+    if (typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(frame);
+    } else {
+      node.textContent = formatNumber(target);
+      node.setAttribute("data-guide-count-current", String(target));
+    }
+  }
+
+  function applyGuideCompletionCount(total, updatedAt, animate) {
     var nodes = document.querySelectorAll("[data-guide-completion-count]");
     if (!nodes.length) return;
 
-    var formatted = formatNumber(asNonNegativeInteger(total));
+    var value = asNonNegativeInteger(total);
+
     Array.prototype.forEach.call(nodes, function (node) {
-      node.textContent = formatted;
+      if (animate) {
+        animateGuideCompletionCount(node, value, 1400);
+      } else {
+        node.textContent = formatNumber(value);
+        node.setAttribute("data-guide-count-current", String(value));
+      }
+
       if (updatedAt) {
         node.setAttribute("title", "Updated " + updatedAt);
       }
@@ -401,7 +451,7 @@
     var nodes = document.querySelectorAll("[data-guide-completion-count]");
     if (!nodes.length) return;
 
-    applyGuideCompletionCount(guideCompletionBaseline);
+    applyGuideCompletionCount(guideCompletionBaseline, null, true);
 
     if (!statsUrl || typeof window.fetch !== "function") return;
 
@@ -411,7 +461,7 @@
       }
       return response.json();
     }).then(function (stats) {
-      applyGuideCompletionCount(stats.totalCompletions, stats.updatedAt);
+      applyGuideCompletionCount(stats.totalCompletions, stats.updatedAt, true);
     }).catch(function () {});
   }
 
