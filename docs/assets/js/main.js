@@ -456,6 +456,21 @@
     });
   }
 
+  function isGuideCompletionCountVisible(node) {
+    if (!node || typeof node.getBoundingClientRect !== "function") return false;
+
+    var rect = node.getBoundingClientRect();
+
+    return (
+      rect.width > 0 &&
+      rect.height > 0 &&
+      rect.bottom >= 0 &&
+      rect.right >= 0 &&
+      rect.top <= (window.innerHeight || document.documentElement.clientHeight) &&
+      rect.left <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+  }
+
   function applyGuideCompletionCount(total, updatedAt, animate) {
     var nodes = document.querySelectorAll("[data-guide-completion-count]");
     if (!nodes.length) return;
@@ -463,6 +478,10 @@
     var value = asNonNegativeInteger(total);
 
     Array.prototype.forEach.call(nodes, function (node) {
+      var previousTarget = asNonNegativeInteger(
+        node.getAttribute("data-guide-count-target")
+      );
+
       node.setAttribute("data-guide-count-target", String(value));
 
       if (updatedAt) {
@@ -478,8 +497,15 @@
 
       if (guideCompletionCountObserver) {
         guideCompletionCountObserver.observe(node);
-      } else {
-        // Fallback for older browsers
+      }
+
+      var isVisible = isGuideCompletionCountVisible(node);
+      var targetChanged = previousTarget !== value;
+
+      if (isVisible && targetChanged) {
+        animateGuideCompletionCount(node, value, 1400);
+        node.setAttribute("data-guide-count-visible", "true");
+      } else if (!guideCompletionCountObserver) {
         animateGuideCompletionCount(node, value, 1400);
       }
     });
