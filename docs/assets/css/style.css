@@ -144,6 +144,11 @@ body {
   padding-top: 0.35rem;
 }
 
+.sidebar-footer a[href*="ko-fi.com"] {
+  display: flex;
+  justify-content: center;
+}
+
 .sidebar-stat-card {
   margin-bottom: 0.9rem;
   padding: 0.9rem 0.95rem 1rem;
