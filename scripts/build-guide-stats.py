@@ -25,7 +25,7 @@ def load_completion_config() -> dict:
         raise ValueError(f"Could not parse completion config from {CONFIG_PATH}")
 
     config = json.loads(match.group(1))
-    config["baselineCompletions"] = int(config.get("baselineCompletions", 0) or 0)
+    config["legacyCompletions"] = int(config.get("legacyCompletions", 0) or 0)
     config["completionEventName"] = str(config.get("completionEventName") or "guide_completed")
     config["requiredPaths"] = [
         str(path).strip().strip("/")
@@ -68,7 +68,7 @@ def fetch_analytics_totals(property_id: str, service_account_json: str, event_na
 
 
 def build_payload(config: dict) -> dict:
-    baseline = config["baselineCompletions"]
+    baseline = config["legacyCompletions"]
     event_name = config["completionEventName"]
     property_id = os.environ.get("GA4_PROPERTY_ID", "").strip()
     service_account_json = os.environ.get("GA4_SERVICE_ACCOUNT_KEY", "").strip()
@@ -92,7 +92,7 @@ def build_payload(config: dict) -> dict:
 
     payload = {
         "eventName": event_name,
-        "baselineCompletions": baseline,
+        "legacyCompletions": baseline,
         "analyticsUniqueUsers": analytics_unique_users,
         "analyticsEventCount": analytics_event_count,
         "totalCompletions": baseline + analytics_unique_users,

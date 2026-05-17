@@ -1,7 +1,7 @@
 // Edit the baseline and requiredPaths here when the guide flow changes.
 // Increase storageVersion only if you intentionally want to reset local progress tracking.
 window.GUIDE_COMPLETION_CONFIG = Object.freeze({
-  "baselineCompletions": 15000,
+  "legacyCompletions": 15000,
   "completionEventName": "guide_completed",
   "storageVersion": 1,
   "requiredPaths": [

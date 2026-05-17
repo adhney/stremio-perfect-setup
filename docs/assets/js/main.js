@@ -50,7 +50,7 @@
 
   var guideCompletionRequiredPaths = normalizeRequiredPaths(completionConfig.requiredPaths);
   var guideCompletionEventName = String(completionConfig.completionEventName || "guide_completed");
-  var guideCompletionBaseline = asNonNegativeInteger(completionConfig.baselineCompletions);
+  var guideCompletionBaseline = asNonNegativeInteger(completionConfig.legacyCompletions);
   var guideCompletionStorageVersion = asNonNegativeInteger(completionConfig.storageVersion) || 1;
   var guideCompletionStorageKey = [
     "guide-completion",
