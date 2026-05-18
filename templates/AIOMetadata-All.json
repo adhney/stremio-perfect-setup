@@ -2,8 +2,8 @@
   "version": "1.35.2",
   "metadata": {
     "apiKeysExcluded": true,
-    "totalCatalogs": 160,
-    "enabledCatalogs": 149
+    "totalCatalogs": 186,
+    "enabledCatalogs": 175
   },
   "config": {
     "language": "en-US",
@@ -6190,6 +6190,968 @@
               "runtimeRange": [
                 181,
                 400
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.brazilian",
+        "type": "movie",
+        "name": "🇧🇷 Brazilian",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_origin_country": "BR",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇧🇷 Brazilian",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originCountry": "BR",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.brazilian",
+        "type": "series",
+        "name": "🇧🇷 Brazilian",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_origin_country": "BR",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇧🇷 Brazilian",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originCountry": "BR",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.chinese",
+        "type": "movie",
+        "name": "🇨🇳 Chinese",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "zh|cn",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇨🇳 Chinese",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "zh|cn",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.chinese",
+        "type": "series",
+        "name": "🇨🇳 Chinese",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "zh|cn",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇨🇳 Chinese",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "zh|cn",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.german",
+        "type": "movie",
+        "name": "🇩🇪 German",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "de",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇩🇪 German",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "de",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.german",
+        "type": "series",
+        "name": "🇩🇪 German",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "de",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇩🇪 German",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "de",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.spanish",
+        "type": "movie",
+        "name": "🇪🇸 Spanish",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_origin_country": "ES",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇪🇸 Spanish",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originCountry": "ES",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.spanish",
+        "type": "series",
+        "name": "🇪🇸 Spanish",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_origin_country": "ES",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇪🇸 Spanish",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originCountry": "ES",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.french",
+        "type": "movie",
+        "name": "🇫🇷 French",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "fr",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇫🇷 French",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "fr",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.french",
+        "type": "series",
+        "name": "🇫🇷 French",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "fr",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇫🇷 French",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "fr",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.indian",
+        "type": "movie",
+        "name": "🇮🇳 Indian",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_origin_country": "IN",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇮🇳 Indian",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originCountry": "IN",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.indian",
+        "type": "series",
+        "name": "🇮🇳 Indian",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_origin_country": "IN",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇮🇳 Indian",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originCountry": "IN",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.italian",
+        "type": "movie",
+        "name": "🇮🇹 Italian",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "it",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇮🇹 Italian",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "it",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.italian",
+        "type": "series",
+        "name": "🇮🇹 Italian",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "it",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇮🇹 Italian",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "it",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.japanese",
+        "type": "movie",
+        "name": "🇯🇵 Japanese",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "ja",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇯🇵 Japanese",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "ja",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.japanese",
+        "type": "series",
+        "name": "🇯🇵 Japanese",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "ja",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇯🇵 Japanese",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "ja",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.korean",
+        "type": "movie",
+        "name": "🇰🇷 Korean",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "ko",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇰🇷 Korean",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "ko",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.korean",
+        "type": "series",
+        "name": "🇰🇷 Korean",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "ko",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇰🇷 Korean",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "ko",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.latin-american",
+        "type": "movie",
+        "name": "🇲🇽 Latin American",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_origin_country": "AR|MX|CO|CL|PE|UY|PY|EC|VE|BO|CR|DO|GT|HN|NI|PA|SV|CU|PR",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇲🇽 Latin American",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originCountry": "AR|MX|CO|CL|PE|UY|PY|EC|VE|BO|CR|DO|GT|HN|NI|PA|SV|CU|PR",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.latin-american",
+        "type": "series",
+        "name": "🇲🇽 Latin American",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_origin_country": "AR|MX|CO|CL|PE|UY|PY|EC|VE|BO|CR|DO|GT|HN|NI|PA|SV|CU|PR",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇲🇽 Latin American",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originCountry": "AR|MX|CO|CL|PE|UY|PY|EC|VE|BO|CR|DO|GT|HN|NI|PA|SV|CU|PR",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.russian",
+        "type": "movie",
+        "name": "🇷🇺 Russian",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "ru",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇷🇺 Russian",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "ru",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.russian",
+        "type": "series",
+        "name": "🇷🇺 Russian",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "ru",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇷🇺 Russian",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "ru",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.nordic",
+        "type": "movie",
+        "name": "🇸🇪 Nordic",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_origin_country": "SE|NO|DK|FI|IS",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇸🇪 Nordic",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originCountry": "SE|NO|DK|FI|IS",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.nordic",
+        "type": "series",
+        "name": "🇸🇪 Nordic",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_origin_country": "SE|NO|DK|FI|IS",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇸🇪 Nordic",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originCountry": "SE|NO|DK|FI|IS",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.movie.world.turkish",
+        "type": "movie",
+        "name": "🇹🇷 Turkish",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "movie",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "tr",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_release_type": "4|5|6"
+            },
+            "formState": {
+              "catalogName": "🇹🇷 Turkish",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "movie",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "tr",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "tmdb.discover.series.world.turkish",
+        "type": "series",
+        "name": "🇹🇷 Turkish",
+        "enabled": true,
+        "showInHome": false,
+        "source": "tmdb",
+        "metadata": {
+          "discover": {
+            "version": 2,
+            "source": "tmdb",
+            "mediaType": "tv",
+            "params": {
+              "sort_by": "popularity.desc",
+              "include_adult": false,
+              "with_original_language": "tr",
+              "vote_count.gte": 15,
+              "vote_average.gte": 5.5,
+              "with_status": "0|3|4|5"
+            },
+            "formState": {
+              "catalogName": "🇹🇷 Turkish",
+              "discoverSource": "tmdb",
+              "sortBy": "popularity.desc",
+              "catalogType": "series",
+              "includeAdult": false,
+              "releasedOnly": true,
+              "originalLanguage": "tr",
+              "voteCountMin": 15,
+              "voteAverageRange": [
+                5.5,
+                10
               ]
             }
           }
