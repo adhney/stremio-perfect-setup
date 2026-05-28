@@ -2819,7 +2819,7 @@
       "showInHome": false
     },
     {
-      "id": "mal.80sDecades",
+      "id": "mal.80sDecade",
       "name": "🍥 Best of 80s",
       "sort": "default",
       "type": "anime",
@@ -2829,7 +2829,7 @@
       "showInHome": false
     },
     {
-      "id": "mal.90sDecades",
+      "id": "mal.90sDecade",
       "name": "🍥 Best of 90s",
       "sort": "default",
       "type": "anime",
@@ -2839,7 +2839,7 @@
       "showInHome": false
     },
     {
-      "id": "mal.00sDecades",
+      "id": "mal.00sDecade",
       "name": "🍥 Best of 2000s",
       "sort": "default",
       "type": "anime",
@@ -2849,7 +2849,7 @@
       "showInHome": false
     },
     {
-      "id": "mal.10sDecades",
+      "id": "mal.10sDecade",
       "name": "🍥 Best of 2010s",
       "sort": "default",
       "type": "anime",
@@ -2859,7 +2859,7 @@
       "showInHome": false
     },
     {
-      "id": "mal.20sDecades",
+      "id": "mal.20sDecade",
       "name": "🍥 Best of 2020s",
       "sort": "default",
       "type": "anime",
