@@ -14,6 +14,14 @@
   </tr>
 </table>
 
+<div class="home-automator-card">
+  <div class="home-automator-card__text">
+    <strong>🤖 New! Automated Setup</strong>
+    <span>Skip the manual steps — let the wizard configure everything for you.</span>
+  </div>
+  <a class="home-automator-card__btn" href="/stremio-perfect-setup/automator/" target="_blank" rel="noopener">Launch Wizard →</a>
+</div>
+
 This is a full beginner-friendly guide for building a clean, reliable, and highly organized setup for both [**🎞️ Stremio**](https://www.stremio.com/) and [**🚀 Nuvio**](https://nuvioapp.space/), using all community best practices and including streams, metadata, catalogs, recommendations, collections, and the extra tweaks that make the whole experience feel much more polished.
 
 **Through this guide, you will be able to configure the following stream types (will be selected in step [📚 3. AIOStreams](3-AIOStreams.md)):**
