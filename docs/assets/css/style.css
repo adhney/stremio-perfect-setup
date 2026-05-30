@@ -549,3 +549,55 @@ pre {
     border-radius: 12px;
   }
 }
+
+/* ── Automator sidebar CTA ──────────────────────────────────────────── */
+.nav-link--automator {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1rem;
+  margin-bottom: 0.75rem;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.93rem;
+  text-decoration: none;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+  transition: opacity 0.15s, transform 0.1s;
+}
+.nav-link--automator:hover { opacity: 0.88; }
+.nav-link--automator:active { transform: scale(0.98); }
+
+/* ── Automator home card ─────────────────────────────────────────────── */
+.home-automator-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin: 1.5rem 0 1rem;
+  padding: 1.1rem 1.4rem;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+.home-automator-card__text strong { display: block; font-size: 1rem; margin-bottom: 0.15rem; }
+.home-automator-card__text span { font-size: 0.88rem; opacity: 0.9; }
+.home-automator-card__btn {
+  flex-shrink: 0;
+  display: inline-block;
+  padding: 0.45rem 1.1rem;
+  border: 2px solid rgba(255,255,255,0.65);
+  border-radius: 9px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.home-automator-card__btn:hover { background: rgba(255,255,255,0.15); }
+@media (max-width: 640px) {
+  .home-automator-card { flex-direction: column; align-items: flex-start; }
+}
