@@ -32,6 +32,14 @@ Interactive:
 ./hosting/main.sh
 ```
 
+Backup-only examples:
+
+```bash
+./hosting/main.sh --backup
+./hosting/main.sh --backup-quick
+./hosting/main.sh --backup-quick --docker-dir /srv/streaming --backup-dir /tmp/backups
+```
+
 Interactive mode guides you through missing values. Unattended mode requires
 the values that cannot be safely guessed, especially `--modules`, `--domain`,
 and `--letsencrypt-email`.
@@ -81,18 +89,24 @@ Resume-from-backup example:
 1. In interactive mode, offers to run `steps/prepare-ssh.sh` unless `--skip-ssh` is passed. Unattended mode runs it only when `--prepare-ssh` is passed.
 2. Installs Docker with `steps/install-docker.sh` and adds the current user to the `docker` group.
 3. Fetches the upstream template into `hosting/.work/docker`.
-4. Reads the root `compose.yaml`, discovers included modules, and forces required modules on.
-5. Prompts for optional modules unless `--modules` was supplied, or imports the selected module list from a backup ZIP when one is passed.
+4. Scans `apps/*/compose.yaml|yml`, discovers available modules, and forces required modules on.
+5. If a backup ZIP is passed, merges any `apps/<module>/` folders from the archive into the fetched template before selection. Then prompts for optional modules unless `--modules` was supplied. When `HOSTING_SELECTED_MODULES.txt` is present in the ZIP, its modules are pre-enabled in that prompt instead of being forced as the final selection. On interactive terminals, the prompt uses a `whiptail` checklist when available, with arrow-key navigation, `Space` toggles, and scrolling for long lists.
 6. Stages root `.env` and selected module config files into `hosting/.work/config`, or reconstructs that staging area from a backup ZIP when one is passed.
 7. Prompts for mandatory root `.env` values: timezone, `DOCKER_DIR`, `DOMAIN`, and `LETSENCRYPT_EMAIL`.
 8. Writes `PUID`, `PGID`, and generated Authelia secrets.
 9. Runs matching hooks from `modules/`.
-10. Prunes the fetched template to the selected modules, removes unselected app directories, and writes final `COMPOSE_PROFILES` from the profiles declared by the remaining modules.
+10. Rebuilds the root `include:` list from the selected modules, removes unselected app directories, and writes final `COMPOSE_PROFILES` from the profiles declared by the remaining modules.
 11. Pauses for manual review unless `--skip-review` is set.
 12. Restores staged files into the fetched template and syncs the prepared tree into `DOCKER_DIR`.
 13. Optionally creates a ZIP backup of staged config files and lets interactive users choose the output directory unless `--backup-dir` was supplied.
 14. Starts Docker Compose with `--profile required`, then starts the full configured stack.
 15. Prints the public IP and either Cloudflare-managed hostnames or DNS A records to create manually.
+
+`./hosting/main.sh --backup` skips the deployment flow entirely. It prompts for
+the Docker directory and backup output directory unless they were supplied with
+`--docker-dir` and `--backup-dir`, then archives the currently enabled modules
+from the deployed tree. `--backup-quick` does the same thing without prompts and
+uses `DEFAULT_DOCKER_DIR` plus `BACKUP_OUTPUT_DIR` unless overridden.
 
 ## Dry Run
 
@@ -161,9 +175,10 @@ template changes.
 
 ### 4. Module Discovery
 
-`lib/template.sh` reads root `compose.yaml` or `compose.yml`, extracts every
-`apps/<module>/compose.yaml` include, and scans module compose files for the
-required profile. Required modules cannot be disabled.
+`lib/template.sh` scans `apps/*/compose.yaml|yml` to discover modules and scans
+each module compose file for the required profile. Required modules cannot be
+disabled. The root `compose.yaml` or `compose.yml` is regenerated later from the
+selected modules, so newly added app folders become selectable automatically.
 
 ### 5. Config Staging
 
@@ -171,9 +186,11 @@ required profile. Required modules cannot be disabled.
 non-compose config files into `hosting/.work/config`. All automated edits happen
 there first. The upstream template remains untouched until deployment.
 
-If `main.sh` is called with a backup ZIP path, `steps/import-backup.sh`
-reconstructs that same staging layout from the ZIP instead of copying files out
-of the fetched template.
+If `main.sh` is called with a backup ZIP path, `steps/inspect-backup.sh` first
+merges any backup-provided `apps/<module>/` folders into the fetched template so
+they participate in module discovery. Then `steps/import-backup.sh`
+reconstructs the same staging layout from the selected modules instead of
+copying files out of the fetched template directly.
 
 ### 6. Root Environment
 
@@ -204,10 +221,11 @@ needed.
 ### 10. Backup
 
 `steps/backup-configs.sh` can create a ZIP backup of the staged configuration
-after deployment. Interactive runs can choose the output directory at backup
-time. The backup contains only relevant config files, not the full upstream
-template. The archive also includes `HOSTING_SELECTED_MODULES.txt` so a later
-run can restore the selected module set automatically.
+after deployment. `steps/backup-docker-config.sh` can create the same archive
+shape directly from an already deployed Docker tree. Interactive runs can
+choose the output directory at backup time. The backup contains the root `.env`,
+the root compose file, `HOSTING_SELECTED_MODULES.txt`, and each enabled
+module's full `apps/<module>/` directory, not the full upstream template.
 
 ### 11. Start
 
@@ -278,7 +296,7 @@ Staged files are temporary and should not be renamed during manual review.
 - `steps/stage-configs.sh`
   Creates the staging config folder and stage manifest.
 - `steps/import-backup.sh`
-  Restores the staging config folder and selected module list from a backup ZIP.
+  Restores the staging config folder for the finally selected modules from a backup ZIP.
 - `steps/deploy-template.sh`
   Restores staged files and syncs the prepared template into `DOCKER_DIR`.
 - `steps/backup-configs.sh`
@@ -293,14 +311,15 @@ Staged files are temporary and should not be renamed during manual review.
 ## Backup Format
 
 Backups are ZIP files named `streaming-YYYYmmddHHMMSS.zip` by default. The
-archive contains the contents of the staging folder, not the staging folder
-itself:
+archive contains the root `.env`, the root compose file, the selected-module
+list, and each selected module's full app directory:
 
 - `.env`
+- `compose.yaml` or `compose.yml`
 - `HOSTING_SELECTED_MODULES.txt`
-- `aiostreams/.env`
-- `honey/config.json`
-- `traefik/compose.yaml`
+- `apps/aiostreams/.env`
+- `apps/honey/config.json`
+- `apps/traefik/compose.yaml`
 
 ## Error Handling
 

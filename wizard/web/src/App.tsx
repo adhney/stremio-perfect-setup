@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useWizard } from './store/wizard';
 import { buildAioSections } from './lib/aioSections';
 import { Welcome } from './steps/Welcome';
@@ -9,24 +9,55 @@ import { AioSectionStep } from './steps/AioSectionStep';
 import { CatalogStep } from './steps/CatalogStep';
 import { InstallingStep } from './steps/InstallingStep';
 import { DoneStep } from './steps/DoneStep';
-import { TEMPLATE_URLS } from './lib/constants';
+import { TEMPLATE_URLS, type WizardConfig } from './lib/constants';
 import { WizardShell } from './components/WizardShell';
+import { ensureAnalytics, getStepMeta, trackWizardStepView } from './lib/analytics';
+
+// config.json is bundled at build time from the root wizard/config.json.
+import bundledConfig from '../../config.json';
 
 function StepRouter() {
-  const { step, templates, aioSections, setTemplates, setAioSections } = useWizard();
+  const { step, target, templates, aioSections, wizardConfig, setTemplates, setAioSections, setWizardConfig } = useWizard();
+  const lastTrackedKeyRef = useRef('');
 
   useEffect(() => {
+    // Apply config.json values into the store on first mount.
+    if (!wizardConfig) {
+      setWizardConfig(bundledConfig as WizardConfig);
+    }
+
     if (templates) return;
+
+    const cfg = bundledConfig as WizardConfig;
+    const tplUrls = {
+      aiostreams:         cfg.templates?.aiostreams          ?? TEMPLATE_URLS.aiostreams,
+      aiometadataStremio: cfg.templates?.aiometadata_stremio ?? TEMPLATE_URLS.aiometadataStremio,
+      collections:        cfg.templates?.collections          ?? TEMPLATE_URLS.collections,
+    };
+
     Promise.all([
-      fetch(TEMPLATE_URLS.aiostreams).then(r => r.json()),
-      fetch(TEMPLATE_URLS.aiometadataStremio).then(r => r.json()),
-      fetch(TEMPLATE_URLS.collections).then(r => r.json()),
+      fetch(tplUrls.aiostreams).then(r => r.json()),
+      fetch(tplUrls.aiometadataStremio).then(r => r.json()),
+      fetch(tplUrls.collections).then(r => r.json()),
     ]).then(([aiostreams, aiometadata, collections]) => {
       setTemplates({ aiostreams, aiometadata, collections });
       setAioSections(buildAioSections(aiostreams));
     }).catch(console.error);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const effectiveTarget = target ?? wizardConfig?.target ?? null;
+    const meta = getStepMeta(step, aioSections);
+    if (!meta) return;
+
+    const trackingKey = `${step}:${effectiveTarget ?? 'unknown'}:${meta.slug}`;
+    if (lastTrackedKeyRef.current === trackingKey) return;
+
+    lastTrackedKeyRef.current = trackingKey;
+    ensureAnalytics();
+    trackWizardStepView(step, effectiveTarget, aioSections);
+  }, [aioSections, step, target, wizardConfig?.target]);
 
   const n = aioSections.length;
   const CATALOGS_STEP = 7 + n;

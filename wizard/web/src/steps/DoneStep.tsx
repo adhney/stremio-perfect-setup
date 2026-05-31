@@ -1,11 +1,131 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Copy, Download, ExternalLink, Sparkles } from 'lucide-react';
 import { WizardShell } from '../components/WizardShell';
 import { useWizard } from '../store/wizard';
 import { getGuideUrl } from '../lib/site';
+import { trackWizardCompletion } from '../lib/analytics';
+
+function toConfigureUrl(manifestUrl: string) {
+  const [baseUrl, search = ''] = manifestUrl.split('?');
+  const configureBase = baseUrl.endsWith('/manifest.json')
+    ? `${baseUrl.slice(0, -'/manifest.json'.length)}/configure`
+    : `${baseUrl.replace(/\/$/, '')}/configure`;
+  return search ? `${configureBase}?${search}` : configureBase;
+}
+
+async function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'absolute';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+}
 
 export function DoneStep() {
-  const { installResult, target } = useWizard();
-  const { aiostreams, aiometadata, warnings, error } = installResult;
+  const {
+    credentials,
+    installResult,
+    nuvioAccount,
+    stremioAccount,
+    target,
+  } = useWizard();
+  const { aiostreams, aiometadata, addonPasswordSource, warnings, error } = installResult;
   const guideUrl = getGuideUrl();
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const isUsingAccountPassword = addonPasswordSource === 'account';
+  const accountMode = target === 'nuvio' ? nuvioAccount.mode : stremioAccount.mode;
+
+  const addons = useMemo(() => (
+    [
+      aiostreams
+        ? {
+            id: 'aiostreams',
+            name: 'AIOStreams',
+            uuid: aiostreams.uuid,
+            password: aiostreams.password,
+            manifestUrl: aiostreams.manifestUrl,
+            configureUrl: toConfigureUrl(aiostreams.manifestUrl),
+          }
+        : null,
+      aiometadata
+        ? {
+            id: 'aiometadata',
+            name: 'AIOMetadata',
+            uuid: aiometadata.uuid,
+            password: aiometadata.password,
+            manifestUrl: aiometadata.manifestUrl,
+            configureUrl: toConfigureUrl(aiometadata.manifestUrl),
+          }
+        : null,
+    ].filter(Boolean)
+  ), [aiostreams, aiometadata]) as Array<{
+    id: string;
+    name: string;
+    uuid: string;
+    password: string;
+    manifestUrl: string;
+    configureUrl: string;
+  }>;
+
+  async function handleManifestCopy(addonId: string, manifestUrl: string) {
+    try {
+      await copyText(manifestUrl);
+      setCopiedKey(addonId);
+      window.setTimeout(() => setCopiedKey(current => current === addonId ? null : current), 1800);
+    } catch {
+      setCopiedKey(null);
+    }
+  }
+
+  useEffect(() => {
+    if (error || !target) return;
+
+    const runId = addons.map(addon => addon.uuid).filter(Boolean).join(':') || `${target}-setup`;
+
+    trackWizardCompletion({
+      accountMode,
+      addonCount: addons.length,
+      debridServiceCount: credentials.debridServices.length,
+      runId,
+      target,
+    });
+  }, [accountMode, addons, credentials.debridServices.length, error, target]);
+
+  function handleDownload() {
+    const lines = [
+      'Stremio/Nuvio Perfect Setup - Add-on Details',
+      '',
+      ...addons.flatMap(addon => [
+        `${addon.name}`,
+        `UUID: ${addon.uuid}`,
+        isUsingAccountPassword
+          ? 'Password: same as your account password'
+          : `Password: ${addon.password}`,
+        `Manifest URL: ${addon.manifestUrl}`,
+        `Configure URL: ${addon.configureUrl}`,
+        '',
+      ]),
+    ];
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'perfect-setup-addon-details.txt';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <WizardShell showBack={false}>
@@ -15,7 +135,7 @@ export function DoneStep() {
           <p className="text-red-500 text-sm bg-red-50 rounded-lg p-3 mb-4">{error}</p>
           <p className="text-gray-500 text-sm">
             Check the error above and try again, or follow the{' '}
-            <a href={guideUrl} target="_blank" rel="noopener" className="text-accent underline">
+            <a href={guideUrl} target="_blank" rel="noopener noreferrer" className="guide-pill-link">
               manual guide
             </a>.
           </p>
@@ -26,36 +146,106 @@ export function DoneStep() {
           <h2 className="text-xl font-bold text-center mb-1">And now you're really done!</h2>
           <p className="text-gray-500 text-sm text-center mb-5">
             {target === 'stremio'
-              ? 'Open web.stremio.com and sign in. Your addons are installed in the right order.'
-              : 'Open the Nuvio app and sign in. Your addons and collections are ready.'}
+              ? 'Open Stremio and sign in. Your addons are installed and ready.'
+              : 'Open Nuvio and sign in. Your addons and collections are ready.'}
           </p>
 
-          {(aiostreams || aiometadata) && (
-            <div className="bg-gray-50 rounded-xl p-4 text-xs font-mono space-y-3 mb-4 border border-gray-200">
-              <p className="font-sans font-semibold text-gray-700 text-sm mb-1">📋 Your credentials (save these!)</p>
-              {aiostreams && (
-                <div>
-                  <p className="text-gray-500">AIOStreams UUID: <span className="text-gray-800 select-all">{aiostreams.uuid}</span></p>
-                  <p className="text-gray-500 break-all">
-                    Manifest:{' '}
-                    <a href={aiostreams.manifestUrl} target="_blank" rel="noopener" className="text-accent">
-                      {aiostreams.manifestUrl}
-                    </a>
-                  </p>
-                </div>
-              )}
-              {aiometadata && (
-                <div>
-                  <p className="text-gray-500">AIOMetadata UUID: <span className="text-gray-800 select-all">{aiometadata.uuid}</span></p>
-                  <p className="text-gray-500 break-all">
-                    Manifest:{' '}
-                    <a href={aiometadata.manifestUrl} target="_blank" rel="noopener" className="text-accent">
-                      {aiometadata.manifestUrl}
-                    </a>
-                  </p>
-                </div>
-              )}
-            </div>
+          {addons.length > 0 && (
+            <>
+              <div
+                style={{
+                  marginBottom: '0.85rem',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: isUsingAccountPassword ? 'var(--panel-2)' : '#fff8e7',
+                  color: 'var(--text)',
+                  fontSize: '0.85rem',
+                  lineHeight: 1.55,
+                }}
+              >
+                {isUsingAccountPassword
+                  ? `These add-ons use your ${target === 'stremio' ? 'Stremio' : 'Nuvio'} account password. You can change each add-on password later from its configure page if you want.`
+                  : `Your ${target === 'stremio' ? 'Stremio' : 'Nuvio'} account password was not accepted by the add-on config save, so a stronger shared add-on password was generated and used for all add-ons below.`}
+              </div>
+
+              <button
+                onClick={handleDownload}
+                style={{
+                  width: '100%',
+                  marginBottom: '0.85rem',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--panel)',
+                  color: 'var(--text)',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.45rem',
+                  cursor: 'pointer',
+                }}
+              >
+                <Download size={16} />
+                Download all add-on details
+              </button>
+
+              <div className="bg-gray-50 rounded-xl p-4 text-xs font-mono space-y-4 mb-4 border border-gray-200">
+                <p className="font-sans font-semibold text-gray-700 text-sm mb-1">📋 Your credentials (save these!)</p>
+                {addons.map((addon) => (
+                  <div key={addon.id}>
+                    <p className="font-sans font-semibold text-gray-700 text-sm mb-2">{addon.name}</p>
+                    <p className="text-gray-500">
+                      UUID: <span className="text-gray-800 select-all">{addon.uuid}</span>
+                    </p>
+                    {!isUsingAccountPassword && (
+                      <p className="text-gray-500">
+                        Password: <span className="text-gray-800 select-all">{addon.password}</span>
+                      </p>
+                    )}
+                    <p className="text-gray-500 break-all">
+                      Configure:{' '}
+                      <a href={addon.configureUrl} target="_blank" rel="noopener noreferrer" className="guide-pill-link">
+                        <span>Open configure page</span>
+                        <ExternalLink size={12} />
+                      </a>
+                    </p>
+                    <p className="text-gray-500 break-all" style={{ marginTop: '0.35rem' }}>
+                      URL:{' '}
+                      <span style={{ color: 'var(--text)', fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.76rem' }}>
+                        {addon.configureUrl}
+                      </span>
+                    </p>
+                    <p className="text-gray-500 break-all" style={{ marginTop: '0.35rem' }}>
+                      Manifest:{' '}
+                      <button
+                        onClick={() => handleManifestCopy(addon.id, addon.manifestUrl)}
+                        type="button"
+                        className="text-accent"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          font: 'inherit',
+                          textAlign: 'left',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '0.35rem',
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        <span>{addon.manifestUrl}</span>
+                        {copiedKey === addon.id ? 'Copied' : <Copy size={12} />}
+                      </button>
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {warnings.length > 0 && (
@@ -65,21 +255,11 @@ export function DoneStep() {
             </div>
           )}
 
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-700 mb-4">
-            🤖 <strong>Watchly</strong> (Netflix-like recommendations) coming soon!
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-700 mb-4 flex items-center gap-2">
+            <Sparkles size={16} />
+            <span><strong>Watchly</strong> (Netflix-like recommendations) coming soon!</span>
           </div>
 
-          <p className="text-xs text-gray-400 text-center">
-            Enjoying the Nuvio collections?{' '}
-            <a
-              href="https://nuvioapp.space/community-collections/nuvio-perfect-collections-incl-dynamic-backdrops-2"
-              target="_blank"
-              rel="noopener"
-              className="text-accent underline"
-            >
-              Support the creator
-            </a>{' '}by visiting the community page.
-          </p>
         </>
       )}
     </WizardShell>

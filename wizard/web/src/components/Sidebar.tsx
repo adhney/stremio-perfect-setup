@@ -4,11 +4,11 @@ import { useWizard } from '../store/wizard';
 import { getGuideStatsUrl } from '../lib/site';
 
 const KEY_STEP_LABELS: Record<number, string> = {
-  2: 'Debrid Service',
-  3: 'TMDB API Keys',
-  4: 'TVDB API Key',
-  5: 'Gemini AI Key',
-  6: 'RPDB Ratings',
+  2: '⚡ Debrid Service',
+  3: '🎬 TMDB API Keys',
+  4: '📺 TVDB API Key',
+  5: '✨ Gemini AI Key',
+  6: '⭐ RPDB Ratings',
 };
 
 interface Props {
@@ -17,19 +17,23 @@ interface Props {
 
 export function Sidebar({ onClose }: Props) {
   const { step, maxReachedStep, aioSections, setStep } = useWizard();
-  const countRef = useRef<HTMLSpanElement>(null);
+  const guideCountRef = useRef<HTMLSpanElement>(null);
+  const wizardCountRef = useRef<HTMLSpanElement>(null);
 
-  // Load and animate the guide completion count
+  // Load and animate the guide and wizard counts
   useEffect(() => {
     const BASELINE = 15000;
-    fetch(getGuideStatsUrl())
+    fetch(getGuideStatsUrl(), { cache: 'no-store' })
       .then(r => r.json())
-      .then((data: { total?: number }) => {
-        const total = (data?.total ?? 0) + BASELINE;
-        animateCount(countRef.current, total);
+      .then((data: { totalCompletions?: number; wizard?: { totalAccountsCreated?: number } }) => {
+        const guideTotal = data?.totalCompletions ?? BASELINE;
+        const wizardTotal = data?.wizard?.totalAccountsCreated ?? 0;
+        animateCount(guideCountRef.current, guideTotal);
+        animateCount(wizardCountRef.current, wizardTotal);
       })
       .catch(() => {
-        if (countRef.current) countRef.current.textContent = new Intl.NumberFormat().format(BASELINE);
+        if (guideCountRef.current) guideCountRef.current.textContent = new Intl.NumberFormat().format(BASELINE);
+        if (wizardCountRef.current) wizardCountRef.current.textContent = '0';
       });
   }, []);
 
@@ -163,10 +167,21 @@ export function Sidebar({ onClose }: Props) {
             <span>Buy me a coffee</span>
           </a>
         </div>
-        <section className="sidebar-stat-card" aria-label="Guide completion count">
-          <span className="sidebar-stat-card__eyebrow">Guide completed by</span>
-          <strong className="sidebar-stat-card__value"><span ref={countRef}>0</span></strong>
-          <span className="sidebar-stat-card__suffix">readers</span>
+        <section className="sidebar-stat-card" aria-label="Guide and wizard activity">
+          <span className="sidebar-stat-card__eyebrow">Setup activity</span>
+          <div className="sidebar-stat-grid">
+            <div className="sidebar-stat-item">
+              <span className="sidebar-stat-item__label">Guide completed</span>
+              <strong className="sidebar-stat-item__value"><span ref={guideCountRef}>0</span></strong>
+              <span className="sidebar-stat-item__suffix">readers</span>
+            </div>
+            <div className="sidebar-stat-divider" aria-hidden="true" />
+            <div className="sidebar-stat-item">
+              <span className="sidebar-stat-item__label">Wizard created</span>
+              <strong className="sidebar-stat-item__value"><span ref={wizardCountRef}>0</span></strong>
+              <span className="sidebar-stat-item__suffix">accounts</span>
+            </div>
+          </div>
         </section>
       </div>
     </div>

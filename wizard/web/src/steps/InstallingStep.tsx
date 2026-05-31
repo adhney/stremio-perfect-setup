@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { RotateCcw } from 'lucide-react';
 import { WizardShell } from '../components/WizardShell';
 import { useWizard } from '../store/wizard';
 import { INSTANCES, TEMPLATE_URLS } from '../lib/constants';
@@ -7,39 +8,57 @@ import { INSTANCES, TEMPLATE_URLS } from '../lib/constants';
 // @ts-ignore
 import { runStremioSetup, runNuvioSetup } from '@core/orchestrator.js';
 
+interface LogEntry {
+  id: number;
+  type: 'info' | 'success' | 'warning' | 'error';
+  message: string;
+}
+
+const STEP_LABELS: Record<string, string> = {
+  account:     'Account ready',
+  profile:     'Profile loaded',
+  aiostreams:  'AIOStreams configuration saved',
+  aiometadata: 'AIOMetadata configuration saved',
+  addons:      'Add-ons installed',
+  collections: 'Collections installed',
+  install:     'Add-ons applied to your account',
+};
+
 export function InstallingStep() {
   const wizard = useWizard();
-  const [log, setLog] = useState<string[]>([]);
+  const [log, setLog] = useState<LogEntry[]>([]);
   const [done, setDone] = useState(false);
+  const [fatal, setFatal] = useState<string | null>(null);
   const ran = useRef(false);
+  let nextId = useRef(0);
+
+  const push = (message: string, type: LogEntry['type'] = 'info') =>
+    setLog(l => [...l, { id: nextId.current++, type, message }]);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
     run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const STEP_MESSAGES: Record<string, string> = {
-    account: 'Account authenticated.',
-    profile: 'Nuvio profile loaded.',
-    aiostreams: 'AIOStreams configuration created.',
-    aiometadata: 'AIOMetadata configuration created.',
-    addons: 'Addons installed on Nuvio.',
-    collections: 'Collections installed on Nuvio.',
-    install: 'Addons installed on your account.',
-  };
-
   async function run() {
-    const push = (msg: string) => setLog(l => [...l, msg]);
     try {
       const {
         target, stremioAccount, nuvioAccount, credentials, aioStreamsInputs,
-        catalogSelection, templates,
+        catalogSelection, templates, wizardConfig,
       } = wizard;
 
-      if (!templates) throw new Error('Templates not loaded. Please go back and try again.');
+      if (!templates) {
+        throw new Error('Template data has not finished loading yet. Please go back to the previous step and wait a moment before trying again.');
+      }
 
-      push('Building AIOStreams configuration…');
+      // Resolve effective instances from config.json (or defaults)
+      const effectiveInstances = wizardConfig?.instances ?? INSTANCES;
+      const proxyBase = wizardConfig?.proxyBase ?? '';
+
+      push('Building your personalised AIOStreams configuration…');
+
       const aiostreamsParams = {
         template: templates.aiostreams,
         inputs: aioStreamsInputs,
@@ -55,89 +74,257 @@ export function InstallingStep() {
         ),
       };
 
-      // Fetch the correct AIOMetadata base template for the target
-      push('Fetching AIOMetadata template…');
-      const metaUrl = target === 'nuvio' ? TEMPLATE_URLS.aiometadataNuvio : TEMPLATE_URLS.aiometadataStremio;
-      const aiometadataBaseTemplate = await fetch(metaUrl).then(r => r.json());
+      // Fetch the correct AIOMetadata base template for this target (Stremio vs Nuvio)
+      push('Loading the AIOMetadata template for your setup…');
+      const metaTemplateKey = target === 'nuvio' ? 'aiometadata_nuvio' : 'aiometadata_stremio';
+      const metaUrl = wizardConfig?.templates?.[metaTemplateKey]
+        ?? (target === 'nuvio' ? TEMPLATE_URLS.aiometadataNuvio : TEMPLATE_URLS.aiometadataStremio);
+
+      let aiometadataBaseTemplate: Record<string, unknown>;
+      try {
+        aiometadataBaseTemplate = await fetch(metaUrl).then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        });
+      } catch (e: unknown) {
+        throw new Error(
+          `Could not load the AIOMetadata template from GitHub. ` +
+          `Please check your internet connection and try again. ` +
+          `(${e instanceof Error ? e.message : String(e)})`
+        );
+      }
 
       const aiometadataParams = {
         baseTemplate: aiometadataBaseTemplate,
         enabledCategories: catalogSelection.enabledCategories,
         enabledDiscoverFolderIds: catalogSelection.enabledDiscoverFolderIds,
         apiKeys: {
-          tmdb: credentials.tmdbApiKey,
+          tmdb:       credentials.tmdbApiKey,
           tmdbAccess: credentials.tmdbAccessToken,
-          tvdb: credentials.tvdbApiKey,
-          gemini: credentials.geminiApiKey,
-          rpdb: credentials.rpdbApiKey,
+          tvdb:       credentials.tvdbApiKey,
+          gemini:     credentials.geminiApiKey,
+          rpdb:       credentials.rpdbApiKey,
         },
-        language: aiometadataBaseTemplate.config?.language ?? 'en-US',
+        language: (aiometadataBaseTemplate as { config?: { language?: string } }).config?.language ?? 'en-US',
       };
 
-      const onStep = (name: string) => push(`✓ ${STEP_MESSAGES[name] ?? name}`);
+      const onStep = (name: string, data: unknown) => {
+        const label = STEP_LABELS[name];
+        if (!label) return;
 
-      let result: { addons: { aiostreams?: { manifestUrl?: string; uuid?: string; password?: string }; aiometadata?: { manifestUrl?: string; uuid?: string } }; warnings: string[] };
+        // Produce friendly supplementary details for key steps
+        let detail = '';
+        if (name === 'account') {
+          const d = data as { created?: boolean; email?: string };
+          detail = d?.created
+            ? `New account created for ${d.email ?? ''}.`
+            : `Signed in as ${d.email ?? ''}.`;
+        } else if (name === 'aiostreams') {
+          const d = data as { instance?: string; fallbacks?: string[] };
+          detail = `Saved on ${d?.instance ?? ''}`;
+          if (d?.fallbacks?.length) detail += ` (+ ${d.fallbacks.length} backup instance${d.fallbacks.length > 1 ? 's' : ''})`;
+          detail += '.';
+        } else if (name === 'aiometadata') {
+          const d = data as { instance?: string };
+          detail = `Saved on ${d?.instance ?? ''}.`;
+        } else if (name === 'install') {
+          const d = data as { count?: number };
+          detail = `${d?.count ?? 0} add-on${(d?.count ?? 0) !== 1 ? 's' : ''} in your collection.`;
+        } else if (name === 'addons') {
+          const d = data as { count?: number };
+          detail = `${d?.count ?? 0} add-on${(d?.count ?? 0) !== 1 ? 's' : ''} pushed to your Nuvio account.`;
+        } else if (name === 'collections') {
+          const d = data as { groupCount?: number };
+          detail = `${d?.groupCount ?? 0} collection group${(d?.groupCount ?? 0) !== 1 ? 's' : ''} configured.`;
+        }
 
-      if (target === 'stremio') {
-        result = await runStremioSetup({
-          instances: INSTANCES,
-          account: stremioAccount,
-          aiostreamsParams,
-          aiometadataParams,
-          onStep,
-        });
-      } else {
-        result = await runNuvioSetup({
-          instances: INSTANCES,
-          account: nuvioAccount,
-          aiostreamsParams,
-          aiometadataParams,
-          collectionsJson: templates.collections as object[],
-          onStep,
-        });
+        push(`${label}${detail ? ': ' + detail : ''}`, 'success');
+      };
+
+      type SetupResult = {
+        addons: {
+          aiostreams?: { manifestUrl?: string; uuid?: string; password?: string };
+          aiometadata?: { manifestUrl?: string; uuid?: string; password?: string };
+        };
+        addonPasswordSource?: 'account' | 'generated';
+        warnings: string[];
+      };
+
+      let result: SetupResult;
+
+      const account = target === 'stremio' ? stremioAccount : nuvioAccount;
+      const setupFn = target === 'stremio' ? runStremioSetup : runNuvioSetup;
+      const extraParams = target === 'nuvio'
+        ? { collectionsJson: templates.collections as object[] }
+        : {};
+
+      push(`Connecting to your ${target === 'stremio' ? 'Stremio' : 'Nuvio'} account…`);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      result = await (setupFn as any)({
+        instances: effectiveInstances,
+        account,
+        aiostreamsParams,
+        aiometadataParams,
+        proxyBase,
+        onStep,
+        ...extraParams,
+      });
+
+      // Surface non-fatal warnings
+      if (result.warnings?.length) {
+        for (const w of result.warnings) {
+          push(`Note: ${w}`, 'warning');
+        }
       }
 
       const aios = result.addons.aiostreams;
       const meta = result.addons.aiometadata;
       wizard.setInstallResult({
-        aiostreams: aios ? { manifestUrl: aios.manifestUrl ?? '', uuid: aios.uuid ?? '', password: aios.password ?? '' } : null,
-        aiometadata: meta ? { manifestUrl: meta.manifestUrl ?? '', uuid: meta.uuid ?? '' } : null,
+        aiostreams:  aios ? { manifestUrl: aios.manifestUrl ?? '', uuid: aios.uuid ?? '', password: aios.password ?? '' } : null,
+        aiometadata: meta ? { manifestUrl: meta.manifestUrl ?? '', uuid: meta.uuid ?? '', password: meta.password ?? '' } : null,
+        addonPasswordSource: result.addonPasswordSource ?? 'account',
         warnings: result.warnings,
         error: null,
       });
+
+      push('Everything is set up and ready to go!', 'success');
       setDone(true);
-      wizard.nextStep();
+      setTimeout(() => wizard.nextStep(), 1200);
+
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       wizard.setInstallResult({ error: msg });
-      push(`❌ ${msg}`);
+      setFatal(msg);
+      push('Setup could not be completed. See the error below.', 'error');
     }
   }
 
+  const iconFor = (type: LogEntry['type']) => {
+    if (type === 'success')  return '✓';
+    if (type === 'warning')  return '⚠';
+    if (type === 'error')    return '✕';
+    return '·';
+  };
+  const colorFor = (type: LogEntry['type']) => {
+    if (type === 'success')  return 'var(--accent)';
+    if (type === 'warning')  return '#d97706';
+    if (type === 'error')    return '#dc2626';
+    return 'var(--muted)';
+  };
+
   return (
     <WizardShell showBack={false}>
-      <h2 className="text-xl font-bold mb-4">Setting everything up…</h2>
-      <div className="space-y-2 min-h-[80px]">
-        {log.map((msg, i) => (
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.35rem' }}>
+          {done ? 'All done! 🎉' : fatal ? 'Setup failed' : 'Setting everything up…'}
+        </h2>
+        <p style={{ fontSize: '0.85rem', color: 'var(--muted)', lineHeight: 1.55 }}>
+          {done
+            ? 'Your streaming setup has been configured and installed. Tap Continue below to see your results.'
+            : fatal
+            ? 'An error occurred during setup. The details are shown below.'
+            : 'Please keep this window open, the wizard is creating your configurations and installing them.'}
+        </p>
+      </div>
+
+      <div
+        style={{
+          background: 'var(--panel)',
+          border: '1px solid var(--border)',
+          borderRadius: '10px',
+          padding: '1rem',
+          minHeight: '160px',
+          maxHeight: '320px',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem',
+        }}
+      >
+        {log.map((entry) => (
           <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-sm text-gray-700"
+            key={entry.id}
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}
           >
-            {msg}
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: colorFor(entry.type), flexShrink: 0, marginTop: '1px' }}>
+              {iconFor(entry.type)}
+            </span>
+            <span style={{ fontSize: '0.85rem', color: entry.type === 'error' ? colorFor('error') : 'var(--text)', lineHeight: 1.55 }}>
+              {entry.message}
+            </span>
           </motion.div>
         ))}
-        {!done && (
+
+        {!done && !fatal && (
           <motion.div
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ repeat: Infinity, duration: 1.2 }}
-            className="text-sm text-accent font-medium"
+            animate={{ opacity: [0.35, 1, 0.35] }}
+            transition={{ repeat: Infinity, duration: 1.4 }}
+            style={{ fontSize: '0.82rem', color: 'var(--accent)', fontWeight: 500, marginTop: '0.25rem' }}
           >
             Working…
           </motion.div>
         )}
       </div>
+
+      {fatal && (
+        <div
+          style={{
+            marginTop: '1rem',
+            padding: '0.9rem 1rem',
+            background: 'rgba(220,38,38,0.07)',
+            border: '1px solid rgba(220,38,38,0.25)',
+            borderRadius: '8px',
+          }}
+        >
+          <p style={{ fontSize: '0.82rem', fontWeight: 600, color: '#dc2626', marginBottom: '0.4rem' }}>Error details</p>
+          <pre style={{
+            fontSize: '0.78rem',
+            color: '#b91c1c',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            lineHeight: 1.6,
+            margin: 0,
+            fontFamily: 'inherit',
+          }}>
+            {fatal}
+          </pre>
+          <button
+            onClick={() => {
+              ran.current = false;
+              setLog([]);
+              setFatal(null);
+              setDone(false);
+              wizard.setInstallResult({ error: null });
+              ran.current = false;
+              // Small delay to allow state to settle before re-running
+              setTimeout(() => {
+                ran.current = false;
+                run();
+              }, 100);
+            }}
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.4rem 0.9rem',
+              borderRadius: '6px',
+              border: '1px solid rgba(220,38,38,0.4)',
+              background: 'rgba(220,38,38,0.1)',
+              color: '#b91c1c',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+            }}
+          >
+            <RotateCcw size={14} />
+            Try again
+          </button>
+        </div>
+      )}
     </WizardShell>
   );
 }

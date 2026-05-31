@@ -3,10 +3,10 @@
 # Builds a ZIP backup from the staged configuration files.
 #
 # Purpose:
-#   After deployment, this step reshapes the staging directory into the same
-#   logical module layout users would expect in the template and archives its
-#   contents. The archive stores config files only, not the full upstream
-#   template.
+#   After deployment, this step writes a self-contained backup archive that
+#   preserves the staged root .env plus each selected module's full app
+#   directory under apps/<module>/. That keeps custom modules and compose files
+#   round-trippable even when they do not exist in the upstream template.
 #
 # Usage:
 #   ./hosting/steps/backup-configs.sh \
@@ -15,23 +15,23 @@
 #
 # Backup layout:
 #   .env
-#   aiostreams/.env
-#   honey/config.json
-#   traefik/compose.yaml
-#
-# Note:
-#   This script moves files inside the staging directory while normalizing them.
-#   Run it only after deploy-template.sh has already restored staged files.
+#   HOSTING_SELECTED_MODULES.txt
+#   apps/aiostreams/.env
+#   apps/honey/config.json
+#   apps/traefik/compose.yaml
 
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "${SCRIPT_DIR}/../lib/common.sh"
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/../lib/template.sh"
 
 load_defaults
 
 CONFIG_DIR_ARG=""
+TEMPLATE_DIR_ARG=""
 MANIFEST_FILE=""
 OUTPUT_DIR="${BACKUP_OUTPUT_DIR:-$HOME}"
 BASENAME_VALUE="${BACKUP_BASENAME:-streaming}"
@@ -41,6 +41,10 @@ while (( $# > 0 )); do
   case "$1" in
     --config-dir)
       CONFIG_DIR_ARG="$2"
+      shift 2
+      ;;
+    --template-dir)
+      TEMPLATE_DIR_ARG="$2"
       shift 2
       ;;
     --manifest-file)
@@ -66,6 +70,8 @@ while (( $# > 0 )); do
 done
 
 [[ -n "${CONFIG_DIR_ARG}" ]] || die "--config-dir is required"
+[[ -n "${TEMPLATE_DIR_ARG}" ]] || die "--template-dir is required"
+[[ -d "${TEMPLATE_DIR_ARG}" ]] || die "Template directory does not exist: ${TEMPLATE_DIR_ARG}"
 [[ -n "${MANIFEST_FILE}" ]] || die "--manifest-file is required"
 [[ -d "${CONFIG_DIR_ARG}" ]] || die "Config directory does not exist: ${CONFIG_DIR_ARG}"
 [[ -f "${MANIFEST_FILE}" ]] || die "Manifest file does not exist: ${MANIFEST_FILE}"
@@ -74,26 +80,25 @@ done
 
 ensure_directory "${OUTPUT_DIR}"
 
-while IFS=$'\t' read -r module source_rel stage_rel item_type; do
-  local_stage="${CONFIG_DIR_ARG}/${stage_rel}"
-  [[ "${module}" == "root" ]] && continue
-  [[ -e "${local_stage}" ]] || continue
+export_dir="$(mktemp -d "$(dirname "${CONFIG_DIR_ARG}")/backup-export.XXXXXX")"
+trap 'rm -rf "${export_dir}"' EXIT
 
-  target_dir="${CONFIG_DIR_ARG}/${module}"
-  target_path="${target_dir}/$(basename "${source_rel}")"
-  ensure_directory "${target_dir}"
-  rm -rf "${target_path}"
-  mv "${local_stage}" "${target_path}"
-done < "${MANIFEST_FILE}"
+cp -a "${CONFIG_DIR_ARG}/.env" "${export_dir}/.env"
+root_compose_path="$(template_root_compose_path "${TEMPLATE_DIR_ARG}")"
+cp -a "${root_compose_path}" "${export_dir}/$(basename "${root_compose_path}")"
+cp -a "${MODULES_FILE}" "${export_dir}/HOSTING_SELECTED_MODULES.txt"
+ensure_directory "${export_dir}/apps"
 
-rm -f "${MANIFEST_FILE}"
-
-cp -a "${MODULES_FILE}" "${CONFIG_DIR_ARG}/HOSTING_SELECTED_MODULES.txt"
+while IFS= read -r module; do
+  [[ -n "${module}" ]] || continue
+  [[ -d "${TEMPLATE_DIR_ARG}/apps/${module}" ]] || die "Selected module directory missing from template: ${TEMPLATE_DIR_ARG}/apps/${module}"
+  cp -a "${TEMPLATE_DIR_ARG}/apps/${module}" "${export_dir}/apps/${module}"
+done < <(read_lines_file "${MODULES_FILE}")
 
 timestamp="$(date +%Y%m%d%H%M%S)"
 archive_path="${OUTPUT_DIR}/${BASENAME_VALUE}-${timestamp}.zip"
 
-python3 - "${CONFIG_DIR_ARG}" "${archive_path}" <<'PY'
+python3 - "${export_dir}" "${archive_path}" <<'PY'
 import os
 import sys
 import zipfile

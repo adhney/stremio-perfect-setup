@@ -110,7 +110,7 @@ export function CatalogStep() {
 
       <p className="text-xs text-gray-400 mt-3 text-right">{enabledCount} catalogs enabled</p>
 
-      <NextButton onClick={nextStep} disabled={overLimit} label="Save & Continue →" />
+      <NextButton onClick={nextStep} disabled={overLimit} label="Finish Setup" />
     </WizardShell>
   );
 }

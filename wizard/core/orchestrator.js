@@ -17,17 +17,103 @@ function randomPassword(len = 20) {
   return Array.from(arr, (n) => chars[n % chars.length]).join('');
 }
 
+function toError(err) {
+  return err instanceof Error ? err : new Error(String(err));
+}
+
+function shouldRetryWithGeneratedPassword(err, attemptedPassword) {
+  const message = String(err?.message || err).toLowerCase();
+
+  if (message.includes('[cors')) return false;
+
+  const explicitPasswordSignal = [
+    'password',
+    'too short',
+    'shorter than',
+    'minimum',
+    'at least',
+    'min length',
+    'length',
+    'weak',
+    'invalid',
+    'required',
+  ].some(signal => message.includes(signal));
+
+  if (explicitPasswordSignal) return true;
+
+  // Some addon APIs return only a generic 400/validation message when the password
+  // is unacceptable. If the account password is relatively short, retry once with
+  // a strong generated password before surfacing the failure.
+  return attemptedPassword.length < 10
+    && /http 400|validation|bad request|rejected/.test(message);
+}
+
+async function createAioStreamsSummary(instances, aiostreamsParams, password, proxyBase, warnings) {
+  const aioResult = await createWithFallbacks(instances.aiostreams, {
+    ...aiostreamsParams,
+    password,
+    proxyBase,
+  });
+
+  for (const r of aioResult.all.filter((result) => !result.ok)) {
+    warnings.push(`AIOStreams fallback ${r.instanceUrl} tried but failed: ${r.error}`);
+  }
+
+  return {
+    instance: aioResult.primary.instanceUrl,
+    uuid: aioResult.primary.uuid,
+    password,
+    manifestUrl: aioResult.primary.manifestUrl,
+    fallbacks: aioResult.all.filter((result) => result.ok && result !== aioResult.primary).map((result) => result.manifestUrl),
+  };
+}
+
+async function createAiometadataSummary(instances, aiometadataParams, password, target, warnings) {
+  const { config: aioMetaConfig } = buildAioMetadataConfig(aiometadataParams.baseTemplate, {
+    ...aiometadataParams,
+    target,
+  });
+
+  let aioMetaResult = null;
+  for (const instanceUrl of instances.aiometadata) {
+    try {
+      const adapter = createAiometadataAdapter(instanceUrl);
+      aioMetaResult = await adapter.createConfig(aioMetaConfig, password);
+      aioMetaResult = { ...aioMetaResult, instanceUrl };
+      break;
+    } catch (err) {
+      warnings.push(`AIOMetadata ${instanceUrl} tried but failed: ${toError(err).message}`);
+    }
+  }
+
+  if (!aioMetaResult) throw new Error('All AIOMetadata instances failed, see warnings');
+
+  return {
+    instance: aioMetaResult.instanceUrl,
+    uuid: aioMetaResult.userUUID,
+    password,
+    manifestUrl: aioMetaResult.manifestUrl || aioMetaResult.installUrl,
+  };
+}
+
+async function createAddonBundle({ instances, aiostreamsParams, aiometadataParams, password, target, proxyBase }) {
+  const warnings = [];
+  const aiostreams = await createAioStreamsSummary(instances, aiostreamsParams, password, proxyBase, warnings);
+  const aiometadata = await createAiometadataSummary(instances, aiometadataParams, password, target, warnings);
+  return { addons: { aiostreams, aiometadata }, warnings };
+}
+
 /**
  * Full Stremio setup flow.
  * @param {object} p
- * @param {object} p.instances         { aiostreams: {primary, fallbacks[]}, aiometadata: {primary, fallbacks[]} }
+ * @param {object} p.instances         { aiostreams: string[], aiometadata: string[] } – ordered list; first is primary, rest are fallbacks
  * @param {object} p.account           { mode: 'create'|'signin', email, password }
  * @param {object} p.aiostreamsParams  { template, inputs, services, credentials }
  * @param {object} p.aiometadataParams { baseTemplate, enabledCategories, enabledDiscoverFolderIds, apiKeys, language }
  * @param {function} p.onStep          (name, data) => void; progress callback
  */
-export async function runStremioSetup({ instances, account, aiostreamsParams, aiometadataParams, onStep }) {
-  const summary = { account: null, addons: {}, warnings: [] };
+export async function runStremioSetup({ instances, account, aiostreamsParams, aiometadataParams, proxyBase, onStep }) {
+  const summary = { account: null, addons: {}, warnings: [], addonPasswordSource: 'account' };
   const step = (name, data) => { onStep?.(name, data); return data; };
 
   // 1) Account
@@ -45,55 +131,46 @@ export async function runStremioSetup({ instances, account, aiostreamsParams, ai
   }
   step('account', summary.account);
 
-  // 2) AIOStreams config (with fallbacks)
-  const aioPassword = randomPassword();
-  const aioInstances = [instances.aiostreams.primary, ...(instances.aiostreams.fallbacks || [])];
-  const aioResult = await createWithFallbacks(aioInstances, { ...aiostreamsParams, password: aioPassword });
-  summary.addons.aiostreams = {
-    instance: aioResult.primary.instanceUrl,
-    uuid: aioResult.primary.uuid,
-    password: aioPassword,
-    manifestUrl: aioResult.primary.manifestUrl,
-    fallbacks: aioResult.all.filter((r) => r.ok && r !== aioResult.primary).map((r) => r.manifestUrl),
-  };
-  for (const r of aioResult.all.filter((r) => !r.ok)) {
-    summary.warnings.push(`AIOStreams fallback ${r.instanceUrl} failed: ${r.error}`);
-  }
-  step('aiostreams', summary.addons.aiostreams);
+  // 2-3) Create all addon configs with a shared password.
+  // Prefer the user's account password so they only need to remember one password.
+  // If addon creation rejects it, retry the whole addon bundle once with a strong
+  // generated password so both addons stay aligned on the same credential.
+  let addonBundle;
+  try {
+    addonBundle = await createAddonBundle({
+      instances,
+      aiostreamsParams,
+      aiometadataParams,
+      password: account.password,
+      target: 'stremio',
+      proxyBase,
+    });
+  } catch (err) {
+    const firstError = toError(err);
+    if (!shouldRetryWithGeneratedPassword(firstError, account.password)) throw firstError;
 
-  // 3) AIOMetadata config
-  const { config: aioMetaConfig } = buildAioMetadataConfig(aiometadataParams.baseTemplate, {
-    ...aiometadataParams,
-    target: 'stremio',
-  });
-  const aioMetaPassword = randomPassword();
-  const aioMetaInstances = [instances.aiometadata.primary, ...(instances.aiometadata.fallbacks || [])];
-  let aioMetaResult = null;
-  for (const instanceUrl of aioMetaInstances) {
-    try {
-      const adapter = createAiometadataAdapter(instanceUrl);
-      // createConfig(config, password): password is a top-level API field (not nested in config)
-      aioMetaResult = await adapter.createConfig(aioMetaConfig, aioMetaPassword);
-      aioMetaResult = { ...aioMetaResult, instanceUrl };
-      break;
-    } catch (err) {
-      summary.warnings.push(`AIOMetadata ${instanceUrl} failed: ${err.message}`);
-    }
+    summary.addonPasswordSource = 'generated';
+    addonBundle = await createAddonBundle({
+      instances,
+      aiostreamsParams,
+      aiometadataParams,
+      password: randomPassword(),
+      target: 'stremio',
+      proxyBase,
+    });
   }
-  if (!aioMetaResult) throw new Error('All AIOMetadata instances failed, see warnings');
-  summary.addons.aiometadata = {
-    instance: aioMetaResult.instanceUrl,
-    uuid: aioMetaResult.userUUID,
-    // installUrl is returned directly; manifestUrl is the same value (verified Task 1)
-    manifestUrl: aioMetaResult.manifestUrl || aioMetaResult.installUrl,
-  };
+
+  summary.addons.aiostreams = addonBundle.addons.aiostreams;
+  summary.addons.aiometadata = addonBundle.addons.aiometadata;
+  summary.warnings.push(...addonBundle.warnings);
+  step('aiostreams', summary.addons.aiostreams);
   step('aiometadata', summary.addons.aiometadata);
 
   // 4) ATOMIC install: push only after all configs succeeded
   const existing = await stremio.getAddons(auth.authKey);
   const collection = buildAddonCollection(existing, {
     aiometadata: summary.addons.aiometadata.manifestUrl,
-    aiostreams: aioResult.primary.manifestUrl,
+    aiostreams: summary.addons.aiostreams.manifestUrl,
   }, { cleanCinemeta: { removeSearch: true, removeCatalogs: true, removeMetadata: true } });
   await stremio.setAddons(auth.authKey, collection);
   step('install', { count: collection.length, order: collection.map((a) => a.manifest?.name || a.transportUrl) });
@@ -104,15 +181,15 @@ export async function runStremioSetup({ instances, account, aiostreamsParams, ai
 /**
  * Full Nuvio setup flow.
  * @param {object} p
- * @param {object} p.instances           { aiostreams: {primary, fallbacks[]}, aiometadata: {primary, fallbacks[]} }
+ * @param {object} p.instances           { aiostreams: string[], aiometadata: string[] } – ordered list; first is primary, rest are fallbacks
  * @param {object} p.account             { mode: 'create'|'signin', email, password }
  * @param {object} p.aiostreamsParams    { template, inputs, services, credentials }
  * @param {object} p.aiometadataParams   { baseTemplate, enabledCategories, enabledDiscoverFolderIds, apiKeys, language }
  * @param {object[]} p.collectionsJson   nuvio-collections.json array
  * @param {function} p.onStep
  */
-export async function runNuvioSetup({ instances, account, aiostreamsParams, aiometadataParams, collectionsJson, onStep }) {
-  const summary = { account: null, addons: {}, warnings: [] };
+export async function runNuvioSetup({ instances, account, aiostreamsParams, aiometadataParams, collectionsJson, proxyBase, onStep }) {
+  const summary = { account: null, addons: {}, warnings: [], addonPasswordSource: 'account' };
   const step = (name, data) => { onStep?.(name, data); return data; };
 
   // 1) Nuvio account
@@ -137,46 +214,36 @@ export async function runNuvioSetup({ instances, account, aiostreamsParams, aiom
   const profileIndex = profile.profile_index;
   step('profile', { profileIndex });
 
-  // 3) AIOStreams config
-  const aioPassword = randomPassword();
-  const aioInstances = [instances.aiostreams.primary, ...(instances.aiostreams.fallbacks || [])];
-  const aioResult = await createWithFallbacks(aioInstances, { ...aiostreamsParams, password: aioPassword });
-  summary.addons.aiostreams = {
-    instance: aioResult.primary.instanceUrl,
-    uuid: aioResult.primary.uuid,
-    password: aioPassword,
-    manifestUrl: aioResult.primary.manifestUrl,
-    fallbacks: aioResult.all.filter((r) => r.ok && r !== aioResult.primary).map((r) => r.manifestUrl),
-  };
-  for (const r of aioResult.all.filter((r) => !r.ok)) {
-    summary.warnings.push(`AIOStreams fallback ${r.instanceUrl} failed: ${r.error}`);
-  }
-  step('aiostreams', summary.addons.aiostreams);
+  // 3-4) Create both addon configs with one shared password.
+  let addonBundle;
+  try {
+    addonBundle = await createAddonBundle({
+      instances,
+      aiostreamsParams,
+      aiometadataParams,
+      password: account.password,
+      target: 'nuvio',
+      proxyBase,
+    });
+  } catch (err) {
+    const firstError = toError(err);
+    if (!shouldRetryWithGeneratedPassword(firstError, account.password)) throw firstError;
 
-  // 4) AIOMetadata config (Nuvio target: showInHome=false, shown via collections instead)
-  const { config: aioMetaConfig } = buildAioMetadataConfig(aiometadataParams.baseTemplate, {
-    ...aiometadataParams,
-    target: 'nuvio',
-  });
-  const aioMetaPassword = randomPassword();
-  const aioMetaInstances = [instances.aiometadata.primary, ...(instances.aiometadata.fallbacks || [])];
-  let aioMetaResult = null;
-  for (const instanceUrl of aioMetaInstances) {
-    try {
-      // createConfig(config, password): password is top-level (verified Task 1)
-      aioMetaResult = await createAiometadataAdapter(instanceUrl).createConfig(aioMetaConfig, aioMetaPassword);
-      aioMetaResult = { ...aioMetaResult, instanceUrl };
-      break;
-    } catch (err) {
-      summary.warnings.push(`AIOMetadata ${instanceUrl} failed: ${err.message}`);
-    }
+    summary.addonPasswordSource = 'generated';
+    addonBundle = await createAddonBundle({
+      instances,
+      aiostreamsParams,
+      aiometadataParams,
+      password: randomPassword(),
+      target: 'nuvio',
+      proxyBase,
+    });
   }
-  if (!aioMetaResult) throw new Error('All AIOMetadata instances failed, see warnings');
-  summary.addons.aiometadata = {
-    instance: aioMetaResult.instanceUrl,
-    uuid: aioMetaResult.userUUID,
-    manifestUrl: aioMetaResult.manifestUrl || aioMetaResult.installUrl,
-  };
+
+  summary.addons.aiostreams = addonBundle.addons.aiostreams;
+  summary.addons.aiometadata = addonBundle.addons.aiometadata;
+  summary.warnings.push(...addonBundle.warnings);
+  step('aiostreams', summary.addons.aiostreams);
   step('aiometadata', summary.addons.aiometadata);
 
   // 5) ATOMIC install: push addons then collections only after all configs succeed.
@@ -185,7 +252,7 @@ export async function runNuvioSetup({ instances, account, aiostreamsParams, aiom
   // pushAddons signature: (token, addons); profileIndex is not sent for addon push.
   const addons = [
     { url: summary.addons.aiometadata.manifestUrl, sort_order: 1 },
-    { url: summary.addons.aiostreams.manifestUrl,  sort_order: 2 },
+    { url: summary.addons.aiostreams.manifestUrl, sort_order: 2 },
   ];
   await nuvio.pushAddons(auth.token, addons);
   step('addons', { count: addons.length });

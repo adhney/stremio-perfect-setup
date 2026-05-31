@@ -190,8 +190,11 @@ function resolveNode(node, ctx, keyHint) {
     for (const item of node) {
       const r = resolveNode(item, ctx, keyHint);
       if (r === REMOVE) continue;
-      // Array flattening for {{inputs.X}} that resolves to an array.
-      if (Array.isArray(r) && item && typeof item === 'object' && '__flatten' in item) {
+      // Array flattening: spread when the item is a standalone {{inputs.X}} string
+      // or an explicit __flatten object and resolves to an array.
+      const isStandaloneInterp = typeof item === 'string' && /^\{\{\s*inputs\./.test(item.trim());
+      const isExplicitFlatten = item && typeof item === 'object' && '__flatten' in item;
+      if (Array.isArray(r) && (isStandaloneInterp || isExplicitFlatten)) {
         out.push(...r);
       } else {
         out.push(r);
@@ -279,7 +282,21 @@ function resolveValueWithFlatten(value, ctx, keyHint) {
  * @returns {object} resolved config (also injects selected services into config.services)
  */
 function resolveTemplate(template, { inputs = {}, services = [], credentials = {}, serviceCredentials = {} } = {}) {
-  const ctx = { inputs, services, credentials };
+  // Seed defaults from metadata.inputs so that unset inputs resolve to their template-defined
+  // default value (e.g. timeout:5000) rather than the empty string fallback.
+  const templateDefaults = {};
+  const metaInputs = template?.metadata?.inputs;
+  if (Array.isArray(metaInputs)) {
+    for (const field of metaInputs) {
+      if (field.id && !field.id.startsWith('header.') && field.default !== undefined) {
+        templateDefaults[field.id] = field.default;
+      }
+    }
+  }
+  // User-supplied inputs take precedence over template defaults.
+  const mergedInputs = { ...templateDefaults, ...inputs };
+
+  const ctx = { inputs: mergedInputs, services, credentials };
   const resolved = resolveNode(template.config, ctx, null);
 
   // Inject the selected Debrid services with optional per-service credentials.

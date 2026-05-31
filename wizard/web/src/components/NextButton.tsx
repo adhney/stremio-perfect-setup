@@ -1,12 +1,20 @@
-import { ChevronRight } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { ArrowRight, Check, Save } from 'lucide-react';
 
 interface Props {
   onClick: () => void;
   disabled?: boolean;
   label?: string;
+  icon?: ReactNode;
 }
 
-export function NextButton({ onClick, disabled = false, label = 'Continue' }: Props) {
+function getDefaultIcon(label: string) {
+  if (/finish/i.test(label)) return <Check size={16} />;
+  if (/save/i.test(label)) return <Save size={16} />;
+  return <ArrowRight size={16} />;
+}
+
+export function NextButton({ onClick, disabled = false, label = 'Continue', icon }: Props) {
   return (
     <button
       onClick={onClick}
@@ -31,7 +39,8 @@ export function NextButton({ onClick, disabled = false, label = 'Continue' }: Pr
       onMouseDown={e => { if (!disabled) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.98)'; }}
       onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
     >
-      {label} <ChevronRight size={16} />
+      <span>{label}</span>
+      {icon ?? getDefaultIcon(label)}
     </button>
   );
 }

@@ -51,26 +51,51 @@ async function rpc(path, token, body) {
 export function createNuvioAdapter() {
   return {
     async signup(email, password) {
-      const res = await fetch(`${SUPABASE_BASE}/auth/v1/signup`, {
-        method: 'POST',
-        headers: anonHeaders(),
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) throw new Error(`Nuvio signup failed: HTTP ${res.status}`);
+      let res;
+      try {
+        res = await fetch(`${SUPABASE_BASE}/auth/v1/signup`, {
+          method: 'POST',
+          headers: anonHeaders(),
+          body: JSON.stringify({ email, password }),
+        });
+      } catch (err) {
+        throw new Error(`Could not reach the Nuvio server: ${err?.message || err}. Please check your connection and try again.`);
+      }
+      if (!res.ok) throw new Error(`Nuvio account creation failed (HTTP ${res.status}). Please try again or use a different email address.`);
       const body = await res.json();
-      if (body.error) throw new Error(`Nuvio signup: ${body.error.message || body.error}`);
+      if (body.error) {
+        const msg = body.error.message || String(body.error);
+        if (/already registered|already exists|duplicate/i.test(msg)) {
+          throw new Error(`An account with that email already exists on Nuvio. Please sign in instead, or use a different email address.`);
+        }
+        throw new Error(`Nuvio signup failed: ${msg}`);
+      }
+      if (!body.access_token) {
+        throw new Error(`Nuvio created the account but did not return an access token. Please try signing in manually in the Nuvio app first.`);
+      }
       return { token: body.access_token, userId: body.user?.id };
     },
 
     async login(email, password) {
-      const res = await fetch(`${SUPABASE_BASE}/auth/v1/token?grant_type=password`, {
-        method: 'POST',
-        headers: anonHeaders(),
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) throw new Error(`Nuvio login failed: HTTP ${res.status}`);
+      let res;
+      try {
+        res = await fetch(`${SUPABASE_BASE}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: anonHeaders(),
+          body: JSON.stringify({ email, password }),
+        });
+      } catch (err) {
+        throw new Error(`Could not reach the Nuvio server: ${err?.message || err}. Please check your connection and try again.`);
+      }
+      if (!res.ok) throw new Error(`Nuvio sign-in failed (HTTP ${res.status}). Please verify your credentials.`);
       const body = await res.json();
-      if (body.error) throw new Error(`Nuvio login: ${body.error.message || body.error}`);
+      if (body.error) {
+        const msg = body.error.message || String(body.error);
+        if (/invalid|wrong|password|credential/i.test(msg)) {
+          throw new Error(`Incorrect email or password for your Nuvio account. Please double-check and try again.`);
+        }
+        throw new Error(`Nuvio sign-in failed: ${msg}`);
+      }
       return { token: body.access_token, userId: body.user?.id };
     },
 

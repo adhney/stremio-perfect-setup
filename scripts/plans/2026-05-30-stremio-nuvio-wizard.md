@@ -2887,7 +2887,7 @@ Change it to:
 <div class="home-wizard-card">
   <div class="home-wizard-card__text">
     <strong>🤖 New! Automated Setup</strong>
-    <span>Skip the manual steps — let the wizard configure everything for you.</span>
+    <span>Skip the manual steps — let the wizard configure everything for you in seconds.</span>
   </div>
   <a class="home-wizard-card__btn" href="/stremio-perfect-setup/wizard/" target="_blank" rel="noopener">Launch Wizard →</a>
 </div>

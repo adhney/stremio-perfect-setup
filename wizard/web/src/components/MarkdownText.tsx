@@ -15,7 +15,7 @@ export function MarkdownText({ text, className, style }: Props) {
   const html = renderMarkdown(text);
   return (
     <div
-      className={className}
+      className={['wizard-rich-text', className].filter(Boolean).join(' ')}
       style={style}
       dangerouslySetInnerHTML={{ __html: html }}
     />
@@ -36,7 +36,7 @@ function renderMarkdown(text: string): string {
     // Links
     .replace(
       /\[([^\]]+)\]\((https?:[^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--accent);text-decoration:underline">$1</a>'
+      '<a href="$2" target="_blank" rel="noopener noreferrer" class="guide-pill-link">$1</a>'
     )
     // Bullet list items: convert \n* to list items
     .replace(/\n\* /g, '\n<li style="margin-left:1rem;list-style:disc">')

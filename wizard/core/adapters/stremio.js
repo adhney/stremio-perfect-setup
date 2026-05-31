@@ -5,15 +5,30 @@
 const DEFAULT_ENDPOINT = 'https://api.strem.io';
 
 async function rpc(endpoint, method, params, authKey) {
-  const res = await fetch(`${endpoint}/api/${method}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ authKey: authKey ?? null, ...params }),
-  });
+  let res;
+  try {
+    res = await fetch(`${endpoint}/api/${method}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ authKey: authKey ?? null, ...params }),
+    });
+  } catch (err) {
+    throw new Error(`Could not reach Stremio (${method}): ${err?.message || err}. Please check your connection and try again.`);
+  }
   if (res.status !== 200) throw new Error(`Stremio ${method} failed: HTTP ${res.status}`);
   const body = await res.json();
-  if (body.error) throw new Error(`Stremio ${method}: ${body.error.message || JSON.stringify(body.error)}`);
-  if (!body.result) throw new Error(`Stremio ${method}: no result`);
+  if (body.error) {
+    const msg = body.error.message || JSON.stringify(body.error);
+    // Provide context-specific messages for common errors
+    if (method === 'register' && /already/i.test(msg)) {
+      throw new Error(`That email address already has a Stremio account. Please sign in instead, or use a different email address.`);
+    }
+    if (method === 'login' && /password|credential|auth/i.test(msg)) {
+      throw new Error(`Incorrect email or password. Please double-check your Stremio credentials and try again.`);
+    }
+    throw new Error(`Stremio ${method}: ${msg}`);
+  }
+  if (!body.result) throw new Error(`Stremio ${method}: received an empty response from the server.`);
   return body.result;
 }
 

@@ -511,11 +511,53 @@
     });
   }
 
-  function loadGuideCompletionCount() {
-    var nodes = document.querySelectorAll("[data-guide-completion-count]");
+  function applyWizardAccountCount(total, updatedAt, animate) {
+    var nodes = document.querySelectorAll("[data-wizard-account-count]");
     if (!nodes.length) return;
 
+    var value = asNonNegativeInteger(total);
+
+    Array.prototype.forEach.call(nodes, function (node) {
+      var previousTarget = asNonNegativeInteger(
+        node.getAttribute("data-guide-count-target")
+      );
+
+      node.setAttribute("data-guide-count-target", String(value));
+
+      if (updatedAt) {
+        node.setAttribute("title", "Updated " + updatedAt);
+      }
+
+      if (!animate) {
+        node.textContent = formatNumber(value);
+        return;
+      }
+
+      setupGuideCompletionCountObserver();
+
+      if (guideCompletionCountObserver) {
+        guideCompletionCountObserver.observe(node);
+      }
+
+      var isVisible = isGuideCompletionCountVisible(node);
+      var targetChanged = previousTarget !== value;
+
+      if (isVisible && targetChanged) {
+        animateGuideCompletionCount(node, value, 1400);
+        node.setAttribute("data-guide-count-visible", "true");
+      } else if (!guideCompletionCountObserver) {
+        animateGuideCompletionCount(node, value, 1400);
+      }
+    });
+  }
+
+  function loadGuideCompletionCount() {
+    var guideNodes = document.querySelectorAll("[data-guide-completion-count]");
+    var wizardNodes = document.querySelectorAll("[data-wizard-account-count]");
+    if (!guideNodes.length && !wizardNodes.length) return;
+
     applyGuideCompletionCount(guideCompletionBaseline, null, true);
+    applyWizardAccountCount(0, null, true);
 
     if (!statsUrl || typeof window.fetch !== "function") return;
 
@@ -526,6 +568,7 @@
       return response.json();
     }).then(function (stats) {
       applyGuideCompletionCount(stats.totalCompletions, stats.updatedAt, true);
+      applyWizardAccountCount(stats && stats.wizard ? stats.wizard.totalAccountsCreated : 0, stats.updatedAt, true);
     }).catch(function () {});
   }
 

@@ -23,13 +23,12 @@
 // VERIFIED: DELETE endpoint = NOT supported. Both DELETE /api/config/save and DELETE /api/config
 //   return HTTP 404. Configs cannot be deleted via the API.
 
-const DEFAULT_INSTANCE = 'https://aiometadata.viren070.me';
-
 function normalizeBase(url) {
   return url.replace(/\/+$/, '');
 }
 
-export function createAiometadataAdapter(instanceUrl = DEFAULT_INSTANCE) {
+export function createAiometadataAdapter(instanceUrl) {
+  if (!instanceUrl) throw new Error('createAiometadataAdapter: instanceUrl is required');
   const base = normalizeBase(instanceUrl);
   return {
     base,
@@ -54,21 +53,29 @@ export function createAiometadataAdapter(instanceUrl = DEFAULT_INSTANCE) {
      */
     async createConfig(config, password) {
       if (!password) throw new Error('AIOMetadata createConfig: password is required');
-      const res = await fetch(`${base}/api/config/save`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, config }),
-      });
+      let res;
+      try {
+        res = await fetch(`${base}/api/config/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password, config }),
+        });
+      } catch (err) {
+        throw new Error(`AIOMetadata at ${base} is unreachable: ${err?.message || err}. Check your internet connection or try again shortly.`);
+      }
       if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        throw new Error(`AIOMetadata createConfig failed: HTTP ${res.status} ${txt.slice(0, 200)}`);
+        let detail = '';
+        try { detail = (await res.json())?.error || (await res.json())?.message || ''; } catch { /* ignore */ }
+        if (!detail) detail = await res.text().catch(() => '');
+        throw new Error(
+          `AIOMetadata at ${base} rejected the configuration (HTTP ${res.status}).` +
+          (detail ? ` Server said: ${String(detail).slice(0, 300)}` : '')
+        );
       }
       const body = await res.json();
-      // Actual field names from verified response:
       const userUUID = body.userUUID;
       const installUrl = body.installUrl;
-      if (!userUUID) throw new Error('AIOMetadata: no userUUID in save response');
-      // installUrl is returned directly; reconstruct as fallback in case it is ever absent.
+      if (!userUUID) throw new Error(`AIOMetadata at ${base}: no userUUID in the server response, the save may have failed silently.`);
       const manifestUrl = installUrl ?? `${base}/stremio/${userUUID}/manifest.json`;
       return { userUUID, password, manifestUrl, installUrl };
     },

@@ -1,13 +1,27 @@
-export const INSTANCES = {
-  aiostreams: {
-    primary: 'https://aiostreamsfortheweebsstable.midnightignite.me',
-    fallbacks: ['https://aiostreams.fortheweak.cloud'],
-  },
-  aiometadata: {
-    primary: 'https://aiometadata.viren070.me',
-    fallbacks: ['https://aiometadatafortheweebs.midnightignite.me'],
-  },
-} as const;
+/** Shape of the wizard/config.json file loaded at runtime. */
+export interface WizardConfig {
+  target?: 'stremio' | 'nuvio';
+  account?: { mode: 'create' | 'signin' };
+  instances: {
+    aiostreams: string[];
+    aiometadata: string[];
+    watchly?: string[];
+  };
+  templates?: {
+    aiostreams?: string;
+    aiometadata_stremio?: string;
+    aiometadata_nuvio?: string;
+    collections?: string;
+  };
+  /** Optional CORS proxy base URL (e.g. "https://proxy.numb3rs.stream"). Prefixed to AIOStreams API calls. */
+  proxyBase?: string;
+}
+
+// Default fallback instances, only used if bundled config.json is somehow missing.
+export const INSTANCES: WizardConfig['instances'] = {
+  aiostreams: ['https://aiostreamsfortheweebsstable.midnightignite.me'],
+  aiometadata: ['https://aiometadata.viren070.me'],
+};
 
 // Raw GitHub URLs for templates (fetched at runtime, not bundled because files are too large to bundle)
 export const TEMPLATE_URLS = {

@@ -3,20 +3,33 @@ import { NextButton } from '../components/NextButton';
 import { MarkdownText } from '../components/MarkdownText';
 import { useWizard } from '../store/wizard';
 import { DEBRID_SERVICES, resolveLogoUrl } from '../lib/services';
+import { getGuideAccountsUrl } from '../lib/site';
 
 export function DebridStep() {
   const { credentials, toggleDebridService, setDebridApiKey, nextStep } = useWizard();
   const { debridServices } = credentials;
+  const guideAccountsUrl = getGuideAccountsUrl();
 
   return (
     <WizardShell>
       <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.35rem' }}>
-        Debrid Service
+        ⚡ Debrid Service
       </h2>
       <MarkdownText
         text="A **Debrid service** is a paid tool that gives you instant access to fast, cached streams with no P2P throttling or legal risk. It dramatically improves streaming quality and reliability.\n\nSelect one or more services below and enter your API key for each. You can find your API key in each service's account or settings page. **Skip if you prefer free P2P/HTTP-only mode.**"
         style={{ color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '1.25rem', lineHeight: 1.65 }}
       />
+
+      <div className="wizard-notice" style={{ marginBottom: '1.25rem' }}>
+        <div className="wizard-notice__title">Need the manual walkthrough?</div>
+        <div>
+          The guide’s accounts chapter has detailed account creation and API key instructions for each service.
+          {' '}
+          <a href={guideAccountsUrl} target="_blank" rel="noopener noreferrer" className="guide-pill-link">
+            Open guide account setup
+          </a>
+        </div>
+      </div>
 
       <p style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
         Select services (you can pick multiple)

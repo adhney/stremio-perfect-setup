@@ -4,9 +4,10 @@
 #
 # Purpose:
 #   This step lets main.sh resume from a backup archive previously produced by
-#   backup-configs.sh. It extracts the archive, restores root .env plus selected
-#   module files into the staging naming scheme, reconstructs the stage manifest,
-#   and writes the selected module list.
+#   backup-configs.sh. It extracts the archive, restores root .env into staging,
+#   then stages the selected modules' editable files from the prepared template
+#   tree. Any backup-provided custom app directories must already have been
+#   merged into the template by inspect-backup.sh before this step runs.
 #
 # Usage:
 #   ./hosting/steps/import-backup.sh \
@@ -65,6 +66,7 @@ done
 [[ -n "${CONFIG_DIR_ARG}" ]] || die "--config-dir is required"
 [[ -n "${MANIFEST_FILE}" ]] || die "--manifest-file is required"
 [[ -n "${MODULES_FILE}" ]] || die "--modules-file is required"
+[[ -f "${MODULES_FILE}" ]] || die "Modules file does not exist: ${MODULES_FILE}"
 
 extract_dir="$(mktemp -d "$(dirname "${CONFIG_DIR_ARG}")/backup-import.XXXXXX")"
 trap 'rm -rf "${extract_dir}"' EXIT
@@ -88,42 +90,15 @@ ensure_directory "${CONFIG_DIR_ARG}"
 cp -a "${extract_dir}/.env" "${CONFIG_DIR_ARG}/.env"
 printf 'root\t.env\t.env\tfile\n' >> "${MANIFEST_FILE}"
 
-metadata_modules_file="${extract_dir}/HOSTING_SELECTED_MODULES.txt"
-if [[ -f "${metadata_modules_file}" ]]; then
-  cp -a "${metadata_modules_file}" "${MODULES_FILE}"
-else
-  find "${extract_dir}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort > "${MODULES_FILE}"
-fi
-
-[[ -s "${MODULES_FILE}" ]] || die "Could not determine selected modules from backup ZIP"
+[[ -s "${MODULES_FILE}" ]] || die "Selected modules file is empty: ${MODULES_FILE}"
 
 while IFS= read -r module; do
   [[ -n "${module}" ]] || continue
 
   while IFS= read -r entry; do
     [[ -n "${entry}" ]] || continue
-    source_rel="apps/${module}/${entry}"
-    imported_path="${extract_dir}/${module}/${entry}"
-    [[ -e "${imported_path}" ]] || die "Backup ZIP is missing ${module}/${entry}"
-
-    stage_name="$(stage_name_for "${module}" "$(basename "${entry}")")"
-    cp -a "${imported_path}" "${CONFIG_DIR_ARG}/${stage_name}"
-    if [[ -d "${imported_path}" ]]; then
-      item_type="dir"
-    else
-      item_type="file"
-    fi
-    printf '%s\t%s\t%s\t%s\n' "${module}" "${source_rel}" "${stage_name}" "${item_type}" >> "${MANIFEST_FILE}"
+    stage_item "${module}" "apps/${module}/${entry}" "${MANIFEST_FILE}" "${TEMPLATE_DIR_ARG}" "${CONFIG_DIR_ARG}"
   done < <(module_stageable_entries "${TEMPLATE_DIR_ARG}" "${module}")
-
-  compose_rel="$(module_compose_relative_path "${TEMPLATE_DIR_ARG}" "${module}")"
-  compose_name="$(basename "${compose_rel}")"
-  imported_compose="${extract_dir}/${module}/${compose_name}"
-  if [[ -e "${imported_compose}" ]]; then
-    stage_name="$(stage_name_for "${module}" "${compose_name}")"
-    cp -a "${imported_compose}" "${CONFIG_DIR_ARG}/${stage_name}"
-    printf '%s\t%s\t%s\tfile\n' "${module}" "${compose_rel}" "${stage_name}" >> "${MANIFEST_FILE}"
-  fi
 done < <(read_lines_file "${MODULES_FILE}")
 
 success "Imported backup ZIP into staging: ${ZIP_FILE_ARG}"

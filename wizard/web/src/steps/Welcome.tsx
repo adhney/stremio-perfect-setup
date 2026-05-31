@@ -25,14 +25,19 @@ export function Welcome() {
   return (
     <WizardShell showBack={false}>
       <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+        <div style={{ margin: '0 auto 1rem', fontSize: '3.1rem', lineHeight: 1 }}>
+          <span aria-hidden="true">🔮</span>
+        </div>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.6rem', lineHeight: 1.3 }}>
           Welcome to the Perfect Setup Wizard
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.9rem', lineHeight: 1.7, marginBottom: '0.5rem' }}>
-          This wizard automatically configures your entire streaming setup - AIOStreams for streams, AIOMetadata for catalogs, and all your preferred settings in one go.
+          <span style={{ display: 'block' }}>This wizard automatically configures your entire streaming setup:</span>
+          <span style={{ display: 'block' }}>AIOStreams for streams, AIOMetadata for catalogs, and all the recommended settings in one go.</span>
         </p>
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', lineHeight: 1.65 }}>
-          You will need a few API keys, but we walk you through each one step by step. The process takes about 5 minutes and everything runs in your browser.
+          <span style={{ display: 'block' }}>You will need a few API keys, but we walk you through each one step by step.</span>
+          <span style={{ display: 'block' }}>The process takes about 5 minutes and everything runs in your browser.</span>
         </p>
       </div>
 

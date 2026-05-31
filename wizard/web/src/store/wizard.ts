@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { INSTANCES, RPDB_FREE_KEY } from '../lib/constants';
+import { INSTANCES, RPDB_FREE_KEY, type WizardConfig } from '../lib/constants';
 import type { AioSection } from '../lib/aioSections';
 
 export type Target = 'stremio' | 'nuvio';
@@ -37,7 +37,8 @@ export interface CatalogSelection {
 
 export interface InstallResult {
   aiostreams: { manifestUrl: string; uuid: string; password: string } | null;
-  aiometadata: { manifestUrl: string; uuid: string } | null;
+  aiometadata: { manifestUrl: string; uuid: string; password: string } | null;
+  addonPasswordSource: 'account' | 'generated' | null;
   warnings: string[];
   error: string | null;
 }
@@ -58,6 +59,8 @@ interface WizardState {
   templates: { aiostreams: unknown; aiometadata: unknown; collections: unknown[] } | null;
   /** Computed from template when loaded; drives dynamic step count */
   aioSections: AioSection[];
+  /** Runtime config loaded from config.json at startup */
+  wizardConfig: WizardConfig | null;
 
   setStep: (step: number) => void;
   nextStep: () => void;
@@ -75,6 +78,7 @@ interface WizardState {
   setTemplates: (t: WizardState['templates']) => void;
   setAioSections: (sections: AioSection[]) => void;
   setInstallResult: (r: Partial<InstallResult>) => void;
+  setWizardConfig: (cfg: WizardConfig) => void;
 }
 
 export const useWizard = create<WizardState>((set) => ({
@@ -88,13 +92,14 @@ export const useWizard = create<WizardState>((set) => ({
     tmdbApiKey: '', tmdbAccessToken: '', tvdbApiKey: '',
     geminiApiKey: '', rpdbApiKey: RPDB_FREE_KEY,
   },
-  aioStreamsInstance: INSTANCES.aiostreams.primary,
+  aioStreamsInstance: INSTANCES.aiostreams[0],
   aioStreamsInputs: {},
-  aiometadataInstance: INSTANCES.aiometadata.primary,
+  aiometadataInstance: INSTANCES.aiometadata[0],
   catalogSelection: { enabledCategories: new Set(), enabledDiscoverFolderIds: new Set() },
-  installResult: { aiostreams: null, aiometadata: null, warnings: [], error: null },
+  installResult: { aiostreams: null, aiometadata: null, addonPasswordSource: null, warnings: [], error: null },
   templates: null,
   aioSections: [],
+  wizardConfig: null,
 
   setStep: (step) => set(s => ({
     step,
@@ -140,4 +145,16 @@ export const useWizard = create<WizardState>((set) => ({
   setTemplates: (templates) => set({ templates }),
   setAioSections: (aioSections) => set({ aioSections }),
   setInstallResult: (r) => set(s => ({ installResult: { ...s.installResult, ...r } })),
+  setWizardConfig: (cfg) => set(s => ({
+    wizardConfig: cfg,
+    // Apply config defaults, only override values still at their initial state
+    aioStreamsInstance: cfg.instances?.aiostreams?.[0] ?? s.aioStreamsInstance,
+    aiometadataInstance: cfg.instances?.aiometadata?.[0] ?? s.aiometadataInstance,
+    stremioAccount: cfg.account?.mode
+      ? { ...s.stremioAccount, mode: cfg.account.mode }
+      : s.stremioAccount,
+    nuvioAccount: cfg.account?.mode
+      ? { ...s.nuvioAccount, mode: cfg.account.mode }
+      : s.nuvioAccount,
+  })),
 }));

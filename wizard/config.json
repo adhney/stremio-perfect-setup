@@ -4,15 +4,15 @@
   "account": { "mode": "create" },
 
   "instances": {
-    "aiostreams": {
-      "primary": "https://aiostreamsfortheweebsstable.midnightignite.me",
-      "fallbacks": ["https://aiostreams.fortheweak.cloud"]
-    },
-    "aiometadata": {
-      "primary": "https://aiometadata.viren070.me",
-      "fallbacks": ["https://aiometadatafortheweebs.midnightignite.me"]
-    },
-    "watchly": { "primary": "https://watchly.elfhosted.com", "enabled": false }
+    "aiostreams": [
+      "https://aiostreamsfortheweebsstable.midnightignite.me",
+      "https://aiostreams.fortheweak.cloud"
+    ],
+    "aiometadata": [
+      "https://aiometadata.viren070.me",
+      "https://aiometadatafortheweebs.midnightignite.me"
+    ],
+    "watchly": []
   },
 
   "templates": {
@@ -22,15 +22,5 @@
     "collections": "https://raw.githubusercontent.com/luckynumb3rs/stremio-perfect-setup/refs/heads/main/collections/nuvio-collections.json"
   },
 
-  "preferences": {
-    "languages": ["English"],
-    "subtitles": ["en"],
-    "streamMode": "debrid",
-    "formatter": "flat",
-    "trakt": { "enabled": true }
-  },
-
-  "integrations": { "couchmoney": false, "mdblist": false, "simkl": false, "watchNext": true },
-
-  "ui": { "showAdvanced": false, "proxyBase": "" }
+  "proxyBase": "https://proxy.numb3rs.stream"
 }

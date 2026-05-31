@@ -22,6 +22,8 @@
 #     --skip-review
 #
 # Key options:
+#   --backup                     Backup an existing deployed Docker tree with prompts.
+#   --backup-quick               Backup an existing deployed Docker tree using defaults.
 #   --modules                     Comma-separated optional modules.
 #   --timezone                    TZ database identifier, for example Europe/Berlin.
 #   --docker-dir                  Final Docker Compose directory, default /opt/docker.
@@ -66,6 +68,8 @@ TEMPLATE_DIR_ABS="${HOSTING_ROOT}/${TEMPLATE_DIR:-.work/docker}"
 CONFIG_DIR_ABS="${HOSTING_ROOT}/${CONFIG_DIR:-.work/config}"
 MANIFEST_FILE="${CONFIG_DIR_ABS}/.stage-map.tsv"
 SELECTED_MODULES_FILE="${WORK_ROOT_ABS}/selected-modules.txt"
+BACKUP_AVAILABLE_MODULES_FILE="${WORK_ROOT_ABS}/backup-modules.txt"
+BACKUP_METADATA_MODULES_FILE="${WORK_ROOT_ABS}/backup-selected-modules.txt"
 CLOUDFLARE_DDNS_MODULE=cloudflare-ddns
 
 MODULES_CSV=""
@@ -86,10 +90,21 @@ SKIP_BACKUP=0
 SKIP_START=0
 PREPARE_SSH=0
 SKIP_SSH=0
+BACKUP_MODE=0
+BACKUP_QUICK_MODE=0
 BACKUP_DIR_SET=0
+DOCKER_DIR_SET=0
 
 while (( $# > 0 )); do
   case "$1" in
+    --backup)
+      BACKUP_MODE=1
+      shift
+      ;;
+    --backup-quick)
+      BACKUP_QUICK_MODE=1
+      shift
+      ;;
     --modules)
       MODULES_CSV="$2"
       shift 2
@@ -100,6 +115,7 @@ while (( $# > 0 )); do
       ;;
     --docker-dir)
       DOCKER_DIR_VALUE="$2"
+      DOCKER_DIR_SET=1
       shift 2
       ;;
     --domain)
@@ -174,6 +190,49 @@ while (( $# > 0 )); do
   esac
 done
 
+run_existing_docker_backup() {
+  local docker_dir_default=""
+  local backup_dir_default=""
+
+  docker_dir_default="${DEFAULT_DOCKER_DIR:-/opt/docker}"
+  backup_dir_default="${BACKUP_DIR_VALUE:-${BACKUP_OUTPUT_DIR:-$HOME}}"
+
+  section "Docker configuration backup"
+  require_commands python3
+
+  if (( BACKUP_MODE )); then
+    if (( ! DOCKER_DIR_SET )); then
+      DOCKER_DIR_VALUE="$(prompt_value "Docker Compose directory to back up" "${docker_dir_default}")"
+    fi
+    if (( ! BACKUP_DIR_SET )); then
+      BACKUP_DIR_VALUE="$(prompt_value "Backup output directory" "${backup_dir_default}")"
+    fi
+  fi
+
+  DOCKER_DIR_VALUE="${DOCKER_DIR_VALUE:-${docker_dir_default}}"
+  BACKUP_DIR_VALUE="${BACKUP_DIR_VALUE:-${backup_dir_default}}"
+
+  [[ -n "${DOCKER_DIR_VALUE}" ]] || die "Docker Compose directory is required for backup mode"
+  [[ -n "${BACKUP_DIR_VALUE}" ]] || die "Backup output directory is required for backup mode"
+
+  log "Source Docker directory: ${DOCKER_DIR_VALUE}"
+  log "Backup output directory: ${BACKUP_DIR_VALUE}"
+
+  "${HOSTING_ROOT}/steps/backup-docker-config.sh" \
+    --docker-dir "${DOCKER_DIR_VALUE}" \
+    --output-dir "${BACKUP_DIR_VALUE}"
+}
+
+if (( BACKUP_MODE && BACKUP_QUICK_MODE )); then
+  die "Use either --backup or --backup-quick, not both"
+fi
+
+if (( BACKUP_MODE || BACKUP_QUICK_MODE )); then
+  [[ -z "${BACKUP_ZIP_INPUT}" ]] || die "Backup ZIP import cannot be combined with --backup or --backup-quick"
+  run_existing_docker_backup
+  exit 0
+fi
+
 section "Hosting preparation"
 log "Work directory: ${WORK_ROOT_ABS}"
 ensure_directory "${WORK_ROOT_ABS}"
@@ -214,6 +273,25 @@ fi
 section "Template fetch"
 "${HOSTING_ROOT}/steps/fetch-template.sh" --source "${TEMPLATE_SOURCE_VALUE}" --template-dir "${TEMPLATE_DIR_ABS}"
 
+backup_available_modules=()
+backup_metadata_modules=()
+backup_default_modules_csv=""
+if [[ -n "${BACKUP_ZIP_INPUT}" ]]; then
+  section "Backup inspection"
+  "${HOSTING_ROOT}/steps/inspect-backup.sh" \
+    --zip-file "${BACKUP_ZIP_INPUT}" \
+    --template-dir "${TEMPLATE_DIR_ABS}" \
+    --available-modules-file "${BACKUP_AVAILABLE_MODULES_FILE}" \
+    --metadata-modules-file "${BACKUP_METADATA_MODULES_FILE}"
+  if [[ -f "${BACKUP_AVAILABLE_MODULES_FILE}" ]]; then
+    mapfile -t backup_available_modules < <(read_lines_file "${BACKUP_AVAILABLE_MODULES_FILE}")
+  fi
+  if [[ -f "${BACKUP_METADATA_MODULES_FILE}" ]]; then
+    mapfile -t backup_metadata_modules < <(read_lines_file "${BACKUP_METADATA_MODULES_FILE}")
+  fi
+  backup_default_modules_csv="$(join_by ',' "${backup_available_modules[@]}")"
+fi
+
 all_modules=()
 required_modules=()
 optional_modules=()
@@ -221,15 +299,17 @@ discover_modules "${TEMPLATE_DIR_ABS}" all_modules required_modules optional_mod
 success "Discovered ${#all_modules[@]} modules (${#required_modules[@]} required, ${#optional_modules[@]} optional)."
 
 if [[ -n "${BACKUP_ZIP_INPUT}" ]]; then
-  section "Backup import"
-  "${HOSTING_ROOT}/steps/import-backup.sh" \
-    --zip-file "${BACKUP_ZIP_INPUT}" \
-    --template-dir "${TEMPLATE_DIR_ABS}" \
-    --config-dir "${CONFIG_DIR_ABS}" \
-    --manifest-file "${MANIFEST_FILE}" \
-    --modules-file "${SELECTED_MODULES_FILE}"
-
-  mapfile -t selected_modules < <(read_lines_file "${SELECTED_MODULES_FILE}")
+  section "Module selection"
+  selected_modules=()
+  backup_default_modules_csv="$(join_by ',' "${backup_metadata_modules[@]}")"
+  if [[ -z "${backup_default_modules_csv}" ]]; then
+    backup_default_modules_csv="$(join_by ',' "${backup_available_modules[@]}")"
+  fi
+  if (( ${#backup_metadata_modules[@]} > 0 )); then
+    selected_modules=("${backup_metadata_modules[@]}")
+  else
+    split_csv_into_array "${backup_default_modules_csv}" selected_modules
+  fi
   if [[ -n "${MODULES_CSV}" ]]; then
     extra_modules=()
     split_csv_into_array "${MODULES_CSV}" extra_modules
@@ -237,6 +317,11 @@ if [[ -n "${BACKUP_ZIP_INPUT}" ]]; then
       [[ -n "${module}" ]] || continue
       array_contains "${module}" "${selected_modules[@]}" || selected_modules+=("${module}")
     done
+  elif is_interactive; then
+    select_modules_interactively "${TEMPLATE_DIR_ABS}" "${SELECTED_MODULES_FILE}" "${backup_default_modules_csv}"
+    mapfile -t selected_modules < <(read_lines_file "${SELECTED_MODULES_FILE}")
+  elif (( ${#backup_metadata_modules[@]} == 0 )); then
+    die "Backup ZIP does not contain HOSTING_SELECTED_MODULES.txt. Run interactively or pass --modules."
   fi
   for module in "${required_modules[@]}"; do
     array_contains "${module}" "${selected_modules[@]}" || selected_modules+=("${module}")
@@ -265,6 +350,14 @@ fi
 if [[ -z "${BACKUP_ZIP_INPUT}" ]]; then
   section "Config staging"
   "${HOSTING_ROOT}/steps/stage-configs.sh" --template-dir "${TEMPLATE_DIR_ABS}" --config-dir "${CONFIG_DIR_ABS}" --modules-file "${SELECTED_MODULES_FILE}" --manifest-file "${MANIFEST_FILE}"
+else
+  section "Backup import"
+  "${HOSTING_ROOT}/steps/import-backup.sh" \
+    --zip-file "${BACKUP_ZIP_INPUT}" \
+    --template-dir "${TEMPLATE_DIR_ABS}" \
+    --config-dir "${CONFIG_DIR_ABS}" \
+    --manifest-file "${MANIFEST_FILE}" \
+    --modules-file "${SELECTED_MODULES_FILE}"
 fi
 
 ROOT_ENV="${CONFIG_DIR_ABS}/.env"
@@ -277,7 +370,7 @@ root_authelia_storage_default="$(env_get "${ROOT_ENV}" AUTHELIA_STORAGE_ENCRYPTI
 root_authelia_jwt_default="$(env_get "${ROOT_ENV}" AUTHELIA_JWT_SECRET || true)"
 
 root_tz_default="${DEFAULT_TIMEZONE:-${root_tz_default:-Europe/Berlin}}"
-root_docker_dir_default="${DOCKER_TARGET_DIR:-${root_docker_dir_default:-/opt/docker}}"
+root_docker_dir_default="${DEFAULT_DOCKER_DIR:-${root_docker_dir_default:-/opt/docker}}"
 env_value_is_placeholder "${root_domain_default}" && root_domain_default=""
 env_value_is_placeholder "${root_letsencrypt_default}" && root_letsencrypt_default=""
 
@@ -426,7 +519,7 @@ if (( ! SKIP_BACKUP )); then
       BACKUP_DIR_VALUE="$(prompt_value "Backup output directory" "${BACKUP_DIR_VALUE}")"
     fi
     section "Backup"
-    "${HOSTING_ROOT}/steps/backup-configs.sh" --config-dir "${CONFIG_DIR_ABS}" --manifest-file "${MANIFEST_FILE}" --modules-file "${SELECTED_MODULES_FILE}" --output-dir "${BACKUP_DIR_VALUE}"
+    "${HOSTING_ROOT}/steps/backup-configs.sh" --config-dir "${CONFIG_DIR_ABS}" --template-dir "${TEMPLATE_DIR_ABS}" --manifest-file "${MANIFEST_FILE}" --modules-file "${SELECTED_MODULES_FILE}" --output-dir "${BACKUP_DIR_VALUE}"
   fi
 fi
 
@@ -466,5 +559,6 @@ fi
 
 rm -rf "${TEMPLATE_DIR_ABS}" "${CONFIG_DIR_ABS}"
 rm -f "${SELECTED_MODULES_FILE}"
+rm -f "${BACKUP_AVAILABLE_MODULES_FILE}" "${BACKUP_METADATA_MODULES_FILE}"
 rmdir "${WORK_ROOT_ABS}" 2>/dev/null || true
 success "Temporary work directories cleaned up."

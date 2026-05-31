@@ -26,9 +26,9 @@
         <span class="topbar-subtitle">Full and Easy Total Beginner's Guide</span>
       </span>
     </a>
-    <a class="topbar-wizard-btn" href="{{ '/wizard/' | relative_url }}" aria-label="Open Setup Wizard">
+    <a class="topbar-wizard-btn topbar-wizard-btn--wizard" href="{{ '/wizard/' | relative_url }}" aria-label="Open Setup Wizard">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-      Wizard
+      <span class="wizard-label">Wizard</span>
     </a>
     <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme" aria-pressed="false">◐</button>
   </header>
@@ -64,10 +64,20 @@
             <span>Buy me a coffee</span>
           </a>
         </div>
-        <section class="sidebar-stat-card" aria-label="Guide completion count">
-          <span class="sidebar-stat-card__eyebrow">Guide completed by</span>
-          <strong class="sidebar-stat-card__value"><span data-guide-completion-count>0</span></strong>
-          <span class="sidebar-stat-card__suffix">readers</span>
+        <section class="sidebar-stat-card" aria-label="Guide and wizard activity">
+          <div class="sidebar-stat-grid">
+            <div class="sidebar-stat-item">
+              <span class="sidebar-stat-item__label">Guide completed</span>
+              <strong class="sidebar-stat-item__value"><span data-guide-completion-count>0</span></strong>
+              <span class="sidebar-stat-item__suffix">readers</span>
+            </div>
+            <div class="sidebar-stat-divider" aria-hidden="true"></div>
+            <div class="sidebar-stat-item">
+              <span class="sidebar-stat-item__label">Wizard created</span>
+              <strong class="sidebar-stat-item__value"><span data-wizard-account-count>0</span></strong>
+              <span class="sidebar-stat-item__suffix">accounts</span>
+            </div>
+          </div>
         </section>
       </div>
     </div>

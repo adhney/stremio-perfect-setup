@@ -16,10 +16,10 @@
 
 <div class="home-wizard-card">
   <div class="home-wizard-card__text">
-    <strong>🤖 New! Automated Setup</strong>
-    <span>Skip the manual steps, let the wizard configure everything for you.</span>
+    <strong>🔮 New! Automated Setup</strong>
+    <span>Skip the manual steps, let the wizard configure everything for you in seconds.</span>
   </div>
-  <a class="home-wizard-card__btn" href="/wizard/" target="_blank" rel="noopener">Launch Wizard →</a>
+  <a class="home-wizard-card__btn" href="/wizard/">Launch Wizard →</a>
 </div>
 
 This is a full beginner-friendly guide for building a clean, reliable, and highly organized setup for both [**🎞️ Stremio**](https://www.stremio.com/) and [**🚀 Nuvio**](https://nuvioapp.space/), using all community best practices and including streams, metadata, catalogs, recommendations, collections, and the extra tweaks that make the whole experience feel much more polished.

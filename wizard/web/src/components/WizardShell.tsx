@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BookOpen, ChevronLeft } from 'lucide-react';
+import { ArrowLeft, BookOpen } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { useWizard } from '../store/wizard';
 import { useTheme } from '../hooks/useTheme';
@@ -51,7 +51,7 @@ export function WizardShell({ children, showBack = true }: Props) {
           </span>
         </a>
         <a
-          className="topbar-wizard-btn is-guide"
+          className="topbar-wizard-btn topbar-wizard-btn--guide"
           href={guideUrl}
           aria-label="Back to guide"
         >
@@ -105,18 +105,19 @@ export function WizardShell({ children, showBack = true }: Props) {
                   marginTop: '0.875rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.3rem',
+                  gap: '0.45rem',
                   fontSize: '0.875rem',
                   color: 'var(--muted)',
-                  background: 'none',
-                  border: 'none',
+                  background: 'var(--panel-2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
                   cursor: 'pointer',
-                  padding: '0.25rem 0',
+                  padding: '0.55rem 0.8rem',
                 }}
                 onMouseOver={e => (e.currentTarget.style.color = 'var(--accent)')}
                 onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
               >
-                <ChevronLeft size={14} /> Back
+                <ArrowLeft size={14} /> Back
               </button>
             )}
           </article>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, LogIn, UserPlus } from 'lucide-react';
 import { WizardShell } from '../components/WizardShell';
 import { MarkdownText } from '../components/MarkdownText';
 import { useWizard } from '../store/wizard';
@@ -96,6 +96,16 @@ export function AccountStep() {
         style={{ color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '1.25rem', lineHeight: 1.6 }}
       />
 
+      {account.mode === 'signin' && (
+        <div className="wizard-notice" style={{ marginBottom: '1.25rem' }}>
+          <div className="wizard-notice__title">Privacy</div>
+          <div>
+            No login credentials, API keys, or setup values are collected or stored by the wizard during this process.
+            Everything runs locally in your browser.
+          </div>
+        </div>
+      )}
+
       {/* Mode toggle */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
         {(['create', 'signin'] as const).map(m => (
@@ -103,13 +113,18 @@ export function AccountStep() {
             key={m}
             onClick={() => { updateAccount({ mode: m }); setError(''); }}
             style={{
-              padding: '0.4rem 1.1rem', borderRadius: '999px', fontSize: '0.875rem',
-              fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+              padding: '0.7rem 1rem', borderRadius: '10px', fontSize: '0.875rem',
+              fontWeight: 600, border: `1px solid ${account.mode === m ? 'transparent' : 'var(--border)'}`,
+              cursor: 'pointer', transition: 'all 0.15s',
               background: account.mode === m ? 'var(--accent)' : 'var(--panel-2)',
               color: account.mode === m ? '#fff' : 'var(--muted)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
+              flex: 1,
+              boxShadow: account.mode === m ? '0 4px 14px rgba(109, 58, 242, 0.22)' : 'none',
             }}
           >
-            {m === 'create' ? 'Create new account' : 'Sign in'}
+            {m === 'create' ? <UserPlus size={15} /> : <LogIn size={15} />}
+            {m === 'create' ? 'Create account' : 'Sign in'}
           </button>
         ))}
       </div>
@@ -166,6 +181,7 @@ export function AccountStep() {
         }}
       >
         {loading && <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />}
+        {!loading && <ArrowRight size={16} />}
         {loading
           ? (account.mode === 'create' ? 'Creating account...' : 'Signing in...')
           : 'Continue'
