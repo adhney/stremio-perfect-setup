@@ -1,7 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 interface WizardIntegrationConfig {
   repoRoot: string;
@@ -20,7 +21,8 @@ interface WizardMetadata {
   addonDetailsTitle: string;
 }
 
-const repoRoot = path.resolve(__dirname, '../..');
+const configDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(configDir, '../..');
 const wizardRoot = path.resolve(repoRoot, 'wizard');
 
 function readYamlScalar(raw: string, key: string) {
@@ -86,7 +88,7 @@ function resolveHtmlAssetUrl(basePath: string, relativePath: string, command: 'b
 
 function replaceAllTokens(html: string, replacements: Record<string, string>) {
   return Object.entries(replacements).reduce(
-    (nextHtml, [token, value]) => nextHtml.replaceAll(token, value),
+    (nextHtml, [token, value]) => nextHtml.split(token).join(value),
     html,
   );
 }
@@ -127,7 +129,7 @@ export default defineConfig(({ command }) => {
     },
     resolve: {
       alias: {
-        '@core': path.resolve(__dirname, '../core'),
+        '@core': path.resolve(configDir, '../core'),
       },
     },
     publicDir: 'public',

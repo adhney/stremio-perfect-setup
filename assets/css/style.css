@@ -248,7 +248,12 @@ pre {
   transition: background 0.15s;
 }
 
-.home-wizard-card__btn:hover { background: var(--on-accent-surface); }
+.home-wizard-card__btn:hover,
+.home-wizard-card__btn:focus-visible {
+  background: var(--on-accent-surface);
+  color: var(--text-on-accent);
+  text-decoration: none;
+}
 
 @media (max-width: 1040px) {
   .nav-link,
