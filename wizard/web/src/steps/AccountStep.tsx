@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Loader2, LogIn, UserPlus } from 'lucide-react';
+import { ArrowRight, Loader2, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { WizardShell } from '../components/WizardShell';
 import { MarkdownText } from '../components/MarkdownText';
 import { useWizard } from '../store/wizard';
@@ -43,6 +43,30 @@ export function AccountStep() {
   const isValidProfileName = !requiresProfileName || !!account.profileName?.trim();
   const hasSelectedProfile = !hasLoadedNuvioProfileStep || isCreatingNuvioProfile || Number.isFinite(account.profileId);
   const canAttempt = isValidEmail && isValidPassword && isValidProfileName && hasSelectedProfile && !loading;
+  const buttonLabel = loading
+    ? (
+      account.mode === 'create'
+        ? 'Creating account...'
+        : isCreatingNuvioProfile
+        ? 'Creating profile...'
+        : hasLoadedNuvioProfileStep
+        ? 'Continuing...'
+        : isNuvio
+        ? 'Loading profiles...'
+        : 'Signing in...'
+    )
+    : hasLoadedNuvioProfileStep
+    ? account.createNewProfile
+      ? 'Create profile and continue'
+      : 'Continue with profile'
+    : 'Continue';
+  const buttonLeadingIcon = loading
+    ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+    : hasLoadedNuvioProfileStep
+    ? <UserRound size={16} />
+    : account.mode === 'create'
+    ? <UserPlus size={16} />
+    : <LogIn size={16} />;
 
   function updateAccount(next: Partial<typeof account>) {
     if (target === 'stremio') {
@@ -298,26 +322,9 @@ export function AccountStep() {
           gap: '0.5rem',
         }}
       >
-        {loading && <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />}
-        {!loading && <ArrowRight size={16} />}
-        {loading
-          ? (
-            account.mode === 'create'
-              ? 'Creating account...'
-              : isCreatingNuvioProfile
-              ? 'Creating profile...'
-              : hasLoadedNuvioProfileStep
-              ? 'Continuing...'
-              : isNuvio
-              ? 'Loading profiles...'
-              : 'Signing in...'
-          )
-          : hasLoadedNuvioProfileStep
-          ? account.createNewProfile
-            ? 'Create profile and continue'
-            : 'Continue with profile'
-          : 'Continue'
-        }
+        <span className="wizard-primary-btn__icon" aria-hidden="true">{buttonLeadingIcon}</span>
+        <span className="wizard-primary-btn__label">{buttonLabel}</span>
+        <span className="wizard-primary-btn__icon" aria-hidden="true"><ArrowRight size={16} /></span>
       </button>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </WizardShell>

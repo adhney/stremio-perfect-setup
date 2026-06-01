@@ -1,4 +1,6 @@
 import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
+import { Gift, KeyRound, Search, TriangleAlert, Users } from 'lucide-react';
 import { WizardShell } from '../components/WizardShell';
 import { NextButton } from '../components/NextButton';
 import { MarkdownText } from '../components/MarkdownText';
@@ -163,6 +165,15 @@ function getDebridContinueState(debridServices: Array<{ id: string; apiKey: stri
   };
 }
 
+function getContinueIcon(screenId: KeyScreenId, label: string, canContinue: boolean): ReactNode {
+  if (!canContinue) return <TriangleAlert size={16} />;
+  if (/shared|free|p2p|http/i.test(label)) return <Users size={16} />;
+  if (/default/i.test(label)) return <Gift size={16} />;
+  if (/without ai-powered search/i.test(label)) return <Search size={16} />;
+  if (screenId !== 'debrid') return <KeyRound size={16} />;
+  return <KeyRound size={16} />;
+}
+
 export function KeysStep({ keyIndex }: Props) {
   const screen = ACTIVE_KEY_SCREENS[keyIndex];
   const {
@@ -207,6 +218,7 @@ export function KeysStep({ keyIndex }: Props) {
   const continueState = screen.id === 'debrid'
     ? getDebridContinueState(credentials.debridServices)
     : getContinueState(screen.id, fieldValues, fallbackAvailable);
+  const continueIcon = getContinueIcon(screen.id, continueState.label, continueState.canContinue);
   const credentialFields = screen.id === 'debrid' ? [] : SCREEN_FIELDS[screen.id];
   const sharedInstructionParts = [
     SHARED_INSTRUCTIONS_WALKTHROUGH,
@@ -329,7 +341,12 @@ export function KeysStep({ keyIndex }: Props) {
         </label>
       ))}
 
-      <NextButton onClick={nextStep} disabled={!continueState.canContinue} label={continueState.label} />
+      <NextButton
+        onClick={nextStep}
+        disabled={!continueState.canContinue}
+        label={continueState.label}
+        icon={continueIcon}
+      />
     </WizardShell>
   );
 }

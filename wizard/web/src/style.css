@@ -109,6 +109,18 @@
   opacity: 0.65;
 }
 
+.wizard-primary-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.wizard-primary-btn__label {
+  min-width: 0;
+  text-align: center;
+}
+
 .wizard-secondary-btn {
   background: var(--panel-2);
   color: var(--muted);

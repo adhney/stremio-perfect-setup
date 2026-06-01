@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { ListChecks } from 'lucide-react';
 import { WizardShell } from '../components/WizardShell';
 import { NextButton } from '../components/NextButton';
 import { MarkdownText } from '../components/MarkdownText';
@@ -104,7 +105,7 @@ export function AioSectionStep({ sectionIndex }: Props) {
         />
       ))}
 
-      <NextButton onClick={nextStep} disabled={isBlocked} />
+      <NextButton onClick={nextStep} disabled={isBlocked} icon={<ListChecks size={16} />} />
     </WizardShell>
   );
 }
