@@ -82,10 +82,19 @@ jobs:
           mkdir -p .pages-publish
           cp -R _site/. .pages-publish/
 
+      - name: Create Pages artifact archive
+        run: |
+          rm -f github-pages.tar github-pages.tar.gz
+          tar -cf github-pages.tar -C .pages-publish .
+          gzip -9 github-pages.tar
+
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          path: ./.pages-publish
+          name: github-pages
+          path: ./github-pages.tar.gz
+          retention-days: 1
+          compression-level: 0
 
   deploy:
     environment:
