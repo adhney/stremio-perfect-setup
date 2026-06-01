@@ -35,8 +35,8 @@ export function Welcome() {
           <span style={{ display: 'block' }}>AIOStreams for streams, AIOMetadata for catalogs, and all the recommended settings in one go.</span>
         </p>
         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', lineHeight: 1.65 }}>
-          <span style={{ display: 'block' }}>You will need a few API keys, but we walk you through each one step by step.</span>
-          <span style={{ display: 'block' }}>The process takes about 5 minutes and everything runs in your browser.</span>
+          <span style={{ display: 'block' }}>You may need a few API keys, but we walk you through each one step by step.</span>
+          <span style={{ display: 'block' }}>The process takes less than 5 minutes and everything runs in your browser.</span>
         </p>
       </div>
 
