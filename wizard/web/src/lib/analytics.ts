@@ -36,9 +36,11 @@ export function ensureAnalytics() {
   }
 
   window.dataLayer = window.dataLayer || [];
-  window.gtag = window.gtag || function gtag(...args: unknown[]) {
-    window.dataLayer?.push(args);
-  };
+  if (!window.gtag) {
+    window.gtag = function gtag() {
+      window.dataLayer?.push(arguments);
+    };
+  }
 
   const scriptId = 'wizard-ga4';
   if (!document.getElementById(scriptId)) {
@@ -122,7 +124,7 @@ export function getStepMeta(step: number, aioSections: AioSection[]): StepMeta |
   if (step >= KEY_SCREEN_START_STEP && step < KEY_SCREEN_START_STEP + ACTIVE_KEY_SCREENS.length) {
     const screen = ACTIVE_KEY_SCREENS[step - KEY_SCREEN_START_STEP];
     if (!screen) return null;
-    return { index: step, slug: screen.slug, name: screen.label };
+    return { index: step, slug: screen.id, name: screen.label };
   }
 
   const sectionIndex = step - AIO_SECTION_START_STEP;

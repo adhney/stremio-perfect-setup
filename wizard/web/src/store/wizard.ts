@@ -19,6 +19,7 @@ export interface AccountInfo {
   password: string;
   profileName?: string;
   profileId?: number;
+  createNewProfile?: boolean;
   profiles?: NuvioProfileOption[];
   /** Set after successful early auth on AccountStep */
   authKey?: string;   // Stremio authKey
@@ -97,7 +98,7 @@ export const useWizard = create<WizardState>((set) => ({
   maxReachedStep: 0,
   target: null,
   stremioAccount: { mode: 'create', email: '', password: '' },
-  nuvioAccount:   { mode: 'create', email: '', password: '', profileName: 'Profile 1', profiles: [] },
+  nuvioAccount:   { mode: 'create', email: '', password: '', profileName: 'Profile 1', createNewProfile: false, profiles: [] },
   credentials: {
     debridServices: [],
     tmdbApiKey: '', tmdbAccessToken: '', tvdbApiKey: '',

@@ -9,6 +9,8 @@ import { createStremioAdapter } from '@core/adapters/stremio.js';
 // @ts-ignore
 import { createNuvioAdapter } from '@core/adapters/nuvio.js';
 
+const CREATE_NEW_PROFILE_VALUE = '__create_new_profile__';
+
 export function AccountStep() {
   const MIN_PASSWORD_LENGTHS = {
     stremio: {
@@ -28,16 +30,18 @@ export function AccountStep() {
   const appName = target === 'stremio' ? 'Stremio' : 'Nuvio';
   const isNuvio = target === 'nuvio';
   const nuvioProfiles = isNuvio ? (account.profiles ?? []) : [];
-  const hasLoadedNuvioProfiles = isNuvio
+  const hasLoadedNuvioProfileStep = isNuvio
     && account.mode === 'signin'
-    && !!account.authToken
-    && nuvioProfiles.length > 0;
+    && typeof account.authToken === 'string'
+    && account.authToken.length > 0;
+  const isCreatingNuvioProfile = hasLoadedNuvioProfileStep && !!account.createNewProfile;
   const minPasswordLength = MIN_PASSWORD_LENGTHS[target ?? 'stremio'][account.mode];
 
   const isValidEmail    = account.email.includes('@');
   const isValidPassword = account.password.length >= minPasswordLength;
-  const isValidProfileName = !isNuvio || account.mode !== 'create' || !!account.profileName?.trim();
-  const hasSelectedProfile = !hasLoadedNuvioProfiles || Number.isFinite(account.profileId);
+  const requiresProfileName = isNuvio && (account.mode === 'create' || isCreatingNuvioProfile);
+  const isValidProfileName = !requiresProfileName || !!account.profileName?.trim();
+  const hasSelectedProfile = !hasLoadedNuvioProfileStep || isCreatingNuvioProfile || Number.isFinite(account.profileId);
   const canAttempt = isValidEmail && isValidPassword && isValidProfileName && hasSelectedProfile && !loading;
 
   function updateAccount(next: Partial<typeof account>) {
@@ -55,17 +59,13 @@ export function AccountStep() {
       authToken: undefined,
       authError: undefined,
       profileId: undefined,
+      createNewProfile: false,
       profiles: [],
     });
   }
 
   async function handleContinue() {
     if (!canAttempt) return;
-
-    if (isNuvio && account.mode === 'signin' && hasLoadedNuvioProfiles) {
-      nextStep();
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -89,23 +89,40 @@ export function AccountStep() {
           setNuvioAccount({
             authToken: auth.token,
             profileId: profile.profile_index,
+            createNewProfile: false,
             profiles: [profile],
           });
+        } else if (hasLoadedNuvioProfileStep) {
+          if (isCreatingNuvioProfile) {
+            const profile = await adapter.createProfile(account.authToken, {
+              name: account.profileName?.trim() || 'Profile 1',
+            });
+            if (!profile) {
+              throw new Error('Nuvio sign-in succeeded, but the new profile could not be created.');
+            }
+            const profiles = [...nuvioProfiles, profile]
+              .sort((a, b) => a.profile_index - b.profile_index);
+            setNuvioAccount({
+              profiles,
+              profileId: profile.profile_index,
+              profileName: profile.name,
+              createNewProfile: false,
+            });
+          }
+          nextStep();
+          return;
         } else {
           const auth = await adapter.login(account.email, account.password);
           const profiles = await adapter.getProfiles(auth.token);
-          if (!profiles.length) {
-            throw new Error('Nuvio: no profiles found on this account. Create one in Nuvio first, then try again.');
-          }
-
           const selectedProfileId = profiles.some(profile => profile.profile_index === account.profileId)
             ? account.profileId
-            : profiles[0].profile_index;
+            : profiles[0]?.profile_index;
 
           setNuvioAccount({
             authToken: auth.token,
             profiles,
-            profileId: selectedProfileId,
+            profileId: profiles.length ? selectedProfileId : undefined,
+            createNewProfile: profiles.length === 0,
           });
           return;
         }
@@ -124,7 +141,7 @@ export function AccountStep() {
     'stremio-create': 'We will create a new Stremio account and install your addons automatically.',
     'stremio-signin': 'We will sign into your existing Stremio account and install your addons.',
     'nuvio-create':   'We will create a new Nuvio account, create its first profile, and install your addons automatically.',
-    'nuvio-signin':   'We will sign into your existing Nuvio account, load its profiles, and install your addons and collections into the profile you choose.',
+    'nuvio-signin':   'We will sign into your existing Nuvio account, load its profiles, and install your addons and collections into an existing profile or a new one you create here.',
   };
 
   const inputStyle: React.CSSProperties = {
@@ -202,35 +219,57 @@ export function AccountStep() {
         />
       </label>
 
-      {isNuvio && account.mode === 'create' && (
+      {isNuvio && (account.mode === 'create' || isCreatingNuvioProfile) && (
         <label style={{ display: 'block', marginBottom: '0.5rem' }}>
           <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>Profile name</span>
           <input
             type="text"
             value={account.profileName ?? ''}
-            onChange={e => { updateAccount({ profileName: e.target.value }); setError(''); }}
+            onChange={e => {
+              if (account.mode === 'create') {
+                updateAccount({ profileName: e.target.value });
+              } else {
+                setNuvioAccount({ profileName: e.target.value });
+              }
+              setError('');
+            }}
             placeholder="Profile 1"
             style={inputStyle}
           />
         </label>
       )}
 
-      {hasLoadedNuvioProfiles && (
+      {hasLoadedNuvioProfileStep && (
         <label style={{ display: 'block', marginBottom: '0.5rem' }}>
           <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>Profile</span>
           <select
-            value={account.profileId ?? ''}
-            onChange={e => { setNuvioAccount({ profileId: Number(e.target.value) }); setError(''); }}
+            value={account.createNewProfile ? CREATE_NEW_PROFILE_VALUE : String(account.profileId ?? '')}
+            onChange={e => {
+              if (e.target.value === CREATE_NEW_PROFILE_VALUE) {
+                setNuvioAccount({ createNewProfile: true, profileId: undefined });
+              } else {
+                setNuvioAccount({ createNewProfile: false, profileId: Number(e.target.value) });
+              }
+              setError('');
+            }}
             style={inputStyle}
           >
+            {nuvioProfiles.length === 0 && (
+              <option value={CREATE_NEW_PROFILE_VALUE}>Create new profile</option>
+            )}
             {nuvioProfiles.map((profile) => (
               <option key={profile.profile_index} value={profile.profile_index}>
                 {profile.name || `Profile ${profile.profile_index}`}
               </option>
             ))}
+            {nuvioProfiles.length > 0 && (
+              <option value={CREATE_NEW_PROFILE_VALUE}>Create new profile</option>
+            )}
           </select>
           <p style={{ marginTop: '0.45rem', color: 'var(--muted)', fontSize: '0.78rem', lineHeight: 1.45 }}>
-            The selected Nuvio profile will have its current addons replaced and its collections updated by the wizard.
+            {account.createNewProfile
+              ? 'A new Nuvio profile will be created and then configured by the wizard when you continue.'
+              : 'The selected Nuvio profile will have its current addons replaced and its collections updated by the wizard.'}
           </p>
         </label>
       )}
@@ -265,14 +304,18 @@ export function AccountStep() {
           ? (
             account.mode === 'create'
               ? 'Creating account...'
-              : hasLoadedNuvioProfiles
+              : isCreatingNuvioProfile
+              ? 'Creating profile...'
+              : hasLoadedNuvioProfileStep
               ? 'Continuing...'
               : isNuvio
               ? 'Loading profiles...'
               : 'Signing in...'
           )
-          : hasLoadedNuvioProfiles
-          ? 'Continue with profile'
+          : hasLoadedNuvioProfileStep
+          ? account.createNewProfile
+            ? 'Create profile and continue'
+            : 'Continue with profile'
           : 'Continue'
         }
       </button>
