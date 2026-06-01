@@ -22,7 +22,7 @@ title: "🔎 4. AIOMetadata [Metadata & Catalogs]"
 * **🌍 World**: International titles grouped by country or language (Disabled initially for *Stremio*).
 
 >**📢 NOTE**:
->If you already have an *AIOMetadata* setup and are only interested in the catalogs, you can use [**this**](https://numb3rs.stream/templates/AIOMetadata-Catalogs.json) file for *Stremio*, or [**here**](https://numb3rs.stream/templates/AIOMetadata-All-Catalogs.json) for *Nuvio*, which are catalog-only and can be imported directly in the *Catalogs* tab, avoiding the full *AIOMetadata* configuration.
+>If you already have an *AIOMetadata* setup and are only interested in the catalogs, you can use [**this**](../templates/AIOMetadata-Catalogs.json) file for *Stremio*, or [**here**](../templates/AIOMetadata-All-Catalogs.json) for *Nuvio*, which are catalog-only and can be imported directly in the *Catalogs* tab, avoiding the full *AIOMetadata* configuration.
 
 Select an **AIOMetadata** instance from [**this**](https://uptime.ibbylabs.dev/aiometadata) or go directly to [**Viren's**](https://aiometadata.viren070.me/) or [**Midnight's**](https://aiometadatafortheweebs.midnightignite.me/) instance (two of the most popular ones) and:
 
@@ -31,7 +31,7 @@ Select an **AIOMetadata** instance from [**this**](https://uptime.ibbylabs.dev/a
 >* *Choose one of the instances and stick with it, you will store your configuration here, and if you change to the other instance, you'll need to transfer your configuration because it's not automatically transferred.*
 >* *You can keep the monitoring links above for later to check the instance online status, if it happens that it's not working and might be temporarily down.*
 
-1. Download my configuration file [**here**](https://numb3rs.stream/templates/AIOMetadata.json) for *Stremio*, or [**here**](https://numb3rs.stream/templates/AIOMetadata-All.json) for *Nuvio* (right-click, "*Save As*", and save it as `.json`, not `.txt`).
+1. Download my configuration file [**here**](../templates/AIOMetadata.json) for *Stremio*, or [**here**](../templates/AIOMetadata-All.json) for *Nuvio* (right-click, "*Save As*", and save it as `.json`, not `.txt`).
    * *Both configurations contain the same catalogs, but on the Nuvio version, all are enabled already because Nuvio supports a higher amount per addon, whereas Stremio has a limit of around 120 catalogs, so some catalogs are initially disabled on its version, but you can enable them manually if you disable some others according to your preferences.*
 2. Go to the "**Configuration**" tab, click on "**Import Configuration**", and load my configuration file.
 

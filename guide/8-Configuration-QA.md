@@ -228,7 +228,7 @@ I am including this section for anyone who has any additional questions or is en
 * The most likely reason is that **AIOMetadata** was not configured and installed in Nuvio first.
 * The Nuvio Collections Pack does not magically create the catalogs by itself. It organizes and groups the catalogs that already exist in your Nuvio setup, which in this setup are provided by *AIOMetadata*.
 * So, before adding the Collections Pack, you need to complete the [**4. 🔎 AIOMetadata**](4-AIOMetadata.md) step:
-   1. Import the [**configuration**](https://numb3rs.stream/templates/AIOMetadata-All.json) file from this guide into *AIOMetadata*, which includes the catalogs needed for the collections.
+   1. Import the [**configuration**](../templates/AIOMetadata-All.json) file from this guide into *AIOMetadata*, which includes the catalogs needed for the collections.
    2. Save the AIOMetadata configuration.
    3. Copy the **Manifest URL**.
    4. Install that Manifest URL in **Nuvio → Account → Addons → Add Addon**.

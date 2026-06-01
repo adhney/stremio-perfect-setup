@@ -1,11 +1,11 @@
 ---
 layout: default
-title: Collections Assets
+title: 🍿 Nuvio Perfect Collections
 ---
 
 # Collections Assets
 
-This directory contains the public asset library that powers the Nuvio collections in this repo.
+This directory contains the public asset library that powers the [🍿 Nuvio Perfect Collections](https://nuvioapp.space/community-collections/nuvio-perfect-collections-incl-dynamic-backdrops-2) Pack.
 
 ## Main Folders
 
@@ -25,5 +25,3 @@ This directory contains the public asset library that powers the Nuvio collectio
 - [Nuvio Collections JSON](/templates/Nuvio-Collections.json)
 - [AIOMetadata All Catalogs JSON](/templates/AIOMetadata-All-Catalogs.json)
 - [AIOMetadata All JSON](/templates/AIOMetadata-All.json)
-
-Direct file URLs under `/collections/...` are published from this repo and can be used from `https://numb3rs.stream`.

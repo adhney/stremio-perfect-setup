@@ -16,7 +16,7 @@ Depending on the version of the template you used initially, to avoid any confli
 Here's a quick summary on how to update to the latest **AIOStreams** template manually:
 1. Sign in to your **AIOStreams** instance with your **UUID** and **Password**.
 2. **Optional**:  As mentioned above, if upgrading from a template before v2.0, I suggest to reset your configuration by going to the **Save & Install** tab, click "**Reset Configuration**", and confirm it by clicking "**Reset**".
-3. On the **Save & Install** tab still, click "**Import**", then "**Import Template**", and paste the [**template link**](https://numb3rs.stream/templates/AIOStreams.json) and click on "**Go**".
+3. On the **Save & Install** tab still, click "**Import**", then "**Import Template**", and paste the [**template link**](../templates/AIOStreams.json) and click on "**Go**".
 4. Click "**Use this Template Now**".
 5. On the "**Select Services**" page that is shown, enable the Debrid services you are already using and click "**Next**". If you're not using any services and want to proceed with the **P2P/HTTP** setup, click "**Skip**".
 6. On the "**Template Options**" page, you'll be able to personalize the configuration to match your preferences, as described on the [**📚 3. AIOStreams**](3-AIOStreams.md) step.
@@ -29,7 +29,7 @@ Here's a quick summary on how to update to the latest **AIOStreams** template ma
 
 For **AIOMetadata**, there's normally not as many changes as AIOStreams so you shouldn't need to perform any updates unless explicitly required, so here are the steps if needed:
 1. Sign in to your **AIOMetadata** instance with your **UUID** and **Password**.
-2. Go to the "**Configuration**" tab, click "**Import Configuration**", and load the downloaded [**configuration file**](https://numb3rs.stream/templates/AIOMetadata.json).
+2. Go to the "**Configuration**" tab, click "**Import Configuration**", and load the downloaded [**configuration file**](../templates/AIOMetadata.json).
 3. **📢 IMPORTANT**: If you made any changes to the configuration after you loaded it when you did the setup for the first time, you may need to do them again (e.g. enabled/disabled/added/removed catalogs, changed any anime settings, etc.).
 4. On the same "**Configuration**" tab, click "**Save Configuration**". No need to install the addon on Stremio/Nuvio again.
 5. **For Stremio**: Keep in mind that if you change catalog structure in AIOMetadata after you installed it on Stremio, you need to go to Cinebye, authenticate again with Stremio credentials, and click the **Refresh** icon to the right of AIOMetadata in the "**Manage Addons**" section.*

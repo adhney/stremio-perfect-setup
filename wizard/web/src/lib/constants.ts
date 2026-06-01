@@ -61,7 +61,6 @@ export interface WizardConfig {
   doneStepNotifications?: WizardNotification[];
   instances: WizardInstances;
   templates: WizardTemplates;
-  /** Optional CORS proxy base URL (e.g. "https://proxy.numb3rs.stream"). Prefixed to AIOStreams API calls. */
   proxyBase?: string;
 }
 

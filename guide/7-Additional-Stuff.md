@@ -85,7 +85,7 @@ Prioritize streams that are ⚡ **cached**, high resolution, strong score (◆),
 
 ## Alternative Stream Information Icons
 
-You can import [**this**](https://numb3rs.stream/templates/AIOStreams-Formatter.json) *AIOStreams* template directly (**AIOStreams → Save & Install → Import → Import Template → [Paste Link] → Go**) if you're only interested in the two formatter options provided in this guide without changing anything else from your configuration. Or you can manually update the formatter as follows:
+You can import [**this**](../templates/AIOStreams-Formatter.json) *AIOStreams* template directly (**AIOStreams → Save & Install → Import → Import Template → [Paste Link] → Go**) if you're only interested in the two formatter options provided in this guide without changing anything else from your configuration. Or you can manually update the formatter as follows:
 
 If you went with the ***Flat Monochrome Icons*** for the formatter and want instead more ***Colorful Icons*** on the stream information view, you can go to the **Formatter** tab in **AIOStreams**, and replace the text in the **Description Template** with this:
 

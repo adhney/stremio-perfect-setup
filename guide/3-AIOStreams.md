@@ -17,7 +17,7 @@ Select an **AIOStreams** instance from [**this**](https://uptime.ibbylabs.dev/ai
 >* *You can keep the monitoring links above for later to check the instance online status, if it happens that it's not working and might be temporarily down.*
 
 1. Select "**Advanced**" on the welcome screen if it shows up.
-2. Copy [**this**](https://numb3rs.stream/templates/AIOStreams.json) link (right-click and "*Copy link address*").
+2. Copy [**this**](../templates/AIOStreams.json) link (right-click and "*Copy link address*").
 3. Go to the "**Save & Install**" tab on AIOStreams (sidebar menu on the left), click "**Import**", "**Import Template**", paste the link you copied and click on "**Go**".
 
    ![Import Template](images/3.3.png)
