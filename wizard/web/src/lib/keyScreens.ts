@@ -21,7 +21,7 @@ export const KEY_SCREENS: KeyScreen[] = [
   },
   {
     id: 'tmdb',
-    label: '🎬 TMDB',
+    label: '🎥 TMDB',
     description: 'The Movie Database (TMDB) powers the metadata, posters, and catalog content in AIOMetadata, and serves to filter out bad results in AIOStreams. Without these keys, the catalog addon cannot display movie and TV show information. You need **two separate credentials** from your TMDB account.',
     instruction: 'Sign up for a free account at [TMDB](https://www.themoviedb.org) and log in. Navigate to **Settings** (profile icon on the top right) then **API**. Generate a new key, fill the form with whatever info, and click **Subscribe**. Access your API keys and copy both the short **API Key** and the long **API Read Access Token**.',
   },
