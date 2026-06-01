@@ -6,6 +6,13 @@ README_PATH="$ROOT_DIR/README.md"
 GUIDE_DIR="$ROOT_DIR/guide"
 CHAPTERS_SEPARATOR="---"
 DEST_DIR="${1:-}"
+DEST_ABS=""
+COPY_EXCLUDES=(
+  --exclude=.git
+  --exclude=_site
+  --exclude=.jekyll-cache
+  --exclude=wizard/web/node_modules
+)
 
 usage() {
   cat <<'EOF'
@@ -13,6 +20,23 @@ Usage:
   scripts/prepare-site-source.sh <destination-dir>
   scripts/prepare-site-source.sh --sync-readme
 EOF
+}
+
+resolve_path() {
+  local path="$1"
+
+  if [[ -d "$path" ]]; then
+    (
+      cd "$path"
+      pwd
+    )
+    return
+  fi
+
+  (
+    cd "$(dirname "$path")"
+    printf '%s/%s\n' "$(pwd)" "$(basename "$path")"
+  )
 }
 
 has_leading_icon() {
@@ -159,6 +183,11 @@ if [[ -z "$DEST_DIR" ]]; then
 fi
 
 mkdir -p "$DEST_DIR"
+DEST_ABS="$(resolve_path "$DEST_DIR")"
+
+if [[ "$DEST_ABS" == "$ROOT_DIR"/* ]]; then
+  COPY_EXCLUDES+=("--exclude=.${DEST_ABS#"$ROOT_DIR"}")
+fi
 
 if [[ ! -f "$ROOT_DIR/README.md" ]]; then
   echo "Missing README source: $ROOT_DIR/README.md" >&2
@@ -176,10 +205,7 @@ if ! render_base_content "$README_PATH" >/dev/null; then
 fi
 
 tar \
-  --exclude=.git \
-  --exclude=_site \
-  --exclude=.jekyll-cache \
-  --exclude=wizard/web/node_modules \
+  "${COPY_EXCLUDES[@]}" \
   -C "$ROOT_DIR" \
   -cf - \
   . | tar -C "$DEST_DIR" -xf -
