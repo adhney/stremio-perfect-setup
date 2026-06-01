@@ -5,7 +5,7 @@ title: "🚀 Nuvio"
 
 # 🚀 Nuvio
 
-![Nuvio Collections](../../assets/images/collections.webp)
+![Nuvio Collections](../../assets/images/screens/nuvio.webp)
 
 **Nuvio** is a new alternative streaming platform that supports the same Stremio addon ecosystem, but is more feature-rich and offers many additional customization options. It has its own account, profiles, collections, layout settings, and app experience. As such, you can configure **AIOStreams**, **AIOMetadata**, and optionally **Watchly** like before, but instead of installing those addons on **Stremio**, you will copy their **Manifest URL** and install them directly on **Nuvio**.
 

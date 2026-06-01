@@ -5,11 +5,11 @@
 <table class="home-showcase" role="presentation">
   <tr>
     <td align="center">
-      <img src="assets/images/stremio.webp" alt="Stremio">
+      <img src="assets/images/screens/stremio.webp" alt="Stremio">
       <div><strong>🎞️ Stremio</strong></div>
     </td>
     <td align="center">
-      <img src="assets/images/collections.webp" alt="Nuvio">
+      <img src="assets/images/screens/nuvio.webp" alt="Nuvio">
       <div><strong>🚀 Nuvio</strong></div>
     </td>
   </tr>
