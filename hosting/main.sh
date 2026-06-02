@@ -369,6 +369,7 @@ elif [[ -n "${MODULES_CSV}" ]]; then
 else
   select_modules_interactively "${TEMPLATE_DIR_ABS}" "${SELECTED_MODULES_FILE}"
 fi
+mapfile -t selected_modules < <(read_lines_file "${SELECTED_MODULES_FILE}")
 
 if [[ -z "${BACKUP_ZIP_INPUT}" ]]; then
   section "Config staging"
@@ -428,10 +429,70 @@ env_upsert "${ROOT_ENV}" AUTHELIA_STORAGE_ENCRYPTION_KEY "${HOSTING_AUTHELIA_STO
 env_upsert "${ROOT_ENV}" AUTHELIA_JWT_SECRET "${HOSTING_AUTHELIA_JWT_SECRET:-${root_authelia_jwt_default:-$(generate_secret_base64)}}"
 success "Root .env values and generated secrets are staged."
 
+sync_staged_configs_to_selected_modules() {
+  local selected_modules_now=()
+  local manifest_tmp=""
+  local module="" source_rel="" stage_rel="" item_type=""
+
+  manifest_tmp="$(mktemp "${WORK_ROOT_ABS}/stage-map.XXXXXX")"
+  mapfile -t selected_modules_now < <(read_lines_file "${SELECTED_MODULES_FILE}")
+
+  while IFS=$'\t' read -r module source_rel stage_rel item_type; do
+    [[ -n "${source_rel}" ]] || continue
+    if [[ "${module}" == "root" ]]; then
+      printf '%s\t%s\t%s\t%s\n' "${module}" "${source_rel}" "${stage_rel}" "${item_type}" >> "${manifest_tmp}"
+      continue
+    fi
+
+    if array_contains "${module}" "${selected_modules_now[@]}"; then
+      [[ -e "${CONFIG_DIR_ABS}/${stage_rel}" ]] || die "Staged path missing for ${source_rel}: ${CONFIG_DIR_ABS}/${stage_rel}"
+      printf '%s\t%s\t%s\t%s\n' "${module}" "${source_rel}" "${stage_rel}" "${item_type}" >> "${manifest_tmp}"
+      continue
+    fi
+
+    rm -rf "${CONFIG_DIR_ABS}/${stage_rel}"
+  done < "${MANIFEST_FILE}"
+
+  mv "${manifest_tmp}" "${MANIFEST_FILE}"
+
+  while IFS= read -r module; do
+    [[ -n "${module}" ]] || continue
+    while IFS= read -r entry; do
+      [[ -n "${entry}" ]] || continue
+      stage_item "${module}" "apps/${module}/${entry}" "${MANIFEST_FILE}" "${TEMPLATE_DIR_ABS}" "${CONFIG_DIR_ABS}"
+    done < <(module_stageable_entries "${TEMPLATE_DIR_ABS}" "${module}")
+  done < <(read_lines_file "${SELECTED_MODULES_FILE}")
+}
+
+module_hook_title() {
+  local script_path="$1"
+  local module_name="$2"
+  local hook_name=""
+
+  hook_name="$(basename "${script_path}" .sh)"
+  case "${hook_name}" in
+    all.supabase)
+      printf 'Supabase setup'
+      ;;
+    cloudflare-ddns)
+      printf 'Cloudflare DDNS setup'
+      ;;
+    *)
+      if [[ -n "${module_name}" ]]; then
+        printf 'Module setup: %s' "${module_name}"
+      else
+        printf 'Module setup: %s' "${hook_name}"
+      fi
+      ;;
+  esac
+}
+
 run_module_hooks() {
   local hook_delim=$'\x1f'
   local script_path="" metadata="" scope="" module="" dependencies="" order=""
   local dependencies_array=() selected_modules_now=() enabled=0 dependency=""
+  local hook_modules=()
+  local hook_title="" hook_target=""
   local hooks_file=""
 
   hooks_file="$(mktemp "${WORK_ROOT_ABS}/hook-order.XXXXXX")"
@@ -459,15 +520,17 @@ run_module_hooks() {
       module)
         [[ -n "${module}" ]] || die "Module hook did not report module metadata: ${script_path}"
         array_contains "${module}" "${selected_modules_now[@]}" || continue
+        hook_modules=("${module}")
         ;;
       all)
         [[ -n "${dependencies}" ]] || die "All-scope hook did not report dependencies metadata: ${script_path}"
         enabled=0
+        hook_modules=()
         split_csv_into_array "${dependencies}" dependencies_array
         for dependency in "${dependencies_array[@]}"; do
           if array_contains "${dependency}" "${selected_modules_now[@]}"; then
             enabled=1
-            break
+            hook_modules+=("${dependency}")
           fi
         done
         (( enabled )) || continue
@@ -477,19 +540,36 @@ run_module_hooks() {
         ;;
     esac
 
-    HOSTING_TEMPLATE_DIR="${TEMPLATE_DIR_ABS}" \
-    HOSTING_CONFIG_DIR="${CONFIG_DIR_ABS}" \
-    HOSTING_MANIFEST_FILE="${MANIFEST_FILE}" \
-    HOSTING_SELECTED_MODULES_FILE="${SELECTED_MODULES_FILE}" \
-    HOSTING_ROOT_ENV="${ROOT_ENV}" \
-    HOSTING_CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN_VALUE}" \
-    HOSTING_CLOUDFLARE_PROXIED="${CLOUDFLARE_PROXIED_VALUE}" \
-    HOSTING_SUPABASE_CONNECTION_STRING="${SUPABASE_CONNECTION_STRING_VALUE}" \
-    HOSTING_SUPABASE_DB_PASSWORD="${SUPABASE_DB_PASSWORD_VALUE}" \
-    "${script_path}"
+    hook_title="$(module_hook_title "${script_path}" "${module}")"
+    hook_target="$(join_by ', ' "${hook_modules[@]}")"
+    section "${hook_title}"
+    log "Running $(basename "${script_path}") for ${hook_target}"
+
+    run_module_hook_script "${script_path}" env \
+      HOSTING_TEMPLATE_DIR="${TEMPLATE_DIR_ABS}" \
+      HOSTING_CONFIG_DIR="${CONFIG_DIR_ABS}" \
+      HOSTING_MANIFEST_FILE="${MANIFEST_FILE}" \
+      HOSTING_SELECTED_MODULES_FILE="${SELECTED_MODULES_FILE}" \
+      HOSTING_ROOT_ENV="${ROOT_ENV}" \
+      HOSTING_CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN_VALUE}" \
+      HOSTING_CLOUDFLARE_PROXIED="${CLOUDFLARE_PROXIED_VALUE}" \
+      HOSTING_SUPABASE_CONNECTION_STRING="${SUPABASE_CONNECTION_STRING_VALUE}" \
+      HOSTING_SUPABASE_DB_PASSWORD="${SUPABASE_DB_PASSWORD_VALUE}"
   done < <(sort -t "${hook_delim}" -k1,1n -k2,2 "${hooks_file}")
 
   rm -f "${hooks_file}"
+}
+
+run_module_hook_script() {
+  local script_path="$1"
+
+  shift
+
+  if is_interactive && tty_device_available; then
+    "$@" "${script_path}" </dev/tty
+  else
+    "$@" "${script_path}"
+  fi
 }
 
 section "Module automation"
@@ -498,6 +578,8 @@ if [[ -n "${BACKUP_ZIP_INPUT}" ]]; then
 else
   run_module_hooks
 fi
+sync_staged_configs_to_selected_modules
+success "Staged config directory synced to the final selected modules."
 
 mapfile -t final_modules < <(read_lines_file "${SELECTED_MODULES_FILE}")
 prune_template_to_modules "${TEMPLATE_DIR_ABS}" "${final_modules[@]}"
