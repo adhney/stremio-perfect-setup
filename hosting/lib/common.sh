@@ -390,6 +390,17 @@ array_contains() {
   return 1
 }
 
+selected_module_enabled() {
+  local module="$1"
+  local selected_modules_file="${2:-${HOSTING_SELECTED_MODULES_FILE:-}}"
+
+  if [[ -z "${selected_modules_file}" || ! -f "${selected_modules_file}" ]]; then
+    return 0
+  fi
+
+  grep -Fqx -- "${module}" "${selected_modules_file}"
+}
+
 dedupe_lines() {
   awk '!seen[$0]++'
 }

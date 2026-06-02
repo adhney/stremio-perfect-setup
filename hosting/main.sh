@@ -490,7 +490,6 @@ module_hook_title() {
 run_module_hooks() {
   local hook_delim=$'\x1f'
   local script_path="" metadata="" scope="" module="" dependencies="" order=""
-  local dependencies_array=() selected_modules_now=() enabled=0 dependency=""
   local hook_modules=()
   local hook_title="" hook_target=""
   local hooks_file=""
@@ -514,26 +513,14 @@ run_module_hooks() {
   done < <(find "${HOSTING_ROOT}/modules" -maxdepth 1 -type f -name '*.sh' | sort)
 
   while IFS="${hook_delim}" read -r order script_path scope module dependencies; do
-    mapfile -t selected_modules_now < <(read_lines_file "${SELECTED_MODULES_FILE}")
-
     case "${scope}" in
       module)
         [[ -n "${module}" ]] || die "Module hook did not report module metadata: ${script_path}"
-        array_contains "${module}" "${selected_modules_now[@]}" || continue
         hook_modules=("${module}")
         ;;
       all)
         [[ -n "${dependencies}" ]] || die "All-scope hook did not report dependencies metadata: ${script_path}"
-        enabled=0
-        hook_modules=()
-        split_csv_into_array "${dependencies}" dependencies_array
-        for dependency in "${dependencies_array[@]}"; do
-          if array_contains "${dependency}" "${selected_modules_now[@]}"; then
-            enabled=1
-            hook_modules+=("${dependency}")
-          fi
-        done
-        (( enabled )) || continue
+        split_csv_into_array "${dependencies}" hook_modules
         ;;
       *)
         die "Unknown module scope '${scope}' in ${script_path}"

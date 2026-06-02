@@ -37,6 +37,10 @@ fi
 [[ -n "${HOSTING_CONFIG_DIR:-}" ]] || die "HOSTING_CONFIG_DIR is not set"
 [[ -n "${HOSTING_MANIFEST_FILE:-}" ]] || die "HOSTING_MANIFEST_FILE is not set"
 
+if ! selected_module_enabled "${MODULE_NAME}"; then
+  exit 0
+fi
+
 ALTMOUNT_ENV="${HOSTING_CONFIG_DIR}/ALTMOUNT.env"
 current_jwt_secret=""
 if [[ -f "${ALTMOUNT_ENV}" ]]; then

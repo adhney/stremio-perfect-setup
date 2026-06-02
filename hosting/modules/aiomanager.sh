@@ -29,6 +29,10 @@ fi
 
 [[ -n "${HOSTING_CONFIG_DIR:-}" ]] || die "HOSTING_CONFIG_DIR is not set"
 
+if ! selected_module_enabled "${MODULE_NAME}"; then
+  exit 0
+fi
+
 AIOMANAGER_ENV="${HOSTING_CONFIG_DIR}/AIOMANAGER.env"
 [[ -f "${AIOMANAGER_ENV}" ]] || die "Missing staged AIOManager env file: ${AIOMANAGER_ENV}"
 

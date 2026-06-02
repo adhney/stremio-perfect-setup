@@ -45,6 +45,10 @@ fi
 [[ -n "${HOSTING_SELECTED_MODULES_FILE:-}" ]] || die "HOSTING_SELECTED_MODULES_FILE is not set"
 [[ -n "${HOSTING_ROOT_ENV:-}" ]] || die "HOSTING_ROOT_ENV is not set"
 
+if ! selected_module_enabled "${MODULE_NAME}"; then
+  exit 0
+fi
+
 token_value="${HOSTING_CLOUDFLARE_API_TOKEN:-$(env_get "${HOSTING_ROOT_ENV}" CLOUDFLARE_API_TOKEN)}"
 proxied_value="${HOSTING_CLOUDFLARE_PROXIED:-$(env_get "${HOSTING_ROOT_ENV}" CLOUDFLARE_PROXIED)}"
 proxied_value="${proxied_value:-${DEFAULT_PROXIED_WHEN_ENABLED}}"
