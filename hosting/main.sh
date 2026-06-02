@@ -74,6 +74,9 @@ MANIFEST_FILE="${CONFIG_DIR_ABS}/.stage-map.tsv"
 SELECTED_MODULES_FILE="${WORK_ROOT_ABS}/selected-modules.txt"
 BACKUP_AVAILABLE_MODULES_FILE="${WORK_ROOT_ABS}/backup-modules.txt"
 BACKUP_METADATA_MODULES_FILE="${WORK_ROOT_ABS}/backup-selected-modules.txt"
+LIVE_SETUP_MODULES_FILE="${WORK_ROOT_ABS}/live-selected-modules.txt"
+MODULE_HOOK_TARGETS_FILE="${WORK_ROOT_ABS}/hook-target-modules.txt"
+MODULE_HOOK_SYNC_ONLY_FILE="${WORK_ROOT_ABS}/hook-sync-only-modules.txt"
 CLOUDFLARE_DDNS_MODULE=cloudflare-ddns
 
 MODULES_CSV=""
@@ -102,6 +105,7 @@ BACKUP_MODE=0
 BACKUP_QUICK_MODE=0
 BACKUP_DIR_SET=0
 DOCKER_DIR_SET=0
+EXISTING_SETUP_MODE="fresh"
 
 while (( $# > 0 )); do
   case "$1" in
@@ -218,6 +222,56 @@ if [[ -n "${BACKUP_ZIP_INPUT}" ]]; then
   BACKUP_ZIP_INPUT="$(absolute_path "${BACKUP_ZIP_INPUT}")"
 fi
 
+detect_existing_setup_modules() {
+  local docker_dir="$1"
+  local -n modules_ref="$2"
+  local root_compose_path=""
+
+  modules_ref=()
+
+  [[ -d "${docker_dir}" ]] || return 1
+  [[ -f "${docker_dir}/.env" ]] || return 1
+
+  if [[ -f "${docker_dir}/compose.yaml" ]]; then
+    root_compose_path="${docker_dir}/compose.yaml"
+  elif [[ -f "${docker_dir}/compose.yml" ]]; then
+    root_compose_path="${docker_dir}/compose.yml"
+  else
+    return 1
+  fi
+
+  mapfile -t modules_ref < <(list_included_modules "${root_compose_path}" | dedupe_lines)
+  (( ${#modules_ref[@]} > 0 )) || return 1
+}
+
+write_optional_lines_file() {
+  local file="$1"
+
+  shift
+  if (( $# > 0 )); then
+    write_lines_file "${file}" "$@"
+  else
+    rm -f "${file}"
+  fi
+}
+
+remove_root_host_vars_for_modules() {
+  local root_env_file="$1"
+
+  shift
+
+  local module=""
+  local env_var=""
+
+  for module in "$@"; do
+    [[ -n "${module}" ]] || continue
+    while IFS= read -r env_var; do
+      [[ -n "${env_var}" ]] || continue
+      env_remove "${root_env_file}" "${env_var}"
+    done < <(module_host_env_vars "${TEMPLATE_DIR_ABS}" "${module}")
+  done
+}
+
 run_existing_docker_backup() {
   local docker_dir_default=""
   local backup_dir_default=""
@@ -248,6 +302,10 @@ run_existing_docker_backup() {
 
   log "Source Docker directory: ${DOCKER_DIR_VALUE}"
   log "Backup output directory: ${BACKUP_DIR_VALUE}"
+
+  if (( BACKUP_MODE )) && is_interactive; then
+    prompt_yes_no "Create a new timestamped backup ZIP from ${DOCKER_DIR_VALUE} into ${BACKUP_DIR_VALUE} now? This only reads the live stack and writes a separate archive without changing the deployed files." yes || die "Backup cancelled."
+  fi
 
   "${HOSTING_ROOT}/steps/backup-docker-config.sh" \
     --docker-dir "${DOCKER_DIR_VALUE}" \
@@ -312,6 +370,55 @@ else
   HOSTING_DOCKER_PROMPTED=1 "${HOSTING_ROOT}/steps/install-docker.sh"
 fi
 
+existing_live_modules=()
+
+section "Deployment target"
+if is_interactive; then
+  show_message "Deployment Target" "Choose the final Docker Compose directory now, immediately after Docker setup. The script will inspect that folder before doing template work so it can warn you about an existing live setup and let you choose whether to overwrite it or continue from it."
+fi
+
+if (( DRY_RUN )); then
+  dry_run_log "Using dry-run deployment directory ${DOCKER_DIR_VALUE}."
+elif (( ! DOCKER_DIR_SET )); then
+  DOCKER_DIR_VALUE="$(prompt_value "Enter the final Docker Compose directory where this stack should be deployed on this machine. You can use ~, an absolute path, or a relative path [DOCKER_DIR]" "${DEFAULT_DOCKER_DIR:-/opt/docker}")"
+fi
+
+DOCKER_DIR_VALUE="${DOCKER_DIR_VALUE:-${DEFAULT_DOCKER_DIR:-/opt/docker}}"
+[[ -n "${DOCKER_DIR_VALUE}" ]] || die "DOCKER_DIR is required"
+DOCKER_DIR_VALUE="$(absolute_path "${DOCKER_DIR_VALUE}")"
+
+if detect_existing_setup_modules "${DOCKER_DIR_VALUE}" existing_live_modules; then
+  if [[ -n "${BACKUP_ZIP_INPUT}" ]]; then
+    EXISTING_SETUP_MODE="overwrite"
+    if is_interactive; then
+      show_message "Existing Setup Detected" "A live hosting setup already exists in ${DOCKER_DIR_VALUE}. Restoring from a backup into this folder will replace files in that existing stack when deployment runs."
+      prompt_yes_no "Continue with the backup restore and overwrite the existing setup in ${DOCKER_DIR_VALUE} when you deploy?" no || die "Restore cancelled."
+    else
+      warn "Existing setup detected in ${DOCKER_DIR_VALUE}; continuing in overwrite mode because prompts are unavailable."
+    fi
+  elif is_interactive; then
+    show_message "Existing Setup Detected" "A live hosting setup already exists in ${DOCKER_DIR_VALUE}. You can either overwrite that target with the prepared upstream files, or continue from the existing setup so the current modules start preselected and you can add or remove modules safely."
+    EXISTING_SETUP_MODE="$(prompt_choice "Existing Setup Detected" "Choose how the installer should handle the existing live setup in ${DOCKER_DIR_VALUE}." "modify" "modify" "Reuse the existing setup, preload its values, and let me add or remove modules." "overwrite" "Overwrite the target directory with the prepared template deployment." "cancel" "Abort without touching this target directory.")"
+    case "${EXISTING_SETUP_MODE}" in
+      modify)
+        log "Continuing from existing setup in ${DOCKER_DIR_VALUE}"
+        ;;
+      overwrite)
+        prompt_yes_no "Proceed in overwrite mode for ${DOCKER_DIR_VALUE}? The final deploy step will replace the current live stack in that folder." no || die "Overwrite cancelled."
+        ;;
+      cancel)
+        die "Setup cancelled."
+        ;;
+      *)
+        die "Unknown existing setup choice: ${EXISTING_SETUP_MODE}"
+        ;;
+    esac
+  else
+    EXISTING_SETUP_MODE="overwrite"
+    warn "Existing setup detected in ${DOCKER_DIR_VALUE}; continuing in overwrite mode because prompts are unavailable."
+  fi
+fi
+
 section "Template fetch"
 "${HOSTING_ROOT}/steps/fetch-template.sh" --source "${TEMPLATE_SOURCE_VALUE}" --template-dir "${TEMPLATE_DIR_ABS}"
 
@@ -337,6 +444,19 @@ if [[ -n "${BACKUP_ZIP_INPUT}" ]]; then
     mapfile -t backup_metadata_modules < <(read_lines_file "${BACKUP_METADATA_MODULES_FILE}")
   fi
   backup_default_modules_csv="$(join_by ',' "${backup_available_modules[@]}")"
+fi
+
+live_default_modules_csv=""
+if [[ "${EXISTING_SETUP_MODE}" == "modify" ]]; then
+  section "Existing setup inspection"
+  "${HOSTING_ROOT}/steps/inspect-live-setup.sh" \
+    --docker-dir "${DOCKER_DIR_VALUE}" \
+    --template-dir "${TEMPLATE_DIR_ABS}" \
+    --enabled-modules-file "${LIVE_SETUP_MODULES_FILE}"
+  if [[ -f "${LIVE_SETUP_MODULES_FILE}" ]]; then
+    mapfile -t existing_live_modules < <(read_lines_file "${LIVE_SETUP_MODULES_FILE}")
+  fi
+  live_default_modules_csv="$(join_by ',' "${existing_live_modules[@]}")"
 fi
 
 all_modules=()
@@ -378,6 +498,24 @@ if [[ -n "${BACKUP_ZIP_INPUT}" ]]; then
   done
   write_lines_file "${SELECTED_MODULES_FILE}" "${selected_modules[@]}"
   success "Selected modules from backup: $(join_by ', ' "${selected_modules[@]}")"
+elif [[ "${EXISTING_SETUP_MODE}" == "modify" ]]; then
+  section "Module selection"
+  selected_modules=("${existing_live_modules[@]}")
+  if [[ -n "${MODULES_CSV}" ]]; then
+    selected_modules=()
+    split_csv_into_array "${MODULES_CSV}" selected_modules
+  elif is_interactive; then
+    select_modules_interactively "${TEMPLATE_DIR_ABS}" "${SELECTED_MODULES_FILE}" "${live_default_modules_csv}"
+    mapfile -t selected_modules < <(read_lines_file "${SELECTED_MODULES_FILE}")
+  fi
+  for module in "${required_modules[@]}"; do
+    array_contains "${module}" "${selected_modules[@]}" || selected_modules+=("${module}")
+  done
+  for module in "${selected_modules[@]}"; do
+    array_contains "${module}" "${all_modules[@]}" || die "Unknown module: ${module}"
+  done
+  write_lines_file "${SELECTED_MODULES_FILE}" "${selected_modules[@]}"
+  success "Selected modules from existing setup: $(join_by ', ' "${selected_modules[@]}")"
 elif [[ -n "${MODULES_CSV}" ]]; then
   section "Module selection"
   selected_modules=()
@@ -395,10 +533,31 @@ else
 fi
 mapfile -t selected_modules < <(read_lines_file "${SELECTED_MODULES_FILE}")
 
-if [[ -z "${BACKUP_ZIP_INPUT}" ]]; then
-  section "Config staging"
-  "${HOSTING_ROOT}/steps/stage-configs.sh" --template-dir "${TEMPLATE_DIR_ABS}" --config-dir "${CONFIG_DIR_ABS}" --modules-file "${SELECTED_MODULES_FILE}" --manifest-file "${MANIFEST_FILE}"
-else
+existing_selected_modules=()
+added_modules=()
+removed_modules=()
+if [[ "${EXISTING_SETUP_MODE}" == "modify" ]]; then
+  mapfile -t existing_selected_modules < <(read_lines_file "${LIVE_SETUP_MODULES_FILE}")
+
+  for module in "${selected_modules[@]}"; do
+    array_contains "${module}" "${existing_selected_modules[@]}" || added_modules+=("${module}")
+  done
+  for module in "${existing_selected_modules[@]}"; do
+    array_contains "${module}" "${selected_modules[@]}" || removed_modules+=("${module}")
+  done
+
+  if (( ${#added_modules[@]} > 0 )); then
+    log "Modules to add: $(join_by ', ' "${added_modules[@]}")"
+  fi
+  if (( ${#removed_modules[@]} > 0 )); then
+    log "Modules to remove: $(join_by ', ' "${removed_modules[@]}")"
+  fi
+  if (( ${#added_modules[@]} == 0 && ${#removed_modules[@]} == 0 )); then
+    log "Selected modules already match the existing setup."
+  fi
+fi
+
+if [[ -n "${BACKUP_ZIP_INPUT}" ]]; then
   section "Backup import"
   "${HOSTING_ROOT}/steps/import-backup.sh" \
     --zip-file "${BACKUP_ZIP_INPUT}" \
@@ -406,27 +565,34 @@ else
     --config-dir "${CONFIG_DIR_ABS}" \
     --manifest-file "${MANIFEST_FILE}" \
     --modules-file "${SELECTED_MODULES_FILE}"
+elif [[ "${EXISTING_SETUP_MODE}" == "modify" ]]; then
+  section "Existing setup import"
+  "${HOSTING_ROOT}/steps/import-live-setup.sh" \
+    --docker-dir "${DOCKER_DIR_VALUE}" \
+    --template-dir "${TEMPLATE_DIR_ABS}" \
+    --config-dir "${CONFIG_DIR_ABS}" \
+    --manifest-file "${MANIFEST_FILE}" \
+    --modules-file "${SELECTED_MODULES_FILE}"
+else
+  section "Config staging"
+  "${HOSTING_ROOT}/steps/stage-configs.sh" --template-dir "${TEMPLATE_DIR_ABS}" --config-dir "${CONFIG_DIR_ABS}" --modules-file "${SELECTED_MODULES_FILE}" --manifest-file "${MANIFEST_FILE}"
 fi
 
 ROOT_ENV="${CONFIG_DIR_ABS}/.env"
 root_tz_default="$(env_get "${ROOT_ENV}" TZ || true)"
-root_docker_dir_default="$(env_get "${ROOT_ENV}" DOCKER_DIR || true)"
 root_domain_default="$(env_get "${ROOT_ENV}" DOMAIN || true)"
 root_letsencrypt_default="$(env_get "${ROOT_ENV}" LETSENCRYPT_EMAIL || true)"
 root_tz_default="${DEFAULT_TIMEZONE:-${root_tz_default:-Europe/Berlin}}"
-root_docker_dir_default="${DEFAULT_DOCKER_DIR:-${root_docker_dir_default:-/opt/docker}}"
 env_value_is_placeholder "${root_domain_default}" && root_domain_default=""
 env_value_is_placeholder "${root_letsencrypt_default}" && root_letsencrypt_default=""
 
 if is_interactive; then
-  show_message "Environment Details" "Next, enter the core environment values for the stack: timezone, final Docker directory, public base domain, and the email address used for Let's Encrypt notifications. These values are written into the staged root .env and used across multiple services."
+  show_message "Environment Details" "Next, enter the remaining core environment values for the stack: timezone, public base domain, and the email address used for Let's Encrypt notifications. The deployment target is already set to ${DOCKER_DIR_VALUE}. These values are written into the staged root .env and used across multiple services."
 fi
 
 TIMEZONE_VALUE="${TIMEZONE_VALUE:-$(prompt_value "Enter the server timezone using the TZ database identifier so containers log and schedule tasks correctly, for example Europe/Berlin [TZ]" "${root_tz_default}")}"
 if (( DRY_RUN )); then
-  dry_run_log "Overriding DOCKER_DIR with ${DOCKER_DIR_VALUE}"
-else
-  DOCKER_DIR_VALUE="${DOCKER_DIR_VALUE:-$(prompt_value "Enter the final Docker Compose directory where the prepared stack should be deployed on this machine. You can use ~, an absolute path, or a relative path [DOCKER_DIR]" "${root_docker_dir_default}")}"
+  dry_run_log "Using DOCKER_DIR ${DOCKER_DIR_VALUE}"
 fi
 DOMAIN_VALUE="${DOMAIN_VALUE:-$(prompt_value "Enter the public base domain that Traefik-routed services should use for their hostnames, for example example.com [DOMAIN]" "${root_domain_default}")}"
 LETSENCRYPT_EMAIL_VALUE="${LETSENCRYPT_EMAIL_VALUE:-$(prompt_value "Enter the email address that Let's Encrypt should use for expiry and certificate notifications [LETSENCRYPT_EMAIL]" "${root_letsencrypt_default}")}"
@@ -445,6 +611,11 @@ env_upsert "${ROOT_ENV}" PGID "$(id -g)"
 env_upsert "${ROOT_ENV}" DOMAIN "${DOMAIN_VALUE}"
 env_upsert "${ROOT_ENV}" LETSENCRYPT_EMAIL "${LETSENCRYPT_EMAIL_VALUE}"
 success "Root .env values are staged."
+
+if (( ${#removed_modules[@]} > 0 )); then
+  remove_root_host_vars_for_modules "${ROOT_ENV}" "${removed_modules[@]}"
+  success "Removed hostname env vars for deselected modules: $(join_by ', ' "${removed_modules[@]}")"
+fi
 
 hostname_vars_missing=()
 hostname_vars_modules=()
@@ -537,12 +708,21 @@ module_hook_title() {
 }
 
 run_module_hooks() {
+  local targets_file="${1:-}"
+  local sync_only_file="${2:-}"
   local hook_delim=$'\x1f'
   local script_path="" metadata="" scope="" module="" dependencies="" order=""
   local hook_modules=()
+  local requested_targets=()
   local hook_title="" hook_target=""
   local hooks_file=""
   local hooks_interactive=0
+  local should_run=1
+  local hook_module=""
+
+  if [[ -n "${targets_file}" && -f "${targets_file}" ]]; then
+    mapfile -t requested_targets < <(read_lines_file "${targets_file}")
+  fi
 
   if is_interactive && tty_device_available; then
     hooks_interactive=1
@@ -581,6 +761,17 @@ run_module_hooks() {
         ;;
     esac
 
+    if [[ -n "${targets_file}" ]]; then
+      should_run=1
+      for hook_module in "${hook_modules[@]}"; do
+        if array_contains "${hook_module}" "${requested_targets[@]}"; then
+          should_run=0
+          break
+        fi
+      done
+      (( should_run == 0 )) || continue
+    fi
+
     hook_title="$(module_hook_title "${script_path}" "${module}")"
     hook_target="$(join_by ', ' "${hook_modules[@]}")"
     section "${hook_title}"
@@ -591,6 +782,8 @@ run_module_hooks() {
       HOSTING_CONFIG_DIR="${CONFIG_DIR_ABS}" \
       HOSTING_MANIFEST_FILE="${MANIFEST_FILE}" \
       HOSTING_SELECTED_MODULES_FILE="${SELECTED_MODULES_FILE}" \
+      HOSTING_MODULE_HOOK_TARGETS_FILE="${targets_file}" \
+      HOSTING_MODULE_SYNC_ONLY_FILE="${sync_only_file}" \
       HOSTING_ROOT_ENV="${ROOT_ENV}" \
       HOSTING_CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN_VALUE}" \
       HOSTING_CLOUDFLARE_PROXIED="${CLOUDFLARE_PROXIED_VALUE}" \
@@ -618,11 +811,36 @@ run_module_hook_script() {
   fi
 }
 
+hook_target_modules=()
+hook_sync_only_modules=()
+if [[ -z "${BACKUP_ZIP_INPUT}" ]]; then
+  if [[ "${EXISTING_SETUP_MODE}" == "modify" ]]; then
+    hook_target_modules=("${added_modules[@]}")
+    if (( ${#added_modules[@]} > 0 || ${#removed_modules[@]} > 0 )); then
+      for module in authelia "${CLOUDFLARE_DDNS_MODULE}" honey; do
+        if array_contains "${module}" "${selected_modules[@]}" && array_contains "${module}" "${existing_selected_modules[@]}" && ! array_contains "${module}" "${hook_target_modules[@]}"; then
+          hook_target_modules+=("${module}")
+          if [[ "${module}" == "authelia" ]]; then
+            hook_sync_only_modules+=("${module}")
+          fi
+        fi
+      done
+    fi
+  else
+    hook_target_modules=("${selected_modules[@]}")
+  fi
+fi
+
+write_optional_lines_file "${MODULE_HOOK_TARGETS_FILE}" "${hook_target_modules[@]}"
+write_optional_lines_file "${MODULE_HOOK_SYNC_ONLY_FILE}" "${hook_sync_only_modules[@]}"
+
 section "Module automation"
 if [[ -n "${BACKUP_ZIP_INPUT}" ]]; then
   log "Skipping module hooks because the staged config was imported from a backup ZIP."
+elif [[ "${EXISTING_SETUP_MODE}" == "modify" && ! -f "${MODULE_HOOK_TARGETS_FILE}" ]]; then
+  log "Skipping module hooks because the selected modules already match the existing setup."
 else
-  run_module_hooks
+  run_module_hooks "${MODULE_HOOK_TARGETS_FILE}" "${MODULE_HOOK_SYNC_ONLY_FILE}"
 fi
 sync_staged_configs_to_selected_modules
 success "Staged config directory synced to the final selected modules."
@@ -672,7 +890,13 @@ if (( ! SKIP_REVIEW )) && is_interactive; then
 fi
 
 if is_interactive; then
-  prompt_yes_no "Deploy the prepared stack into ${DOCKER_DIR_VALUE} now? This will sync the generated files into that directory and make it the live Docker Compose tree for this setup." yes || die "Deployment cancelled."
+  deploy_prompt="Deploy the prepared stack into ${DOCKER_DIR_VALUE} now? This will sync the generated files into that directory and make it the live Docker Compose tree for this setup."
+  if [[ "${EXISTING_SETUP_MODE}" == "modify" ]]; then
+    deploy_prompt="Update the existing stack in ${DOCKER_DIR_VALUE} now? This will sync the selected add/remove changes into that live Docker Compose tree."
+  elif (( ${#existing_live_modules[@]} > 0 )); then
+    deploy_prompt="Deploy the prepared stack into ${DOCKER_DIR_VALUE} now? This will replace the existing live Docker Compose tree in that directory."
+  fi
+  prompt_yes_no "${deploy_prompt}" yes || die "Deployment cancelled."
 fi
 
 section "Deploy"
@@ -739,6 +963,6 @@ fi
 
 rm -rf "${TEMPLATE_DIR_ABS}" "${CONFIG_DIR_ABS}"
 rm -f "${SELECTED_MODULES_FILE}"
-rm -f "${BACKUP_AVAILABLE_MODULES_FILE}" "${BACKUP_METADATA_MODULES_FILE}"
+rm -f "${BACKUP_AVAILABLE_MODULES_FILE}" "${BACKUP_METADATA_MODULES_FILE}" "${LIVE_SETUP_MODULES_FILE}" "${MODULE_HOOK_TARGETS_FILE}" "${MODULE_HOOK_SYNC_ONLY_FILE}"
 rmdir "${WORK_ROOT_ABS}" 2>/dev/null || true
 success "Temporary work directories cleaned up."

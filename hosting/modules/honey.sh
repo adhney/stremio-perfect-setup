@@ -43,6 +43,10 @@ fi
 [[ -n "${HOSTING_ROOT_ENV:-}" ]] || die "HOSTING_ROOT_ENV is not set"
 [[ -f "${HONEY_RESOURCES_CONFIG}" ]] || die "Honey resource catalog is missing: ${HONEY_RESOURCES_CONFIG}"
 
+if ! hook_target_enabled "${MODULE_NAME}"; then
+    exit 0
+fi
+
 if ! selected_module_enabled "${MODULE_NAME}"; then
   exit 0
 fi

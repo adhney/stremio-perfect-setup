@@ -152,13 +152,32 @@ Good to know:
 - after being added to the `docker` group, some systems need a logout/login before Docker works without `sudo`
 - if Docker is already installed, this phase simply reports that and moves on
 
-### Phase 3: Template Fetch
+### Phase 3: Deployment Target
+
+Right after Docker setup, the script now asks for the final `DOCKER_DIR`.
+
+That happens early on purpose.
+
+The script inspects the chosen target before it downloads and stages anything else so it can warn you about an existing live stack before deployment.
+
+If the target already contains one of these hosting setups, you now get a choice:
+
+- overwrite the existing deployment later with the prepared upstream files
+- continue from the existing deployment, preload its values, and add or remove modules from it
+
+If you continue from the existing deployment:
+
+- the existing modules start preselected in the checklist
+- the later `TZ`, `DOMAIN`, and `LETSENCRYPT_EMAIL` prompts are pre-filled from the live root `.env`
+- modules you deselect are removed from the final tree and their hostname env vars are cleaned up
+
+### Phase 4: Template Fetch
 
 The script downloads the upstream Docker template into a temporary work area under `hosting/.work/`.
 
 This is intentional. It does not directly edit your final deployment folder first. Instead, it prepares everything in a staging area so the script can validate and modify files before deployment.
 
-### Phase 4: Module Selection
+### Phase 5: Module Selection
 
 This is the checklist UI you mentioned.
 
@@ -166,6 +185,8 @@ You will see:
 
 - required modules, which stay enabled automatically
 - optional modules, which you can toggle on or off
+
+If you chose to continue from an existing deployment in Phase 3, the modules already present in that live setup start enabled in this list.
 
 Controls in the checklist:
 
@@ -176,7 +197,7 @@ Controls in the checklist:
 
 Choose only what you actually want to run. More modules means more configuration, more containers, and more moving parts.
 
-### Phase 5: Config Staging
+### Phase 6: Config Staging
 
 After module selection, the script copies the relevant config files into `hosting/.work/config/`.
 
@@ -188,21 +209,23 @@ That means:
 - the final deployment directory is still untouched
 - all automatic edits happen in staging first
 
-### Phase 6: Core Environment Questions
+If you chose to continue from an existing deployment, this phase imports the live root `.env` and the selected live module files into staging first, then stages any newly added modules from the fetched template.
+
+### Phase 7: Core Environment Questions
 
 The script will then ask for the core values that cannot be guessed automatically:
 
 - `TZ`
-- `DOCKER_DIR`
 - `DOMAIN`
 - `LETSENCRYPT_EMAIL`
 
 What they mean:
 
 - `TZ`: your server timezone, for example `Europe/Berlin`
-- `DOCKER_DIR`: where the final Docker stack should live, usually `/opt/docker`
 - `DOMAIN`: the base domain used for public hostnames
 - `LETSENCRYPT_EMAIL`: the email address used for certificate notices
+
+`DOCKER_DIR` is now handled earlier in Phase 3 so the script can inspect the target before the rest of the flow continues.
 
 The script also fills in:
 
@@ -210,7 +233,7 @@ The script also fills in:
 - `PGID`
 - generated Authelia secrets
 
-### Phase 7: Module Automation
+### Phase 8: Module Automation
 
 Now the script applies module-specific logic based on what you selected.
 
@@ -224,7 +247,9 @@ These prompts now use the same visual UI style when possible.
 
 Important: if you enable `cloudflare-ddns` but do not provide a token, the script disables that module instead of leaving it half-configured.
 
-### Phase 8: Manual Review
+If you continued from an existing deployment, module hooks only rerun for newly added modules, plus the shared hostname-sync hooks that need to reconcile add/remove changes safely.
+
+### Phase 9: Manual Review
 
 Before deployment, the script pauses and tells you where the staged files are:
 
@@ -242,11 +267,15 @@ Use this pause when:
 
 Do not rename the staged files. Their names are mapped back to their original destinations automatically.
 
-### Phase 9: Deployment Confirmation
+### Phase 10: Deployment Confirmation
 
 This is another important confirmation point.
 
-Before touching the final Docker folder, the script now explicitly asks whether it should deploy into your chosen `DOCKER_DIR`.
+Before touching the final Docker folder, the script explicitly asks for deployment confirmation.
+
+If you chose overwrite mode for an existing target, this confirmation warns that the live Docker tree in `DOCKER_DIR` will be replaced.
+
+If you chose to continue from an existing target, this confirmation frames the action as an update to that live stack, including add/remove module changes.
 
 If you confirm, it will:
 
@@ -254,7 +283,7 @@ If you confirm, it will:
 - sync that prepared tree into the target Docker directory
 - prune out unselected modules so the final tree contains only what you chose
 
-### Phase 10: Backup ZIP
+### Phase 11: Backup ZIP
 
 After deployment, the script can create a backup ZIP of the prepared configuration.
 
@@ -266,7 +295,9 @@ Why it matters:
 - it is useful before later experiments or upgrades
 - it preserves the selected modules and the staged config files in a format the script can import again
 
-### Phase 11: Start the Stack
+If you run `./main.sh --backup`, the script now also asks for confirmation after you enter the source Docker directory and backup output directory, so you can verify both paths before it writes the archive.
+
+### Phase 12: Start the Stack
 
 The script now asks before starting Docker Compose.
 
@@ -299,14 +330,16 @@ If you just want the shortest possible beginner path, this is the usual order:
 5. `cd hosting`
 6. Run `./main.sh`
 7. Confirm Docker installation if needed.
-8. Select your modules.
-9. Fill in timezone, Docker directory, domain, and Let's Encrypt email.
-10. Complete any module-specific prompts such as Cloudflare or Supabase.
-11. Review the staged config.
-12. Confirm deployment.
-13. Create the backup ZIP.
-14. Start the stack.
-15. Finish any DNS work shown in the final summary.
+8. Choose the deployment Docker directory.
+9. If that target already has a live setup, choose whether to overwrite it or continue from it.
+10. Select your modules.
+11. Fill in timezone, domain, and Let's Encrypt email.
+12. Complete any module-specific prompts such as Cloudflare or Supabase.
+13. Review the staged config.
+14. Confirm deployment.
+15. Create the backup ZIP.
+16. Start the stack.
+17. Finish any DNS work shown in the final summary.
 
 ## Useful Commands
 

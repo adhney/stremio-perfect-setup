@@ -5,7 +5,7 @@ title: "📜 Changelog"
 
 # 📜 Changelog
 
-## 🎬 Guide
+## 🍿 Guide
 
 No tracked guide-specific releases yet.
 

@@ -401,6 +401,28 @@ selected_module_enabled() {
   grep -Fqx -- "${module}" "${selected_modules_file}"
 }
 
+hook_target_enabled() {
+  local module="$1"
+  local hook_targets_file="${2:-${HOSTING_MODULE_HOOK_TARGETS_FILE:-}}"
+
+  if [[ -z "${hook_targets_file}" || ! -f "${hook_targets_file}" ]]; then
+    return 0
+  fi
+
+  grep -Fqx -- "${module}" "${hook_targets_file}"
+}
+
+hook_sync_only_enabled() {
+  local module="$1"
+  local sync_only_file="${2:-${HOSTING_MODULE_SYNC_ONLY_FILE:-}}"
+
+  if [[ -z "${sync_only_file}" || ! -f "${sync_only_file}" ]]; then
+    return 1
+  fi
+
+  grep -Fqx -- "${module}" "${sync_only_file}"
+}
+
 dedupe_lines() {
   awk '!seen[$0]++'
 }
@@ -590,6 +612,16 @@ env_upsert_uncomment() {
       }
     }
   ' "${file}" > "${tmp_file}"
+  mv "${tmp_file}" "${file}"
+}
+
+env_remove() {
+  local file="$1"
+  local key="$2"
+  local tmp_file
+
+  tmp_file="$(temp_file_next_to "${file}")"
+  awk -v key="${key}" '$0 !~ ("^" key "=") { print }' "${file}" > "${tmp_file}"
   mv "${tmp_file}" "${file}"
 }
 

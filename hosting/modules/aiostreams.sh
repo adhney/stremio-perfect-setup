@@ -111,6 +111,10 @@ fi
 [[ -n "${HOSTING_CONFIG_DIR:-}" ]] || die "HOSTING_CONFIG_DIR is not set"
 [[ -n "${HOSTING_SELECTED_MODULES_FILE:-}" ]] || die "HOSTING_SELECTED_MODULES_FILE is not set"
 
+if ! hook_target_enabled "${MODULE_NAME}"; then
+  exit 0
+fi
+
 if ! selected_module_enabled "${MODULE_NAME}"; then
   exit 0
 fi

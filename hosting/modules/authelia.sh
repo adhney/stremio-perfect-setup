@@ -47,8 +47,17 @@ fi
 [[ -n "${HOSTING_SELECTED_MODULES_FILE:-}" ]] || die "HOSTING_SELECTED_MODULES_FILE is not set"
 [[ -n "${HOSTING_ROOT_ENV:-}" ]] || die "HOSTING_ROOT_ENV is not set"
 
+if ! hook_target_enabled "${MODULE_NAME}"; then
+  exit 0
+fi
+
 if ! selected_module_enabled "${MODULE_NAME}"; then
   exit 0
+fi
+
+authelia_sync_only=0
+if hook_sync_only_enabled "${MODULE_NAME}"; then
+  authelia_sync_only=1
 fi
 
 # ── secrets ───────────────────────────────────────────────────────────────────
@@ -155,6 +164,11 @@ new_lines.extend(pending_comments)
 with open(compose_path, "w", encoding="utf-8") as fh:
     fh.writelines(new_lines)
 PY
+
+if (( authelia_sync_only )); then
+  success "Updated Authelia compose hostnames for the selected modules"
+  exit 0
+fi
 
 # ── users.yml ─────────────────────────────────────────────────────────────────
 

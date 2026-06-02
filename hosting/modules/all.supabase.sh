@@ -79,11 +79,19 @@ PY
 }
 
 selected_addons=()
-while IFS= read -r module; do
-  if array_contains "${module}" "${SUPPORTED_ADDONS[@]}"; then
-    selected_addons+=("${module}")
-  fi
-done < <(read_lines_file "${HOSTING_SELECTED_MODULES_FILE}")
+if [[ -n "${HOSTING_MODULE_HOOK_TARGETS_FILE:-}" && -f "${HOSTING_MODULE_HOOK_TARGETS_FILE}" ]]; then
+  while IFS= read -r module; do
+    if array_contains "${module}" "${SUPPORTED_ADDONS[@]}" && selected_module_enabled "${module}"; then
+      selected_addons+=("${module}")
+    fi
+  done < <(read_lines_file "${HOSTING_MODULE_HOOK_TARGETS_FILE}")
+else
+  while IFS= read -r module; do
+    if array_contains "${module}" "${SUPPORTED_ADDONS[@]}"; then
+      selected_addons+=("${module}")
+    fi
+  done < <(read_lines_file "${HOSTING_SELECTED_MODULES_FILE}")
+fi
 
 (( ${#selected_addons[@]} > 0 )) || exit 0
 
