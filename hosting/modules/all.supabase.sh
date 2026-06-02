@@ -106,7 +106,7 @@ Before you continue:
 
 If you enable this, the script will create one schema and one login role per selected addon, then write the generated connection strings into each staged addon .env file automatically."
     warn "Use a new database, not one already used for unrelated data."
-    if ! prompt_yes_no "Use Supabase/Postgres instead of local SQLite for $(join_by ', ' "${selected_addons[@]}") so the script can provision per-addon schemas and credentials?" no; then
+    if ! prompt_yes_no "Use Supabase/Postgres instead of local SQLite for $(join_by ', ' "${selected_addons[@]}") so the script can provision per-addon schemas and credentials?" yes; then
       log "Keeping local SQLite for $(join_by ', ' "${selected_addons[@]}")"
       exit 0
     fi

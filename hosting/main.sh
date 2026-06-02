@@ -272,7 +272,7 @@ if (( DRY_RUN )); then
 elif (( PREPARE_SSH )); then
   section "SSH setup"
   "${HOSTING_ROOT}/steps/prepare-ssh.sh"
-elif (( ! SKIP_SSH )) && is_interactive && prompt_yes_no "Prepare or update the local SSH key and alias configuration now? This is needed so you can connect to the VPS reliably from this machine." yes; then
+elif (( ! SKIP_SSH )) && is_interactive && prompt_yes_no "Prepare or update the local SSH key and alias configuration now? This is needed so you can connect to the VPS reliably from this machine." no; then
   section "SSH setup"
   "${HOSTING_ROOT}/steps/prepare-ssh.sh"
 fi

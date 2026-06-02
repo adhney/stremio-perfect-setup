@@ -67,6 +67,7 @@ while IFS= read -r module; do
 done < <(read_lines_file "${HOSTING_SELECTED_MODULES_FILE}")
 
 HOSTING_HONEY_DOMAIN="${DOMAIN_VALUE}" \
+HOSTING_HONEY_MODULE_NAME="${MODULE_NAME}" \
 HOSTING_HONEY_SELECTED_MODULES="$(printf '%s\n' "${selected_modules[@]}" | dedupe_lines)" \
 HOSTING_HONEY_HOST_ENV_VARS="$(printf '%s\n' "${hostname_env_vars[@]}" | dedupe_lines)" \
 python3 - "${HONEY_CONFIG}" "${HONEY_RESOURCES_CONFIG}" "${HOSTING_ROOT_ENV}" <<'PY'
@@ -80,6 +81,7 @@ config_path = sys.argv[1]
 resource_path = sys.argv[2]
 env_path = sys.argv[3]
 target_domain = os.environ["HOSTING_HONEY_DOMAIN"]
+self_module = os.environ.get("HOSTING_HONEY_MODULE_NAME", "")
 selected_modules = [line for line in os.environ.get("HOSTING_HONEY_SELECTED_MODULES", "").splitlines() if line]
 host_env_vars = [line for line in os.environ.get("HOSTING_HONEY_HOST_ENV_VARS", "").splitlines() if line]
 
@@ -159,6 +161,8 @@ for service in data.get("services", []):
             seen_hrefs.add(href)
 
 for module in selected_modules:
+    if module == self_module:
+        continue
     for entry in resources.get("modules", {}).get(module, []):
         hostname_env = entry.get("hostname_env")
         if not hostname_env:
