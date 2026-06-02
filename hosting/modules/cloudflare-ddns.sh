@@ -28,6 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 # shellcheck disable=SC1091
 source "${SCRIPT_DIR}/lib/template.sh"
+ensure_dialog_ui "Cloudflare DDNS setup"
 
 MODULE_NAME=cloudflare-ddns
 TRAEFIK_MODULE=traefik
@@ -49,7 +50,7 @@ proxied_value="${HOSTING_CLOUDFLARE_PROXIED:-$(env_get "${HOSTING_ROOT_ENV}" CLO
 proxied_value="${proxied_value:-${DEFAULT_PROXIED_WHEN_ENABLED}}"
 
 if [[ -z "${token_value}" ]] && is_interactive; then
-  printf 'Cloudflare DDNS creates proxied DNS records and only works when your DNS is hosted on Cloudflare.\n'
+  show_message "Cloudflare DDNS" "Cloudflare DDNS creates proxied DNS records for the selected services. Only continue if this domain already uses Cloudflare nameservers and you have an API token with the required DNS permissions."
   token_value="$(prompt_secret "Enter the Cloudflare API token, or leave blank to disable cloudflare-ddns")"
 fi
 

@@ -23,6 +23,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../lib/common.sh"
 
 load_defaults
+ensure_dialog_ui "SSH preparation"
 
 SSH_DIR="${HOME}/.ssh"
 SSH_CONFIG="${SSH_DIR}/config"
@@ -87,6 +88,7 @@ find_default_key() {
 
 select_key() {
   local detected_key=""
+  local key_mode=""
 
   if [[ -n "${KEY_PATH}" ]]; then
     [[ -f "${KEY_PATH}" ]] || die "SSH key does not exist: ${KEY_PATH}"
@@ -106,18 +108,54 @@ select_key() {
   detected_key="$(find_default_key || true)"
 
   if is_interactive; then
-    if [[ -n "${detected_key}" ]] && prompt_yes_no "Use the default SSH key at ${detected_key}?" yes; then
-      KEY_PATH="${detected_key}"
-      return 0
+    if [[ -n "${detected_key}" ]]; then
+      key_mode="$(prompt_choice \
+        "SSH Key" \
+        "Choose how the SSH helper should prepare your local key." \
+        "use-default" \
+        "use-default" "Use the detected key at ${detected_key}" \
+        "existing-path" "Enter a different existing private key path" \
+        "generate-new" "Create a new ed25519 key in ${SSH_DIR}")"
+      case "${key_mode}" in
+        use-default)
+          KEY_PATH="${detected_key}"
+          return 0
+          ;;
+        existing-path)
+          KEY_PATH="$(prompt_value "Enter the existing SSH private key path")"
+          [[ -f "${KEY_PATH}" ]] || die "SSH key does not exist: ${KEY_PATH}"
+          return 0
+          ;;
+        generate-new)
+          KEY_PATH="${SSH_DIR}/${KEY_NAME}"
+          GENERATE_KEY=1
+          return 0
+          ;;
+        *)
+          die "Unknown SSH key selection: ${key_mode}"
+          ;;
+      esac
     fi
 
-    KEY_PATH="$(prompt_value "Enter an existing SSH private key path, or leave blank to generate ${SSH_DIR}/${KEY_NAME}")"
-    if [[ -n "${KEY_PATH}" ]]; then
-      [[ -f "${KEY_PATH}" ]] || die "SSH key does not exist: ${KEY_PATH}"
-    else
-      KEY_PATH="${SSH_DIR}/${KEY_NAME}"
-      GENERATE_KEY=1
-    fi
+    key_mode="$(prompt_choice \
+      "SSH Key" \
+      "No default SSH key was detected. Choose how to continue." \
+      "generate-new" \
+      "existing-path" "Enter an existing private key path" \
+      "generate-new" "Create a new ed25519 key in ${SSH_DIR}")"
+    case "${key_mode}" in
+      existing-path)
+        KEY_PATH="$(prompt_value "Enter the existing SSH private key path")"
+        [[ -f "${KEY_PATH}" ]] || die "SSH key does not exist: ${KEY_PATH}"
+        ;;
+      generate-new)
+        KEY_PATH="${SSH_DIR}/${KEY_NAME}"
+        GENERATE_KEY=1
+        ;;
+      *)
+        die "Unknown SSH key selection: ${key_mode}"
+        ;;
+    esac
     return 0
   fi
 
@@ -146,24 +184,49 @@ ensure_key_exists() {
 }
 
 configure_ssh_alias() {
-  if (( ALIAS_SET )) || ! is_interactive; then
+  if ! is_interactive; then
     return 0
   fi
 
-  if prompt_yes_no "Use the default SSH alias ${SSH_ALIAS}?" yes; then
-    return 0
+  if (( ! ALIAS_SET )); then
+    SSH_ALIAS="$(prompt_value "Choose the SSH alias name to save in ${SSH_CONFIG}" "${SSH_ALIAS}")"
   fi
-
-  SSH_ALIAS="$(prompt_value "Enter the SSH alias to write into ${SSH_CONFIG}" "${SSH_ALIAS}")"
   [[ -n "${SSH_ALIAS}" ]] || die "SSH alias cannot be empty"
+}
+
+collect_connection_details() {
+  if ! is_interactive; then
+    [[ -n "${SSH_HOST}" ]] || die "Use --host to provide the VPS IP address or hostname"
+    [[ -n "${SSH_USER}" ]] || die "Use --user to provide the VPS SSH username"
+    return 0
+  fi
+
+  if [[ -z "${SSH_HOST}" ]]; then
+    SSH_HOST="$(prompt_value "Enter the VPS IP address or hostname for alias ${SSH_ALIAS}")"
+  fi
+  if [[ -z "${SSH_USER}" ]]; then
+    SSH_USER="$(prompt_value "Enter the SSH username for ${SSH_HOST:-the VPS}" "root")"
+  fi
+
+  [[ -n "${SSH_HOST}" ]] || die "VPS IP address or hostname is required to configure the SSH alias"
+  [[ -n "${SSH_USER}" ]] || die "SSH username is required to configure the SSH alias"
 }
 
 update_ssh_config() {
   local tmp_file=""
+  local alias_exists=0
 
   [[ -n "${SSH_ALIAS}" ]] || return 0
   touch "${SSH_CONFIG}"
   chmod 600 "${SSH_CONFIG}"
+
+  if awk -v alias="${SSH_ALIAS}" '$1 == "Host" && $2 == alias { found = 1 } END { exit !found }' "${SSH_CONFIG}"; then
+    alias_exists=1
+  fi
+
+  if (( alias_exists )) && is_interactive; then
+    prompt_yes_no "SSH alias ${SSH_ALIAS} already exists in ${SSH_CONFIG}. Replace it with the new HostName, User, and key settings?" yes || die "SSH alias update cancelled."
+  fi
 
   tmp_file="$(temp_file_next_to "${SSH_CONFIG}")"
   awk -v alias="${SSH_ALIAS}" '
@@ -184,10 +247,41 @@ update_ssh_config() {
   } >> "${SSH_CONFIG}"
 }
 
+show_final_instructions() {
+  local message=""
+  local copy_command=""
+  local connect_command=""
+
+  copy_command="cat ${KEY_PATH}.pub"
+  if [[ -n "${SSH_HOST}" && -n "${SSH_USER}" ]]; then
+    copy_command="ssh-copy-id -i ${KEY_PATH}.pub ${SSH_USER}@${SSH_HOST}"
+  fi
+
+  connect_command="ssh ${SSH_ALIAS}"
+  message=$(
+    cat <<EOF
+Your local SSH setup is ready.
+
+Next, install the public key on the VPS before you try the alias:
+
+1. Copy the public key:
+   ${copy_command}
+2. Add the contents of ${KEY_PATH}.pub to ~/.ssh/authorized_keys on the VPS.
+3. Connect using the alias:
+   ${connect_command}
+EOF
+  )
+
+  show_message "SSH Setup Complete" "${message}"
+  log "Next step: install ${KEY_PATH}.pub on the VPS, then connect with ${connect_command}"
+}
+
 select_key
 ensure_key_exists
 configure_ssh_alias
+collect_connection_details
 update_ssh_config
 
 log "SSH key ready: ${KEY_PATH}"
 log "Public key: ${KEY_PATH}.pub"
+show_final_instructions

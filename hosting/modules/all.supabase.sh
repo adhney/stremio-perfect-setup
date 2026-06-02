@@ -26,6 +26,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091
 source "${SCRIPT_DIR}/lib/common.sh"
+ensure_dialog_ui "Supabase setup"
 
 SUPPORTED_ADDONS=(aiomanager aiometadata aiostreams)
 declare -A DATABASE_URL_KEYS=(
@@ -93,11 +94,14 @@ if [[ -z "${connection_string}" ]]; then
   if is_interactive; then
     section "Supabase option"
     log "The selected AIO addons can use Supabase instead of local SQLite: $(join_by ', ' "${selected_addons[@]}")"
-    printf '  1. Create a Supabase account or open an existing account.\n'
-    printf '  2. Create a new project/database dedicated to these addons.\n'
-    printf '  3. Save the database password you set for the project.\n'
-    printf '  4. Open Project Settings → Database → Connection string.\n'
-    printf '  5. Copy the direct session pooler IPv4 connection string exactly as Supabase shows it.\n'
+    show_message "Supabase Option" "The selected AIO addons can use Supabase instead of local SQLite: $(join_by ', ' "${selected_addons[@]}").
+
+Before you continue:
+1. Create or open a Supabase account.
+2. Create a fresh project dedicated to these addons.
+3. Save the database password for that project.
+4. Open Project Settings > Database > Connection string.
+5. Copy the direct session pooler IPv4 connection string exactly as shown."
     warn "Use a new database, not one already used for unrelated data."
     if ! prompt_yes_no "Use Supabase for $(join_by ', ' "${selected_addons[@]}")?" no; then
       log "Keeping local SQLite for $(join_by ', ' "${selected_addons[@]}")"

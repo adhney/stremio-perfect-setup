@@ -234,6 +234,7 @@ if (( BACKUP_MODE || BACKUP_QUICK_MODE )); then
 fi
 
 section "Hosting preparation"
+prime_sudo_session "the hosting setup"
 log "Work directory: ${WORK_ROOT_ABS}"
 ensure_directory "${WORK_ROOT_ABS}"
 ensure_apt_packages python3 openssl curl
@@ -251,6 +252,12 @@ if (( DRY_RUN )); then
   fi
   ensure_directory "${DOCKER_DIR_VALUE}"
   ensure_directory "${BACKUP_DIR_VALUE}"
+fi
+
+ensure_dialog_ui "the hosting setup"
+
+if is_interactive; then
+  show_message "Hosting Setup" "This guided setup will prepare SSH access, fetch the Docker template, let you choose modules, stage editable config files, and then deploy the final stack to your VPS."
 fi
 
 if (( DRY_RUN )); then
@@ -373,6 +380,10 @@ root_tz_default="${DEFAULT_TIMEZONE:-${root_tz_default:-Europe/Berlin}}"
 root_docker_dir_default="${DEFAULT_DOCKER_DIR:-${root_docker_dir_default:-/opt/docker}}"
 env_value_is_placeholder "${root_domain_default}" && root_domain_default=""
 env_value_is_placeholder "${root_letsencrypt_default}" && root_letsencrypt_default=""
+
+if is_interactive; then
+  show_message "Environment Details" "Next, enter the core settings for the stack: your timezone, the final Docker directory on the VPS, the public domain that Traefik should use, and the email address for Let's Encrypt notifications."
+fi
 
 TIMEZONE_VALUE="${TIMEZONE_VALUE:-$(prompt_value "Timezone (see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones and use the TZ identifier value)" "${root_tz_default}")}"
 if (( DRY_RUN )); then
@@ -502,7 +513,11 @@ if (( ! SKIP_REVIEW )) && is_interactive; then
   section "Manual review"
   log "Review staged files in ${CONFIG_DIR_ABS}"
   warn "Do not rename staged files. Prefixes such as AIOSTREAMS., HONEY., and TRAEFIK. map files back to modules."
-  read -r -p "$(style '35' '?') Press Enter when you are ready to deploy the staged configuration." _
+  show_message "Manual Review" "Review the staged files in ${CONFIG_DIR_ABS} before deployment. You can edit values there if needed, but do not rename the files. Select OK when you are ready to continue."
+fi
+
+if is_interactive; then
+  prompt_yes_no "Deploy the prepared stack into ${DOCKER_DIR_VALUE}? This will sync the generated files into that directory." yes || die "Deployment cancelled."
 fi
 
 section "Deploy"
@@ -514,12 +529,21 @@ section "Deploy"
   $([[ "${HOSTING_DRY_RUN:-0}" == "1" ]] && printf '%s' '--no-fix-permissions')
 
 if (( ! SKIP_BACKUP )); then
-  if ! is_interactive || prompt_yes_no "Create a backup archive of the staged configuration?" yes; then
+  if ! is_interactive || prompt_yes_no "Create a backup ZIP of the prepared configuration now? This makes later restores much easier." yes; then
     if is_interactive && (( ! BACKUP_DIR_SET )); then
       BACKUP_DIR_VALUE="$(prompt_value "Backup output directory" "${BACKUP_DIR_VALUE}")"
     fi
     section "Backup"
     "${HOSTING_ROOT}/steps/backup-configs.sh" --config-dir "${CONFIG_DIR_ABS}" --template-dir "${TEMPLATE_DIR_ABS}" --manifest-file "${MANIFEST_FILE}" --modules-file "${SELECTED_MODULES_FILE}" --output-dir "${BACKUP_DIR_VALUE}"
+  fi
+fi
+
+if (( ! SKIP_START )); then
+  if is_interactive; then
+    prompt_yes_no "Start the Docker Compose stack now?" yes || {
+      warn "Skipping Docker Compose start at your request."
+      SKIP_START=1
+    }
   fi
 fi
 

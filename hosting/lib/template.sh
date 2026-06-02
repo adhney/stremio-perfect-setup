@@ -275,6 +275,7 @@ select_modules_interactively() {
   local raw_input="" token="" index=0
 
   discover_modules "${template_dir}" all_modules required_modules optional_modules
+  ensure_dialog_ui "module selection"
 
   if [[ -n "${defaults_csv}" ]]; then
     split_csv_into_array "${defaults_csv}" default_selected
@@ -293,16 +294,9 @@ select_modules_interactively() {
     return 0
   fi
 
-  if is_interactive && command -v whiptail >/dev/null 2>&1; then
+  if dialog_ui_available; then
     select_modules_with_whiptail "${output_file}" "${required_modules[@]}" -- "${optional_modules[@]}" -- "${default_selected_optional[@]}"
     return 0
-  fi
-
-  if is_interactive && ! hosting_is_dry_run; then
-    if ensure_apt_packages whiptail >/dev/null 2>&1 && command -v whiptail >/dev/null 2>&1; then
-      select_modules_with_whiptail "${output_file}" "${required_modules[@]}" -- "${optional_modules[@]}" -- "${default_selected_optional[@]}"
-      return 0
-    fi
   fi
 
   section "Module selection"

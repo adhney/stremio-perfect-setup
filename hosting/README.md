@@ -1,337 +1,377 @@
-# Hosting Automation
+# Hosting Guide for Beginners
 
-This folder contains the complete automation bundle for preparing a VPS-hosted
-Docker Compose stack from
-[Viren070/docker-compose-template](https://github.com/Viren070/docker-compose-template).
+This `hosting/` folder is a guided setup for turning a fresh VPS into a Docker-based streaming stack.
 
-Everything lives under `hosting/` so this folder can later be moved into a
-larger repository without path rewrites. There is intentionally no root README
-for this automation.
+If you are new to SSH, Docker, or self-hosting in general, use this guide from top to bottom once before you start clicking through the script. The goal is to make the process predictable: first you prepare SSH access, then you get the `hosting/` folder onto the VPS, then you run the main setup script and follow the visual prompts.
 
-## Directory Layout
+## What This Setup Does
 
-- `main.sh`
-  Main end-to-end entrypoint.
-- `steps/`
-  Reusable orchestration steps used by `main.sh`, including Docker and SSH setup.
-- `modules/`
-  Addon-specific hooks discovered automatically from selected compose modules.
-- `db/`
-  Standalone Supabase helper scripts and SQL files.
-- `lib/`
-  Shared Bash helpers for prompting, env edits, staging, and template discovery.
-- `defaults.env`
-  Central fallback values for paths, upstream source, backup names, SSH defaults,
-  and Docker target directory.
+The hosting scripts do the heavy lifting for you:
 
-## Main Command
+- prepare an SSH key and alias for your VPS
+- install Docker and Docker Compose when needed
+- fetch the upstream Docker template
+- let you choose which modules you want to run
+- stage the important config files in an editable area
+- ask for the values the stack cannot guess for you
+- apply module-specific automation, such as Supabase or Cloudflare adjustments
+- deploy the final stack into your Docker directory
+- optionally create a restore-friendly backup ZIP
+- optionally start the stack right away
 
-Interactive:
+The interactive flow is designed to use a visual `whiptail` UI across the whole setup. If `whiptail` is missing, the scripts try to install it automatically first, and only fall back to plain terminal prompts if that installation is not possible.
 
-```bash
-./hosting/main.sh
-```
+## Before You Start
 
-Backup-only examples:
+You should have these things ready:
 
-```bash
-./hosting/main.sh --backup
-./hosting/main.sh --backup-quick
-./hosting/main.sh --backup-quick --docker-dir /srv/streaming --backup-dir /tmp/backups
-```
+- a Linux VPS that will actually run Docker
+- SSH access to that VPS from your current machine
+- a domain name if you want public HTTPS services through Traefik
+- Cloudflare nameservers already active if you plan to use `cloudflare-ddns`
+- a Supabase project ready only if you want the AIO modules to use Postgres instead of local SQLite
 
-Interactive mode guides you through missing values. Unattended mode requires
-the values that cannot be safely guessed, especially `--modules`, `--domain`,
-and `--letsencrypt-email`.
+Important: the `main.sh` script must run on the Linux machine that will host Docker. The easiest way is to SSH into the VPS first, then clone `hosting/` there, and run everything directly on the VPS.
 
-Unattended example:
+## Step 1: Prepare an SSH Alias
+
+If you already have a clean SSH alias for this VPS and it works, you can skip to Step 2.
+
+If not, run the SSH helper from a machine where you normally open your terminal:
 
 ```bash
-./hosting/main.sh \
-  --modules aiostreams,aiometadata,aiomanager,honey,cloudflare-ddns \
-  --domain example.com \
-  --timezone Europe/Berlin \
-  --docker-dir /opt/docker \
-  --letsencrypt-email admin@example.com \
-  --cloudflare-api-token cf_token \
-  --supabase-connection-string 'postgresql://postgres.project:[YOUR-PASSWORD]@aws-0-region.pooler.supabase.com:5432/postgres' \
-  --supabase-db-password 'database-password' \
-  --backup-dir "$HOME" \
-  --skip-review
+./hosting/steps/prepare-ssh.sh
 ```
 
-Dry-run example:
+What it will ask you:
+
+- whether to use an existing SSH key or generate a new one
+- what alias name you want, for example `streaming`
+- the VPS IP address or hostname
+- the SSH username for that VPS, often `root`
+
+What it writes:
+
+- your private key under `~/.ssh/` if you chose to generate one
+- a `Host` block inside `~/.ssh/config`
+- `HostName`, `User`, and `IdentityFile` entries for the alias
+
+When it finishes, it will show you what to do next. This step only prepares your local SSH client. It does not magically install the key on the server for you.
+
+You still need to place the public key on the VPS:
+
+1. Copy the contents of the generated `.pub` file.
+2. Add that public key to `~/.ssh/authorized_keys` for the target VPS user.
+3. After that, test the alias with `ssh your-alias`.
+
+If `ssh-copy-id` is available on your machine, the helper will also show you a command like this:
 
 ```bash
-./hosting/main.sh \
-  --dry-run \
-  --skip-ssh \
-  --modules honey,altmount \
-  --domain example.com \
-  --timezone Europe/Berlin \
-  --letsencrypt-email admin@example.com
+ssh-copy-id -i ~/.ssh/streaming.pub root@YOUR_VPS_IP
 ```
 
-Resume-from-backup example:
+After the key is installed on the VPS, connect with the alias:
 
 ```bash
-./hosting/main.sh \
-  /path/to/streaming-20260531091321.zip \
-  --domain example.com \
-  --timezone Europe/Berlin \
-  --letsencrypt-email admin@example.com
+ssh streaming
 ```
 
-## Main Flow
+From this point onward, the rest of the guide assumes you are inside the VPS shell.
 
-`main.sh` performs the full preparation:
+## Step 2: Download Only the `hosting/` Folder
 
-1. In interactive mode, offers to run `steps/prepare-ssh.sh` unless `--skip-ssh` is passed. Unattended mode runs it only when `--prepare-ssh` is passed.
-2. Installs Docker with `steps/install-docker.sh` and adds the current user to the `docker` group.
-3. Fetches the upstream template into `hosting/.work/docker`.
-4. Scans `apps/*/compose.yaml|yml`, discovers available modules, and forces required modules on.
-5. If a backup ZIP is passed, merges any `apps/<module>/` folders from the archive into the fetched template before selection. Then prompts for optional modules unless `--modules` was supplied. When `HOSTING_SELECTED_MODULES.txt` is present in the ZIP, its modules are pre-enabled in that prompt instead of being forced as the final selection. On interactive terminals, the prompt uses a `whiptail` checklist when available, with arrow-key navigation, `Space` toggles, and scrolling for long lists.
-6. Stages root `.env` and selected module config files into `hosting/.work/config`, or reconstructs that staging area from a backup ZIP when one is passed.
-7. Prompts for mandatory root `.env` values: timezone, `DOCKER_DIR`, `DOMAIN`, and `LETSENCRYPT_EMAIL`.
-8. Writes `PUID`, `PGID`, and generated Authelia secrets.
-9. Runs matching hooks from `modules/`.
-10. Rebuilds the root `include:` list from the selected modules, removes unselected app directories, and writes final `COMPOSE_PROFILES` from the profiles declared by the remaining modules.
-11. Pauses for manual review unless `--skip-review` is set.
-12. Restores staged files into the fetched template and syncs the prepared tree into `DOCKER_DIR`.
-13. Optionally creates a ZIP backup of staged config files and lets interactive users choose the output directory unless `--backup-dir` was supplied.
-14. Starts Docker Compose with `--profile required`, then starts the full configured stack.
-15. Prints the public IP and either Cloudflare-managed hostnames or DNS A records to create manually.
+If you do not want the whole repository on the VPS, you can pull only the `hosting/` part.
 
-`./hosting/main.sh --backup` skips the deployment flow entirely. It prompts for
-the Docker directory and backup output directory unless they were supplied with
-`--docker-dir` and `--backup-dir`, then archives the currently enabled modules
-from the deployed tree. `--backup-quick` does the same thing without prompts and
-uses `DEFAULT_DOCKER_DIR` plus `BACKUP_OUTPUT_DIR` unless overridden.
+Run these commands on the VPS after logging in:
 
-## Dry Run
+```bash
+git clone --filter=blob:none --sparse https://github.com/luckynumb3rs/stremio-perfect-setup.git temp-repo
+cd temp-repo
+git sparse-checkout set hosting
+cd ..
+cp -r temp-repo/hosting ./hosting
+rm -rf temp-repo
+cd hosting/
+```
 
-`./hosting/main.sh --dry-run` exercises the preparation flow without changing
-system state. It still fetches or copies the template, stages configs, runs the
-file-mutation hooks, prunes modules, deploys into `hosting/.work/dry-run/deploy`,
-and creates a backup archive under `hosting/.work/dry-run/backup` unless
-`--skip-backup` is set.
+What this does:
 
-Dry run skips:
+- clones the repository in a lightweight way
+- tells Git to fetch only the `hosting/` folder
+- copies that folder into your current VPS directory as a standalone working folder
+- removes the temporary clone when done
 
-- SSH setup
-- Docker installation
-- Docker Compose start
-- Supabase schema creation
-- Public IP lookup
+After that, move into the folder:
 
-Dry run still cleans up `hosting/.work/` at the end. If you want to keep the
-generated backup ZIP, pass an explicit `--backup-dir` outside `hosting/.work/`.
+```bash
+cd hosting
+```
 
-## Prerequisites
+## Step 3: Run the Main Setup Script
 
-- Clone this repository on the Linux host that will run Docker.
-- Use Debian or Ubuntu if you want automatic package installation.
-- Have a domain ready if any Traefik-routed service should be public.
-- If using Cloudflare DDNS, your domain must already use Cloudflare nameservers.
-- If using Supabase, create a new Supabase project dedicated to these addons.
+Start the guided setup with:
 
-## Console Output
+```bash
+./main.sh
+```
 
-The scripts use color and icons to separate message types:
+If `whiptail` is not installed yet, the script will try to install it automatically so the whole setup can stay inside the visual interface. Only if that cannot be done will it fall back to regular terminal prompts.
 
-- `▶` marks a major phase.
-- `ℹ` marks informational output.
-- `✓` marks a completed step.
-- `⚠` marks a warning or manual action.
-- `✗` marks a fatal error.
+## Step 4: Follow the Setup Phases
 
-Set `NO_COLOR=1` if you want plain output without ANSI color codes.
+The script is divided into clear phases. Knowing what each phase means makes the whole process much less intimidating.
 
-## Detailed Step Behavior
+### Phase 1: SSH Preparation Offer
 
-### 1. SSH Preparation
+If you launched `./main.sh` interactively, it may ask whether you want to run the SSH helper first.
 
-Interactive `main.sh` runs offer SSH preparation up front unless `--skip-ssh`
-is passed. Unattended runs stay opt-in through `--prepare-ssh`. The helper can
-use an explicit key, detect an existing default key, or generate a new ed25519
-key. In interactive mode it also offers the default SSH alias from
-`defaults.env` or lets the user enter a custom alias. It does not install the
-public key on the VPS.
+Use this when:
 
-### 2. Docker Setup
+- you have not set up an SSH alias yet
+- you are not sure your VPS key setup is correct
 
-`steps/install-docker.sh` installs Docker Engine from Docker's official apt
-repository when Docker is missing. It adds the current user to the `docker`
-group. If group membership changes, log out and back in before expecting Docker
-to work without `sudo`.
+Skip it when:
 
-### 3. Template Fetch
+- `ssh your-alias` already works
+- you already prepared SSH in Step 1
 
-`steps/fetch-template.sh` clones the upstream template into `hosting/.work/docker` by
-default. The repository does not keep a checked-in copy of the template.
-`--template-source local` is useful when you want to prepare from a local
-template checkout instead of cloning upstream, for example while testing local
-template changes.
+### Phase 2: Docker Setup
 
-### 4. Module Discovery
+This is one of the important confirmation points.
 
-`lib/template.sh` scans `apps/*/compose.yaml|yml` to discover modules and scans
-each module compose file for the required profile. Required modules cannot be
-disabled. The root `compose.yaml` or `compose.yml` is regenerated later from the
-selected modules, so newly added app folders become selectable automatically.
+If Docker is not already installed, the script will clearly tell you that it is about to:
 
-### 5. Config Staging
+- add Docker's official package repository
+- install Docker Engine
+- install the Docker Compose plugin
+- add your current user to the `docker` group
 
-`steps/stage-configs.sh` copies the root `.env` and each selected module's
-non-compose config files into `hosting/.work/config`. All automated edits happen
-there first. The upstream template remains untouched until deployment.
+You must confirm before it proceeds.
 
-If `main.sh` is called with a backup ZIP path, `steps/inspect-backup.sh` first
-merges any backup-provided `apps/<module>/` folders into the fetched template so
-they participate in module discovery. Then `steps/import-backup.sh`
-reconstructs the same staging layout from the selected modules instead of
-copying files out of the fetched template directly.
+Good to know:
 
-### 6. Root Environment
+- the main setup now usually asks for `sudo` once near the beginning so later privileged steps can continue more smoothly
+- this may ask for `sudo`
+- after being added to the `docker` group, some systems need a logout/login before Docker works without `sudo`
+- if Docker is already installed, this phase simply reports that and moves on
 
-`main.sh` prompts for `TZ`, `DOCKER_DIR`, `DOMAIN`, and `LETSENCRYPT_EMAIL`.
-It fills `PUID` and `PGID` from `id`, and generates the Authelia secret values.
+### Phase 3: Template Fetch
 
-### 7. Module Hooks
+The script downloads the upstream Docker template into a temporary work area under `hosting/.work/`.
 
-Every `modules/*.sh` file exposes metadata through `--metadata`. `main.sh`
-uses that metadata to decide whether the hook should run and in what order.
-This keeps module automation removable and additive.
+This is intentional. It does not directly edit your final deployment folder first. Instead, it prepares everything in a staging area so the script can validate and modify files before deployment.
 
-### 8. Manual Review
+### Phase 4: Module Selection
 
-Unless `--skip-review` is set, the script pauses after automation and before
-deployment. Review staged files in `hosting/.work/config`. Edit values if
-needed, but do not rename files.
+This is the checklist UI you mentioned.
 
-### 9. Deployment
+You will see:
 
-`steps/deploy-template.sh` restores staged files into the fetched template with
-their original names and paths, then rsyncs the prepared template into
-`DOCKER_DIR`. Before deployment, `main.sh` prunes the root compose include list
-and removes unselected `apps/*` directories so the deployed tree contains only
-the selected modules. It creates or fixes permissions on `DOCKER_DIR` when
-needed.
+- required modules, which stay enabled automatically
+- optional modules, which you can toggle on or off
 
-### 10. Backup
+Controls in the checklist:
 
-`steps/backup-configs.sh` can create a ZIP backup of the staged configuration
-after deployment. `steps/backup-docker-config.sh` can create the same archive
-shape directly from an already deployed Docker tree. Interactive runs can
-choose the output directory at backup time. The backup contains the root `.env`,
-the root compose file, `HOSTING_SELECTED_MODULES.txt`, and each enabled
-module's full `apps/<module>/` directory, not the full upstream template.
+- `Up` and `Down` move through the list
+- `Space` toggles a module
+- `Tab` moves between buttons
+- `Enter` confirms
 
-### 11. Start
+Choose only what you actually want to run. More modules means more configuration, more containers, and more moving parts.
 
-`steps/start-stack.sh` first starts the required profile, then starts the full
-stack using the deployed root `.env` and its generated `COMPOSE_PROFILES` value.
+### Phase 5: Config Staging
 
-## Supabase Behavior
+After module selection, the script copies the relevant config files into `hosting/.work/config/`.
 
-Supabase is not forced. Per the prompt, it is offered only when at least one of
-`aiomanager`, `aiometadata`, or `aiostreams` is selected.
+This is the safe editing zone.
 
-If the user accepts, the script asks for the Supabase direct session pooler IPv4
-connection string and database password, replaces `[YOUR-PASSWORD]`, creates
-one schema and one role per selected addon, and writes generated Postgres
-connection strings into the staged addon env files.
+That means:
 
-If the user declines, or if unattended mode does not supply a Supabase
-connection string, the addons keep their upstream SQLite defaults.
+- the upstream template is still untouched
+- the final deployment directory is still untouched
+- all automatic edits happen in staging first
 
-The supported addons are configured at the top of `modules/all.supabase.sh`:
+### Phase 6: Core Environment Questions
 
-- `SUPPORTED_ADDONS`
-- `DATABASE_URL_KEYS`
-- `EXTRA_ENV_ASSIGNMENTS`
+The script will then ask for the core values that cannot be guessed automatically:
 
-Change those arrays/maps if another addon later needs Supabase support.
+- `TZ`
+- `DOCKER_DIR`
+- `DOMAIN`
+- `LETSENCRYPT_EMAIL`
 
-## Module Hooks
+What they mean:
 
-Hooks use a simple metadata contract. `main.sh` calls each `modules/*.sh`
-with `--metadata` first, then runs it only when its module or dependency set is
-selected.
+- `TZ`: your server timezone, for example `Europe/Berlin`
+- `DOCKER_DIR`: where the final Docker stack should live, usually `/opt/docker`
+- `DOMAIN`: the base domain used for public hostnames
+- `LETSENCRYPT_EMAIL`: the email address used for certificate notices
 
-- `modules/aiostreams.sh`
-  Enables `TORRENTIO_URL`, generates `SECRET_KEY`, sets `FEATURED_TEMPLATE_IDS`,
-  appends the requested `TEMPLATE_URLS`, and points to local StremThru when `stremthru` is selected.
-- `modules/aiomanager.sh`
-  Generates `ENCRYPTION_KEY`.
-- `modules/altmount.sh`
-  Creates `ALTMOUNT.env` with `JWT_SECRET`, stages AltMount compose, and adds `env_file: .env`.
-- `modules/honey.sh`
-  Sets `HONEY_HOSTNAME=stream.${DOMAIN}`, rewrites trusted domains, and removes dashboard links for unselected services.
-- `modules/cloudflare-ddns.sh`
-  Asks for a Cloudflare token, disables itself if missing, writes `CLOUDFLARE_PROXIED=true` only when enabled, prunes DDNS domains to selected hostnames, and switches Traefik to Cloudflare DNS challenge.
-- `modules/all.supabase.sh`
-  Runs for selected AIO addons and offers Supabase setup.
+The script also fills in:
 
-## Staged Config Naming
+- `PUID`
+- `PGID`
+- generated Authelia secrets
 
-Staged files are temporary and should not be renamed during manual review.
+### Phase 7: Module Automation
 
-- Root `.env` stays `.env`.
-- `apps/aiostreams/.env` becomes `AIOSTREAMS.env`.
-- `apps/honey/config.json` becomes `HONEY.config.json`.
-- `apps/authelia/config/` becomes `AUTHELIA.config/`.
-- Special staged compose files are named like `TRAEFIK.compose.yaml` or `TRAEFIK.compose.yml`, matching the upstream extension.
+Now the script applies module-specific logic based on what you selected.
 
-## Standalone Commands
+Examples:
 
-- `main.sh`
-  Full end-to-end deployment flow.
-- `steps/prepare-ssh.sh`
-  Local SSH key selection/generation and SSH config alias setup.
-- `steps/install-docker.sh`
-  Docker Engine and docker group setup.
-- `steps/fetch-template.sh`
-  Fetches upstream or copies an explicit local template source.
-- `steps/stage-configs.sh`
-  Creates the staging config folder and stage manifest.
-- `steps/import-backup.sh`
-  Restores the staging config folder for the finally selected modules from a backup ZIP.
-- `steps/deploy-template.sh`
-  Restores staged files and syncs the prepared template into `DOCKER_DIR`.
-- `steps/backup-configs.sh`
-  Normalizes staged files into module folders and creates a ZIP archive.
-- `steps/start-stack.sh`
-  Starts the required profile and then the full Compose stack.
-- `db/create-addon-schemas.sh`
-  Creates Supabase schemas and roles for selected AIO addons.
-- `db/delete-addon-schemas.sh`
-  Drops schemas and roles created by the create helper.
+- `cloudflare-ddns` asks for a Cloudflare API token and adjusts DNS challenge settings
+- AIO modules can offer Supabase instead of local SQLite
+- some modules stage extra files or update hostnames automatically
 
-## Backup Format
+These prompts now use the same visual UI style when possible.
 
-Backups are ZIP files named `streaming-YYYYmmddHHMMSS.zip` by default. The
-archive contains the root `.env`, the root compose file, the selected-module
-list, and each selected module's full app directory:
+Important: if you enable `cloudflare-ddns` but do not provide a token, the script disables that module instead of leaving it half-configured.
 
-- `.env`
-- `compose.yaml` or `compose.yml`
-- `HOSTING_SELECTED_MODULES.txt`
-- `apps/aiostreams/.env`
-- `apps/honey/config.json`
-- `apps/traefik/compose.yaml`
+### Phase 8: Manual Review
 
-## Error Handling
+Before deployment, the script pauses and tells you where the staged files are:
 
-- Missing required arguments fail with `✗` and a direct explanation.
-- Missing upstream files fail early during template discovery or staging.
-- Unknown module names fail before config staging.
-- Cloudflare DDNS disables itself if selected without a token.
-- Supabase setup exits without changes if the user declines it.
-- If deployment fails before cleanup, inspect `hosting/.work/docker`, `hosting/.work/config`, and `hosting/.work/`.
+```bash
+hosting/.work/config/
+```
 
-## Notes
+This is your chance to inspect the generated configuration.
 
-- `hosting/.work/docker`, `hosting/.work/config`, and `hosting/.work/` are temporary working paths.
-- Automatic package installation assumes Debian or Ubuntu.
-- If Docker group membership was just added, log out and back in before running Docker without `sudo`.
+Use this pause when:
+
+- you want to double-check domains
+- you want to edit module env files by hand
+- you want to compare staged values with external service dashboards
+
+Do not rename the staged files. Their names are mapped back to their original destinations automatically.
+
+### Phase 9: Deployment Confirmation
+
+This is another important confirmation point.
+
+Before touching the final Docker folder, the script now explicitly asks whether it should deploy into your chosen `DOCKER_DIR`.
+
+If you confirm, it will:
+
+- restore the staged files back into the prepared template
+- sync that prepared tree into the target Docker directory
+- prune out unselected modules so the final tree contains only what you chose
+
+### Phase 10: Backup ZIP
+
+After deployment, the script can create a backup ZIP of the prepared configuration.
+
+For most people, say yes.
+
+Why it matters:
+
+- it gives you an easy restore point
+- it is useful before later experiments or upgrades
+- it preserves the selected modules and the staged config files in a format the script can import again
+
+### Phase 11: Start the Stack
+
+The script now asks before starting Docker Compose.
+
+If you confirm, it will:
+
+1. start the required profile first
+2. start the rest of the configured stack
+
+If you are not ready yet, you can decline here, review files again, and start manually later.
+
+## Step 5: Read the Final Summary
+
+At the end, the script prints a summary with things like:
+
+- where the stack was deployed
+- your detected public IP
+- which hostnames were generated
+- whether Cloudflare DDNS is handling them, or whether you need to create DNS A records manually
+
+Read this part carefully. It tells you what still has to happen outside the script, especially around DNS.
+
+## Typical First-Time Workflow
+
+If you just want the shortest possible beginner path, this is the usual order:
+
+1. Run `./hosting/steps/prepare-ssh.sh` on your own machine.
+2. Install the `.pub` key on the VPS.
+3. Connect with `ssh your-alias`.
+4. Run the sparse checkout commands on the VPS.
+5. `cd hosting`
+6. Run `./main.sh`
+7. Confirm Docker installation if needed.
+8. Select your modules.
+9. Fill in timezone, Docker directory, domain, and Let's Encrypt email.
+10. Complete any module-specific prompts such as Cloudflare or Supabase.
+11. Review the staged config.
+12. Confirm deployment.
+13. Create the backup ZIP.
+14. Start the stack.
+15. Finish any DNS work shown in the final summary.
+
+## Useful Commands
+
+Run the full guided setup:
+
+```bash
+./main.sh
+```
+
+Import a previously created backup ZIP:
+
+```bash
+./main.sh /path/to/streaming-backup.zip
+```
+
+Create a backup from an existing deployed Docker directory:
+
+```bash
+./main.sh --backup
+```
+
+Create that backup non-interactively with defaults:
+
+```bash
+./main.sh --backup-quick
+```
+
+Test the file-preparation flow without making system-level changes:
+
+```bash
+./main.sh --dry-run --skip-ssh
+```
+
+## Common Notes and Pitfalls
+
+- Run `./main.sh` on the VPS, not on your laptop, unless your laptop is the machine that will host Docker.
+- If Docker group membership was just added, a fresh login may be needed before Docker works without `sudo`.
+- `cloudflare-ddns` only makes sense when the domain is actually managed by Cloudflare.
+- Supabase is optional. If you do not configure it, the supported addons stay on their default SQLite setup.
+- The temporary work directory is cleaned up at the end, so if you want to keep artifacts from a dry run, send the backup ZIP to a directory outside `hosting/.work/`.
+
+## Folder Layout
+
+- `main.sh`: the main guided setup entrypoint
+- `steps/`: reusable setup steps such as SSH prep, Docker install, deploy, backup, and start
+- `modules/`: addon-specific automation hooks
+- `db/`: Supabase-related helper scripts and SQL
+- `lib/`: shared Bash helpers for prompts, staging, and template logic
+- `defaults.env`: default values used by the scripts
+
+## If You Want to Run Non-Interactively Later
+
+Once you already understand the flow, you can pass values directly through flags such as:
+
+- `--modules`
+- `--timezone`
+- `--docker-dir`
+- `--domain`
+- `--letsencrypt-email`
+- `--cloudflare-api-token`
+- `--supabase-connection-string`
+- `--supabase-db-password`
+- `--skip-review`
+
+That is useful for repeat deployments, but for a first run, the guided interactive flow is the safer path.

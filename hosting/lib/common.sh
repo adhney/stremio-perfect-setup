@@ -125,6 +125,69 @@ is_interactive() {
   [[ -t 0 && -t 1 ]]
 }
 
+dialog_ui_available() {
+  is_interactive && command -v whiptail >/dev/null 2>&1
+}
+
+ensure_dialog_ui() {
+  local purpose="${1:-the hosting setup}"
+  local install_status=1
+
+  if ! is_interactive || dialog_ui_available || hosting_is_dry_run; then
+    return 0
+  fi
+
+  if [[ "${HOSTING_DIALOG_INSTALL_ATTEMPTED:-0}" == "1" ]]; then
+    warn "whiptail is unavailable, so ${purpose} will continue with plain terminal prompts."
+    return 0
+  fi
+
+  export HOSTING_DIALOG_INSTALL_ATTEMPTED=1
+
+  if ! command -v dpkg >/dev/null 2>&1 || ! command -v apt-get >/dev/null 2>&1; then
+    warn "whiptail is not installed, so ${purpose} will continue with plain terminal prompts."
+    return 0
+  fi
+
+  if dpkg -s whiptail >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log "whiptail is missing; attempting to install it so ${purpose} can use the visual interface."
+
+  if (( EUID == 0 )); then
+    if apt-get update && apt-get install -y whiptail; then
+      install_status=0
+    fi
+  elif command -v sudo >/dev/null 2>&1; then
+    if sudo apt-get update && sudo apt-get install -y whiptail; then
+      install_status=0
+    fi
+  fi
+
+  if (( install_status == 0 )) && dialog_ui_available; then
+    success "whiptail installed successfully."
+    return 0
+  fi
+
+  warn "Could not install whiptail automatically, so ${purpose} will continue with plain terminal prompts."
+}
+
+show_message() {
+  local title="$1"
+  local message="$2"
+
+  if dialog_ui_available; then
+    whiptail \
+      --title "${title}" \
+      --msgbox "${message}" \
+      18 78
+    return 0
+  fi
+
+  printf '%s\n' "${message}"
+}
+
 prompt_value() {
   local prompt="$1"
   local default_value="${2:-}"
@@ -132,6 +195,18 @@ prompt_value() {
 
   if ! is_interactive; then
     printf '%s' "${default_value}"
+    return 0
+  fi
+
+  if dialog_ui_available; then
+    value="$(
+      whiptail \
+        --title "Input Required" \
+        --inputbox "${prompt}" \
+        13 78 "${default_value}" \
+        3>&1 1>&2 2>&3
+    )" || die "Prompt cancelled."
+    printf '%s' "${value}"
     return 0
   fi
 
@@ -149,6 +224,18 @@ prompt_secret() {
   local value=""
 
   if ! is_interactive; then
+    return 0
+  fi
+
+  if dialog_ui_available; then
+    value="$(
+      whiptail \
+        --title "Secret Required" \
+        --passwordbox "${prompt}" \
+        13 78 \
+        3>&1 1>&2 2>&3
+    )" || die "Prompt cancelled."
+    printf '%s' "${value}"
     return 0
   fi
 
@@ -172,6 +259,17 @@ prompt_yes_no() {
     return
   fi
 
+  if dialog_ui_available; then
+    local default_flag="--defaultno"
+    [[ "${default_answer}" == "yes" ]] && default_flag="--defaultyes"
+    whiptail \
+      --title "Confirmation" \
+      "${default_flag}" \
+      --yesno "${prompt}" \
+      12 78
+    return
+  fi
+
   read -r -p "$(style '35' '?') ${prompt} ${suffix} " answer || true
   answer="${answer,,}"
 
@@ -181,6 +279,56 @@ prompt_yes_no() {
   fi
 
   [[ "${answer}" == "y" || "${answer}" == "yes" ]]
+}
+
+prompt_choice() {
+  local title="$1"
+  local prompt="$2"
+  local default_value="${3:-}"
+  shift 3
+  local options=("$@")
+  local args=()
+  local default_args=()
+  local choice="" token="" description="" index=0
+
+  (( ${#options[@]} > 0 )) || die "prompt_choice requires at least one option"
+
+  if dialog_ui_available; then
+    while (( index < ${#options[@]} )); do
+      token="${options[index]}"
+      description="${options[index + 1]:-}"
+      args+=("${token}" "${description}")
+      index=$((index + 2))
+    done
+
+    if [[ -n "${default_value}" ]]; then
+      default_args=(--default-item "${default_value}")
+    fi
+
+    choice="$(
+      whiptail \
+        "${default_args[@]}" \
+        --title "${title}" \
+        --menu "${prompt}" \
+        18 88 8 \
+        "${args[@]}" \
+        3>&1 1>&2 2>&3
+    )" || die "Prompt cancelled."
+    printf '%s' "${choice}"
+    return 0
+  fi
+
+  printf '%s\n' "${prompt}" >&2
+  index=0
+  while (( index < ${#options[@]} )); do
+    token="${options[index]}"
+    description="${options[index + 1]:-}"
+    printf '  %s. %s\n' "${token}" "${description}" >&2
+    index=$((index + 2))
+  done
+
+  choice="$(prompt_value "Enter your choice" "${default_value}")"
+  printf '%s' "${choice}"
 }
 
 trim() {
@@ -437,6 +585,24 @@ run_privileged() {
     command -v sudo >/dev/null 2>&1 || die "This step needs elevated privileges, but sudo is not installed."
     sudo "$@"
   fi
+}
+
+prime_sudo_session() {
+  local purpose="${1:-this setup}"
+
+  if hosting_is_dry_run || (( EUID == 0 )) || ! is_interactive; then
+    return 0
+  fi
+
+  command -v sudo >/dev/null 2>&1 || die "${purpose} needs elevated privileges, but sudo is not installed."
+
+  if [[ "${HOSTING_SUDO_PRIMED:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  log "Requesting sudo access up front so ${purpose} can complete without repeated privilege prompts."
+  sudo -v || die "Could not obtain sudo access for ${purpose}."
+  HOSTING_SUDO_PRIMED=1
 }
 
 generate_secret_base64() {

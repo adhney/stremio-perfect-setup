@@ -22,6 +22,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../lib/common.sh"
 
 load_defaults
+ensure_dialog_ui "Docker setup"
 
 RUN_USER="${SUDO_USER:-$USER}"
 
@@ -41,6 +42,10 @@ install_docker() {
   if command -v docker >/dev/null 2>&1; then
     log "Docker is already installed."
     return 0
+  fi
+
+  if is_interactive; then
+    prompt_yes_no "Docker is not installed yet. This step will add Docker's official repository, install Docker Engine plus the Compose plugin, and may ask for sudo privileges. Continue?" yes || die "Docker installation cancelled."
   fi
 
   [[ -r /etc/os-release ]] || die "Unsupported Linux distribution: missing /etc/os-release"
