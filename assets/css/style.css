@@ -236,7 +236,9 @@ pre {
 
 .home-wizard-card__btn {
   flex-shrink: 0;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   padding: 0.45rem 1.1rem;
   border: 2px solid var(--on-accent-border);
   border-radius: 9px;
@@ -246,6 +248,10 @@ pre {
   text-decoration: none;
   white-space: nowrap;
   transition: background 0.15s;
+}
+
+.home-wizard-card__btn svg {
+  flex: 0 0 auto;
 }
 
 .home-wizard-card__btn:hover,
