@@ -587,7 +587,7 @@ env_value_is_placeholder "${root_domain_default}" && root_domain_default=""
 env_value_is_placeholder "${root_letsencrypt_default}" && root_letsencrypt_default=""
 
 if is_interactive; then
-  show_message "Environment Details" "Next, enter the remaining core environment values for the stack: timezone, public base domain, and the email address used for Let's Encrypt notifications. The deployment target is already set to ${DOCKER_DIR_VALUE}. These values are written into the staged root .env and used across multiple services."
+  show_message "Environment Details" "Next, enter the remaining core environment values for the stack: Timezone, Domain, and the Email address used for Let's Encrypt notifications. The deployment target is already set to ${DOCKER_DIR_VALUE}. These values are written into the staged root .env and used across multiple services."
 fi
 
 TIMEZONE_VALUE="${TIMEZONE_VALUE:-$(prompt_value "Enter the server timezone using the TZ database identifier so containers log and schedule tasks correctly, for example Europe/Berlin [TZ]" "${root_tz_default}")}"

@@ -314,7 +314,7 @@ password_hash="$(
   run_authelia_docker --rm authelia/authelia:latest \
     authelia crypto hash generate argon2 \
     --password "${authelia_password}" 2>&1 \
-  | awk '/^Digest:/ { print $2 }'
+  | awk 'match($0, /\$argon2[^[:space:]"]+/) { print substr($0, RSTART, RLENGTH); exit }'
 )"
 
 [[ -n "${password_hash}" ]] || die "Failed to generate argon2 password hash via Docker."

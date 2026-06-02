@@ -43,13 +43,7 @@ prompt_aiostreams_auth_value() {
   local auth_value="${current_auth_value}"
 
   if is_interactive; then
-    show_message \
-      "AIOStreams Proxy" \
-      "Optional: set built-in proxy users for AIOStreams. Use comma-separated username:password pairs, for example user1:pass1,user2:pass2."
-
-    if prompt_yes_no "Configure AIOSTREAMS_AUTH now for the built-in proxy users?" no; then
-      auth_value="$(prompt_value "Enter comma-separated username:password pairs for AIOSTREAMS_AUTH" "${current_auth_value}")"
-    fi
+    auth_value="$(prompt_value "Optional built-in proxy users (AIOSTREAMS_AUTH). Enter comma-separated username:password pairs, or leave empty to skip." "${current_auth_value}")"
   fi
 
   printf '%s' "${auth_value}"
@@ -93,6 +87,8 @@ import json
 import os
 
 for key, value in json.loads(os.environ["HOSTING_AIOSTREAMS_PARAMETERS_JSON"]).items():
+    if key == "CUSTOM_HTML":
+        value = json.dumps(value, ensure_ascii=False)
     print(f"{key}\t{value}")
 PY
   )"
