@@ -47,11 +47,11 @@ prompt_aiostreams_auth_value() {
       auth_value="$(
         whiptail_capture_on_tty \
           --title "AIOStreams Proxy" \
-          --inputbox "Optional: set built-in proxy users for AIOStreams. Use comma-separated username:password pairs, for example user1:pass1,user2:pass2.\n\nLeave empty to skip." \
+          --inputbox "Optional: Here you can set built-in proxy users for use in AIOStreams. Use comma-separated username:password pairs, for example user1:pass1,user2:pass2.\n\nLeave empty to skip." \
           13 84 "${current_auth_value}"
       )" || die "Prompt cancelled."
     else
-      auth_value="$(prompt_value "Optional: set built-in proxy users for AIOStreams. Use comma-separated username:password pairs, for example user1:pass1,user2:pass2. Leave empty to skip [AIOSTREAMS_AUTH]" "${current_auth_value}")"
+      auth_value="$(prompt_value "Optional: Set built-in proxy users for use in AIOStreams. Use comma-separated username:password pairs, for example user1:pass1,user2:pass2. Leave empty to skip [AIOSTREAMS_AUTH]" "${current_auth_value}")"
     fi
   fi
 
