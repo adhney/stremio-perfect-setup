@@ -488,6 +488,29 @@ print(value, end="")
 PY
 }
 
+extract_connection_string_password() {
+  local connection_string="$1"
+
+  python3 - "${connection_string}" <<'PY'
+from urllib.parse import unquote, urlsplit
+import sys
+
+connection_string = sys.argv[1]
+
+try:
+    parsed = urlsplit(connection_string)
+except ValueError:
+    print("", end="")
+    raise SystemExit(0)
+
+password = parsed.password
+if password is None:
+    print("", end="")
+else:
+    print(unquote(password), end="")
+PY
+}
+
 env_upsert() {
   local file="$1"
   local key="$2"

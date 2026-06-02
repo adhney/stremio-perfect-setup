@@ -43,11 +43,30 @@ create temp table if not exists addon_connection_strings (
 
 truncate table addon_connection_strings;
 
+create temp table if not exists addon_params (
+  addon_names text[],
+  shared_password text,
+  base_connection_string text
+);
+
+truncate table addon_params;
+
+insert into addon_params (
+  addon_names,
+  shared_password,
+  base_connection_string
+)
+values (
+  regexp_split_to_array(:'addon_names_csv', '\s*,\s*'),
+  :'shared_password',
+  :'base_connection_string'
+);
+
 do $$
 declare
-  addon_names text[] := regexp_split_to_array(:'addon_names_csv', '\s*,\s*');
-  shared_password text := :'shared_password';
-  base_connection_string text := :'base_connection_string';
+  addon_names text[] := (select addon_names from addon_params limit 1);
+  shared_password text := (select addon_params.shared_password from addon_params limit 1);
+  base_connection_string text := (select addon_params.base_connection_string from addon_params limit 1);
   parsed_user text := substring(base_connection_string from '^[^:]+://([^:]+):');
   addon text;
   clean_name text;

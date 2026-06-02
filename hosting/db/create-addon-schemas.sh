@@ -50,7 +50,12 @@ done
 
 [[ -n "${CONNECTION_STRING}" ]] || die "--connection-string is required"
 [[ -n "${ADDONS}" ]] || die "--addons is required"
-[[ -n "${PASSWORD}" ]] || die "--password is required"
+
+if [[ -z "${PASSWORD}" ]]; then
+  PASSWORD="$(extract_connection_string_password "${CONNECTION_STRING}")"
+fi
+
+[[ -n "${PASSWORD}" ]] || die "--password is required when the connection string does not already include one"
 
 HOSTING_LOG_TO_STDERR=1 ensure_apt_packages postgresql-client
 CONNECTION_STRING="${CONNECTION_STRING//\[YOUR-PASSWORD\]/${PASSWORD}}"

@@ -16,9 +16,18 @@
 
 begin;
 
+create temp table if not exists delete_addon_params (
+  addon_names text[]
+);
+
+truncate table delete_addon_params;
+
+insert into delete_addon_params (addon_names)
+values (regexp_split_to_array(:'addon_names_csv', '\s*,\s*'));
+
 do $$
 declare
-  addon_names text[] := regexp_split_to_array(:'addon_names_csv', '\s*,\s*');
+  addon_names text[] := (select addon_names from delete_addon_params limit 1);
   addon text;
   clean_name text;
   schema_name text;
