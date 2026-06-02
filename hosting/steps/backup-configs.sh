@@ -77,6 +77,7 @@ done
 [[ -f "${MANIFEST_FILE}" ]] || die "Manifest file does not exist: ${MANIFEST_FILE}"
 [[ -n "${MODULES_FILE}" ]] || die "--modules-file is required"
 [[ -f "${MODULES_FILE}" ]] || die "Modules file does not exist: ${MODULES_FILE}"
+OUTPUT_DIR="$(absolute_path "${OUTPUT_DIR}")"
 
 ensure_directory "${OUTPUT_DIR}"
 

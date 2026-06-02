@@ -68,6 +68,7 @@ done
 
 TARGET_DIR_ARG="${TARGET_DIR_ARG:-$(env_get "${CONFIG_DIR_ARG}/.env" DOCKER_DIR)}"
 [[ -n "${TARGET_DIR_ARG}" ]] || die "DOCKER_DIR is not set in ${CONFIG_DIR_ARG}/.env"
+TARGET_DIR_ARG="$(absolute_path "${TARGET_DIR_ARG}")"
 
 while IFS=$'\t' read -r module source_rel stage_rel item_type; do
   [[ -n "${source_rel}" ]] || continue

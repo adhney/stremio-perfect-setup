@@ -60,6 +60,7 @@ while (( $# > 0 )); do
 done
 
 [[ -n "${ZIP_FILE_ARG}" ]] || die "--zip-file is required"
+ZIP_FILE_ARG="$(absolute_path "${ZIP_FILE_ARG}")"
 [[ -f "${ZIP_FILE_ARG}" ]] || die "Backup ZIP does not exist: ${ZIP_FILE_ARG}"
 [[ -n "${TEMPLATE_DIR_ARG}" ]] || die "--template-dir is required"
 [[ -d "${TEMPLATE_DIR_ARG}" ]] || die "Template directory does not exist: ${TEMPLATE_DIR_ARG}"

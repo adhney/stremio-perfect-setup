@@ -99,13 +99,7 @@ What this does:
 - clones the repository in a lightweight way
 - tells Git to fetch only the `hosting/` folder
 - copies that folder into your current VPS directory as a standalone working folder
-- removes the temporary clone when done
-
-After that, move into the folder:
-
-```bash
-cd hosting
-```
+- removes the temporary clone when done and takes you to `hosting\`
 
 ## Step 3: Run the Main Setup Script
 

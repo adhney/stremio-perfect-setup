@@ -36,6 +36,7 @@ while (( $# > 0 )); do
 done
 
 [[ -n "${TARGET_DIR_ARG}" ]] || die "--target-dir is required"
+TARGET_DIR_ARG="$(absolute_path "${TARGET_DIR_ARG}")"
 [[ -d "${TARGET_DIR_ARG}" ]] || die "Target directory does not exist: ${TARGET_DIR_ARG}"
 
 (

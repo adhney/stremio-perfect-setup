@@ -122,11 +122,23 @@ dry_run_log() {
 }
 
 is_interactive() {
-  [[ -t 0 && -t 1 ]]
+  [[ -t 0 ]]
+}
+
+tty_device_available() {
+  [[ -r /dev/tty && -w /dev/tty ]]
 }
 
 dialog_ui_available() {
-  is_interactive && command -v whiptail >/dev/null 2>&1
+  is_interactive && tty_device_available && command -v whiptail >/dev/null 2>&1
+}
+
+whiptail_on_tty() {
+  whiptail "$@" </dev/tty >/dev/tty 2>&1
+}
+
+whiptail_capture_on_tty() {
+  whiptail "$@" 3>&1 1>/dev/tty 2>&3 </dev/tty
 }
 
 ensure_dialog_ui() {
@@ -178,7 +190,7 @@ show_message() {
   local message="$2"
 
   if dialog_ui_available; then
-    whiptail \
+    whiptail_on_tty \
       --title "${title}" \
       --msgbox "${message}" \
       18 78
@@ -200,11 +212,10 @@ prompt_value() {
 
   if dialog_ui_available; then
     value="$(
-      whiptail \
+      whiptail_capture_on_tty \
         --title "Input Required" \
         --inputbox "${prompt}" \
         13 78 "${default_value}" \
-        3>&1 1>&2 2>&3
     )" || die "Prompt cancelled."
     printf '%s' "${value}"
     return 0
@@ -229,11 +240,10 @@ prompt_secret() {
 
   if dialog_ui_available; then
     value="$(
-      whiptail \
+      whiptail_capture_on_tty \
         --title "Secret Required" \
         --passwordbox "${prompt}" \
         13 78 \
-        3>&1 1>&2 2>&3
     )" || die "Prompt cancelled."
     printf '%s' "${value}"
     return 0
@@ -260,13 +270,18 @@ prompt_yes_no() {
   fi
 
   if dialog_ui_available; then
-    local default_flag="--defaultno"
-    [[ "${default_answer}" == "yes" ]] && default_flag="--defaultyes"
-    whiptail \
-      --title "Confirmation" \
-      "${default_flag}" \
-      --yesno "${prompt}" \
-      12 78
+    if [[ "${default_answer}" == "no" ]]; then
+      whiptail_on_tty \
+        --title "Confirmation" \
+        --defaultno \
+        --yesno "${prompt}" \
+        12 78
+    else
+      whiptail_on_tty \
+        --title "Confirmation" \
+        --yesno "${prompt}" \
+        12 78
+    fi
     return
   fi
 
@@ -290,8 +305,10 @@ prompt_choice() {
   local args=()
   local default_args=()
   local choice="" token="" description="" index=0
+  local choice_key=""
 
   (( ${#options[@]} > 0 )) || die "prompt_choice requires at least one option"
+  choice_key="$(printf '%s' "${title}" | tr '[:lower:]' '[:upper:]' | tr -c 'A-Z0-9' '_')_CHOICE"
 
   if dialog_ui_available; then
     while (( index < ${#options[@]} )); do
@@ -306,13 +323,12 @@ prompt_choice() {
     fi
 
     choice="$(
-      whiptail \
+      whiptail_capture_on_tty \
         "${default_args[@]}" \
         --title "${title}" \
         --menu "${prompt}" \
         18 88 8 \
-        "${args[@]}" \
-        3>&1 1>&2 2>&3
+        "${args[@]}"
     )" || die "Prompt cancelled."
     printf '%s' "${choice}"
     return 0
@@ -327,7 +343,7 @@ prompt_choice() {
     index=$((index + 2))
   done
 
-  choice="$(prompt_value "Enter your choice" "${default_value}")"
+  choice="$(prompt_value "Enter the option token for this setup step so the script can continue (${choice_key})" "${default_value}")"
   printf '%s' "${choice}"
 }
 
@@ -536,10 +552,39 @@ temp_file_next_to() {
 
 absolute_path() {
   local input_path="$1"
-  if [[ "${input_path}" == /* ]]; then
-    printf '%s' "${input_path}"
+  local expanded_path=""
+  local home_lookup="" user_name="" remainder=""
+
+  if [[ -z "${input_path}" ]]; then
+    return 0
+  fi
+
+  case "${input_path}" in
+    [~])
+      expanded_path="${HOME}"
+      ;;
+    [~]/*)
+      expanded_path="${HOME}/${input_path:2}"
+      ;;
+    [~]*)
+      user_name="${input_path:1}"
+      user_name="${user_name%%/*}"
+      remainder="${input_path:$((1 + ${#user_name}))}"
+      if command -v getent >/dev/null 2>&1; then
+        home_lookup="$(getent passwd "${user_name}" | cut -d: -f6)"
+      fi
+      [[ -n "${home_lookup}" ]] || die "Could not resolve home directory for ~${user_name}"
+      expanded_path="${home_lookup}${remainder}"
+      ;;
+    *)
+      expanded_path="${input_path}"
+      ;;
+  esac
+
+  if [[ "${expanded_path}" == /* ]]; then
+    printf '%s' "${expanded_path}"
   else
-    printf '%s/%s' "$(pwd)" "${input_path#./}"
+    printf '%s/%s' "$(pwd)" "${expanded_path#./}"
   fi
 }
 
@@ -597,6 +642,12 @@ prime_sudo_session() {
   command -v sudo >/dev/null 2>&1 || die "${purpose} needs elevated privileges, but sudo is not installed."
 
   if [[ "${HOSTING_SUDO_PRIMED:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  if sudo -n true 2>/dev/null; then
+    log "Passwordless sudo is available for ${purpose}."
+    HOSTING_SUDO_PRIMED=1
     return 0
   fi
 

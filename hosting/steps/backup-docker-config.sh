@@ -47,6 +47,8 @@ while (( $# > 0 )); do
 done
 
 [[ -n "${DOCKER_DIR_ARG}" ]] || die "--docker-dir is required"
+DOCKER_DIR_ARG="$(absolute_path "${DOCKER_DIR_ARG}")"
+OUTPUT_DIR="$(absolute_path "${OUTPUT_DIR}")"
 [[ -d "${DOCKER_DIR_ARG}" ]] || die "Docker directory does not exist: ${DOCKER_DIR_ARG}"
 [[ -f "${DOCKER_DIR_ARG}/.env" ]] || die "Docker directory does not contain a root .env: ${DOCKER_DIR_ARG}/.env"
 

@@ -50,8 +50,8 @@ proxied_value="${HOSTING_CLOUDFLARE_PROXIED:-$(env_get "${HOSTING_ROOT_ENV}" CLO
 proxied_value="${proxied_value:-${DEFAULT_PROXIED_WHEN_ENABLED}}"
 
 if [[ -z "${token_value}" ]] && is_interactive; then
-  show_message "Cloudflare DDNS" "Cloudflare DDNS creates proxied DNS records for the selected services. Only continue if this domain already uses Cloudflare nameservers and you have an API token with the required DNS permissions."
-  token_value="$(prompt_secret "Enter the Cloudflare API token, or leave blank to disable cloudflare-ddns")"
+  show_message "Cloudflare DDNS" "Cloudflare DDNS creates DNS records for the selected services and also switches Traefik to use the Cloudflare DNS challenge for Let's Encrypt. Only continue if this domain already uses Cloudflare nameservers and you have an API token with the required DNS permissions (CLOUDFLARE_SETUP)."
+  token_value="$(prompt_secret "Enter the Cloudflare API token so the script can create DNS records and enable the Traefik DNS challenge, or leave blank to disable this module (CLOUDFLARE_API_TOKEN)")"
 fi
 
 if [[ -z "${token_value}" ]]; then
@@ -59,6 +59,14 @@ if [[ -z "${token_value}" ]]; then
   remove_line_from_file "${HOSTING_SELECTED_MODULES_FILE}" "${MODULE_NAME}"
   env_upsert "${HOSTING_ROOT_ENV}" CLOUDFLARE_API_TOKEN ""
   exit 0
+fi
+
+if [[ -z "${HOSTING_CLOUDFLARE_PROXIED:-}" ]] && is_interactive; then
+  if prompt_yes_no "Should Cloudflare create proxied orange-cloud DNS records for the selected hostnames? Choose yes if you want Cloudflare to sit in front of the traffic, or no for DNS-only records (CLOUDFLARE_PROXIED)" yes; then
+    proxied_value=true
+  else
+    proxied_value=false
+  fi
 fi
 
 env_upsert "${HOSTING_ROOT_ENV}" CLOUDFLARE_API_TOKEN "${token_value}"

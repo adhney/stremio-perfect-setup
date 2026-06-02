@@ -39,7 +39,7 @@ declare -A EXTRA_ENV_ASSIGNMENTS=(
 )
 
 if [[ "${1:-}" == "--metadata" ]]; then
-  printf 'scope=all\ndependencies=%s\n' "$(join_by ',' "${SUPPORTED_ADDONS[@]}")"
+  printf 'scope=all\ndependencies=%s\norder=110\n' "$(join_by ',' "${SUPPORTED_ADDONS[@]}")"
   exit 0
 fi
 
@@ -93,21 +93,23 @@ database_password="${HOSTING_SUPABASE_DB_PASSWORD:-}"
 if [[ -z "${connection_string}" ]]; then
   if is_interactive; then
     section "Supabase option"
-    log "The selected AIO addons can use Supabase instead of local SQLite: $(join_by ', ' "${selected_addons[@]}")"
-    show_message "Supabase Option" "The selected AIO addons can use Supabase instead of local SQLite: $(join_by ', ' "${selected_addons[@]}").
+    log "The selected AIO addons can use Supabase/Postgres instead of local SQLite: $(join_by ', ' "${selected_addons[@]}")"
+    show_message "Supabase Option" "The selected AIO addons can use Supabase/Postgres instead of their default local SQLite databases: $(join_by ', ' "${selected_addons[@]}").
 
 Before you continue:
 1. Create or open a Supabase account.
 2. Create a fresh project dedicated to these addons.
 3. Save the database password for that project.
 4. Open Project Settings > Database > Connection string.
-5. Copy the direct session pooler IPv4 connection string exactly as shown."
+5. Copy the direct session pooler IPv4 connection string exactly as shown.
+
+If you enable this, the script will create one schema and one login role per selected addon, then write the generated connection strings into each staged addon `.env` file automatically (SUPABASE_SETUP)."
     warn "Use a new database, not one already used for unrelated data."
-    if ! prompt_yes_no "Use Supabase for $(join_by ', ' "${selected_addons[@]}")?" no; then
+    if ! prompt_yes_no "Use Supabase/Postgres instead of local SQLite for $(join_by ', ' "${selected_addons[@]}") so the script can provision per-addon schemas and credentials? (SUPABASE_ENABLED)" no; then
       log "Keeping local SQLite for $(join_by ', ' "${selected_addons[@]}")"
       exit 0
     fi
-    connection_string="$(prompt_value "Paste the Supabase direct session pooler IPv4 connection string")"
+    connection_string="$(prompt_value "Paste the Supabase direct session pooler IPv4 connection string that has enough access to create addon schemas and roles (SUPABASE_CONNECTION_STRING)")"
   else
     log "No Supabase connection string supplied; keeping local SQLite for $(join_by ', ' "${selected_addons[@]}")"
     exit 0
@@ -115,13 +117,18 @@ Before you continue:
 fi
 
 if [[ -z "${database_password}" ]] && is_interactive; then
-  database_password="$(prompt_secret "Enter the database password used in that connection string")"
+  database_password="$(prompt_secret "Enter the database password referenced by that connection string so schema creation can authenticate successfully (SUPABASE_DB_PASSWORD)")"
 fi
 
 [[ -n "${connection_string}" ]] || die "Supabase connection string is required for ${selected_addons[*]}"
 [[ -n "${database_password}" ]] || die "Supabase database password is required for ${selected_addons[*]}"
 
 addons_csv="$(join_by ',' "${selected_addons[@]}")"
+if is_interactive && ! prompt_yes_no "Create or update the Supabase schemas and login roles now for ${addons_csv}, then write the generated connection strings into the staged addon `.env` files? (SUPABASE_APPLY)" yes; then
+  log "Skipping Supabase schema deployment and keeping local SQLite for ${addons_csv}"
+  exit 0
+fi
+
 log "Creating Supabase schemas for: ${addons_csv}"
 connection_string="${connection_string//\[YOUR-PASSWORD\]/${database_password}}"
 if hosting_is_dry_run; then
