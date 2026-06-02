@@ -11,7 +11,7 @@ import { wizardMetadata } from './integration';
 
 const MEASUREMENT_ID = wizardMetadata.ga4Id.trim();
 
-const COMPLETION_EVENT = 'wizard_setup_completed';
+const COMPLETION_EVENT = 'wizard_completed';
 const ACCOUNT_CREATED_EVENT = 'wizard_account_created';
 
 let analyticsReady = false;
