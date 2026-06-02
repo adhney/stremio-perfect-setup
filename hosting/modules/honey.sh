@@ -183,7 +183,7 @@ for module in selected_modules:
         filtered_services.append(service)
         seen_hrefs.add(href)
 
-data["services"] = filtered_services
+data["services"] = sorted(filtered_services, key=lambda s: s.get("name", "").lower())
 
 with open(config_path, "w", encoding="utf-8") as handle:
     json.dump(data, handle, indent=2)

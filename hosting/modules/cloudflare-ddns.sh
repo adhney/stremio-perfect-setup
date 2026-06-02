@@ -165,4 +165,30 @@ with open(compose_path, "w", encoding="utf-8") as handle:
     handle.writelines(lines)
 PY
 
+# ── clean up unused *_HOSTNAME vars from root .env ───────────────────────────
+
+HOSTING_CF_HOST_VARS="$(printf '%s\n' "${host_vars[@]}" | dedupe_lines)" python3 - "${HOSTING_ROOT_ENV}" <<'PY'
+import os
+import re
+import sys
+
+env_path  = sys.argv[1]
+keep_vars = set(line for line in os.environ.get("HOSTING_CF_HOST_VARS", "").splitlines() if line)
+
+hostname_re = re.compile(r'^([A-Z0-9_]+_HOSTNAME)=')
+
+with open(env_path, "r", encoding="utf-8") as fh:
+    lines = fh.readlines()
+
+new_lines = []
+for line in lines:
+    m = hostname_re.match(line)
+    if m and m.group(1) not in keep_vars:
+        continue
+    new_lines.append(line)
+
+with open(env_path, "w", encoding="utf-8") as fh:
+    fh.writelines(new_lines)
+PY
+
 success "Updated Cloudflare DDNS and Traefik configs for the selected hostnames"

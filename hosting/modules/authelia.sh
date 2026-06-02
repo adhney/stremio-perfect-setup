@@ -99,27 +99,16 @@ if [[ -z "${authelia_username}" || -z "${authelia_displayname}" || \
 
   if dialog_ui_available; then
     while true; do
-      form_output="$(
+      authelia_username="$(
         whiptail_capture_on_tty \
           --title "Authelia User Account" \
-          --mixedform "Enter the initial Authelia user account details:" \
-          18 78 4 \
-          "Username:"     1 1 "${authelia_username}"    1 20 50 0 0 \
-          "Display Name:" 2 1 "${authelia_displayname}" 2 20 50 0 0 \
-          "Password:"     3 1 ""                        3 20 50 0 1 \
-          "Email:"        4 1 "${authelia_email}"       4 20 50 0 0
+          --inputbox "Username (letters, digits, hyphens, underscores only):" \
+          10 78 "${authelia_username}"
       )" || die "Prompt cancelled."
 
-      mapfile -t form_fields <<< "${form_output}"
-      authelia_username="${form_fields[0]:-}"
-      authelia_displayname="${form_fields[1]:-}"
-      authelia_password="${form_fields[2]:-}"
-      authelia_email="${form_fields[3]:-}"
-
-      if [[ -z "${authelia_username}" || -z "${authelia_displayname}" || \
-            -z "${authelia_password}" || -z "${authelia_email}" ]]; then
+      if [[ -z "${authelia_username}" ]]; then
         whiptail_on_tty --title "Validation Error" \
-          --msgbox "All fields are required. Please fill in every field." 10 60
+          --msgbox "Username is required." 8 60
         continue
       fi
 
@@ -128,6 +117,45 @@ if [[ -z "${authelia_username}" || -z "${authelia_displayname}" || \
           --msgbox "Username '${authelia_username}' is not valid.\nUse only letters, digits, hyphens, and underscores." \
           10 70
         authelia_username=""
+        continue
+      fi
+
+      authelia_displayname="$(
+        whiptail_capture_on_tty \
+          --title "Authelia User Account" \
+          --inputbox "Display Name:" \
+          10 78 "${authelia_displayname}"
+      )" || die "Prompt cancelled."
+
+      if [[ -z "${authelia_displayname}" ]]; then
+        whiptail_on_tty --title "Validation Error" \
+          --msgbox "Display name is required." 8 60
+        continue
+      fi
+
+      authelia_password="$(
+        whiptail_capture_on_tty \
+          --title "Authelia User Account" \
+          --passwordbox "Password (will be argon2-hashed via Docker):" \
+          10 78
+      )" || die "Prompt cancelled."
+
+      if [[ -z "${authelia_password}" ]]; then
+        whiptail_on_tty --title "Validation Error" \
+          --msgbox "Password is required." 8 60
+        continue
+      fi
+
+      authelia_email="$(
+        whiptail_capture_on_tty \
+          --title "Authelia User Account" \
+          --inputbox "Email:" \
+          10 78 "${authelia_email}"
+      )" || die "Prompt cancelled."
+
+      if [[ -z "${authelia_email}" ]]; then
+        whiptail_on_tty --title "Validation Error" \
+          --msgbox "Email is required." 8 60
         continue
       fi
 
