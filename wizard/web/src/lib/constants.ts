@@ -67,7 +67,7 @@ export interface WizardAnalyticsConfig {
 export interface WizardConfig {
   name: string;
   targets: WizardTarget[];
-  addonDetailsFilename: string;
+  addonDetailsFilenamePrefix: string;
   catalogSelectionExceptions?: string[];
   keys: WizardKeys;
   limits: WizardLimits;
@@ -82,9 +82,11 @@ export interface WizardConfigFile {
   configurations: WizardConfig[];
 }
 
-interface LegacyWizardConfig extends Omit<WizardConfig, 'targets'> {
+interface LegacyWizardConfig extends Omit<WizardConfig, 'targets' | 'addonDetailsFilenamePrefix'> {
   target?: WizardTarget;
   targets?: WizardTarget[];
+  addonDetailsFilenamePrefix?: string;
+  addonDetailsFilename?: string;
 }
 
 function normalizeTargets(targets: unknown): WizardTarget[] {
@@ -205,6 +207,11 @@ function normalizeConfigBlock(block: LegacyWizardConfig): WizardConfig | null {
   void _target;
   void _account;
   const targets = normalizeTargets(block.targets ?? (block.target ? [block.target] : []));
+  const addonDetailsFilenamePrefix = typeof block.addonDetailsFilenamePrefix === 'string'
+    ? block.addonDetailsFilenamePrefix.trim()
+    : typeof block.addonDetailsFilename === 'string'
+    ? block.addonDetailsFilename.replace(/\.txt$/i, '').trim()
+    : '';
   const instances = normalizeInstances(block.instances);
   const templates = normalizeTemplates(block.templates);
   const keys = normalizeKeys(block.keys);
@@ -214,8 +221,7 @@ function normalizeConfigBlock(block: LegacyWizardConfig): WizardConfig | null {
     !targets.length
     || typeof block.name !== 'string'
     || block.name.trim().length === 0
-    || typeof block.addonDetailsFilename !== 'string'
-    || block.addonDetailsFilename.trim().length === 0
+    || addonDetailsFilenamePrefix.length === 0
     || !instances
     || !templates
     || !keys
@@ -227,7 +233,7 @@ function normalizeConfigBlock(block: LegacyWizardConfig): WizardConfig | null {
   return {
     ...rest,
     name: block.name,
-    addonDetailsFilename: block.addonDetailsFilename,
+    addonDetailsFilenamePrefix,
     catalogSelectionExceptions: normalizeOptionalStringArray(block.catalogSelectionExceptions),
     keys,
     limits,

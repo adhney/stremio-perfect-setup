@@ -32,6 +32,10 @@ async function copyText(text: string) {
   document.body.removeChild(textarea);
 }
 
+function sanitizeFilenameSegment(value: string) {
+  return value.replace(/[<>:"/\\|?*\u0000-\u001F]/g, '_').trim();
+}
+
 export function DoneStep() {
   const {
     credentials,
@@ -50,7 +54,36 @@ export function DoneStep() {
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const isUsingAccountPassword = addonPasswordSource === 'account';
   const accountMode = target === 'nuvio' ? nuvioAccount.mode : stremioAccount.mode;
-  const addonDetailsFilename = wizardConfig?.addonDetailsFilename ?? '';
+  const selectedNuvioProfileName = useMemo(() => {
+    const selectedProfile = (nuvioAccount.profiles ?? [])
+      .find((profile) => profile.profile_index === nuvioAccount.profileId);
+    return selectedProfile?.name?.trim() || nuvioAccount.profileName?.trim() || '';
+  }, [nuvioAccount.profileId, nuvioAccount.profileName, nuvioAccount.profiles]);
+  const addonDetailsFilename = useMemo(() => {
+    const prefix = wizardConfig?.addonDetailsFilenamePrefix?.trim() ?? '';
+    if (!prefix || !target) return '';
+
+    const providerLabel = target === 'stremio' ? 'Stremio' : 'Nuvio';
+    const email = sanitizeFilenameSegment(
+      (target === 'stremio' ? stremioAccount.email : nuvioAccount.email).trim(),
+    );
+    if (!email) return '';
+
+    const parts = [
+      prefix,
+      `[${providerLabel}]`,
+      `[${email}]`,
+    ];
+
+    if (target === 'nuvio') {
+      const profileName = sanitizeFilenameSegment(selectedNuvioProfileName);
+      if (profileName) {
+        parts.push(`[${profileName}]`);
+      }
+    }
+
+    return `${parts.join('')}.txt`;
+  }, [nuvioAccount.email, selectedNuvioProfileName, stremioAccount.email, target, wizardConfig?.addonDetailsFilenamePrefix]);
   const credentialsCardStyle = {
     background: 'var(--panel-2)',
     border: '1px solid var(--border)',

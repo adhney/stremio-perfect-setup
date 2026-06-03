@@ -141,11 +141,13 @@ export function AccountStep() {
           const selectedProfileId = profiles.some(profile => profile.profile_index === account.profileId)
             ? account.profileId
             : profiles[0]?.profile_index;
+          const selectedProfile = profiles.find((profile) => profile.profile_index === selectedProfileId);
 
           setNuvioAccount({
             authToken: auth.token,
             profiles,
             profileId: profiles.length ? selectedProfileId : undefined,
+            profileName: selectedProfile?.name ?? account.profileName,
             createNewProfile: profiles.length === 0,
           });
           return;
@@ -275,7 +277,13 @@ export function AccountStep() {
               if (e.target.value === CREATE_NEW_PROFILE_VALUE) {
                 setNuvioAccount({ createNewProfile: true, profileId: undefined });
               } else {
-                setNuvioAccount({ createNewProfile: false, profileId: Number(e.target.value) });
+                const selectedProfileId = Number(e.target.value);
+                const selectedProfile = nuvioProfiles.find((profile) => profile.profile_index === selectedProfileId);
+                setNuvioAccount({
+                  createNewProfile: false,
+                  profileId: selectedProfileId,
+                  profileName: selectedProfile?.name ?? account.profileName,
+                });
               }
               setError('');
             }}
