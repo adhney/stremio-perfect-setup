@@ -14,6 +14,7 @@ const stremioTemplate = JSON.parse(readFileSync(join(root, 'templates', 'AIOMeta
 const nuvioTemplate = JSON.parse(readFileSync(join(root, 'templates', 'AIOMetadata-All.json'), 'utf8'));
 const collections = JSON.parse(readFileSync(join(root, 'templates', 'Nuvio-Collections.json'), 'utf8'));
 const catalogs = stremioTemplate.config.catalogs;
+const categoryExceptions = ['🍥'];
 
 let passed = 0, failed = 0;
 function ok(name, cond, detail = '') {
@@ -38,35 +39,39 @@ ok('Discover emoji Popular', deriveCategoryKey('🏆 Popular') === '🏆');
 ok('tmdb.language category (🌐) is excluded-group', deriveCategoryKey('🌐 By Language') === '🌐');
 
 console.log('\n# deriveCategories: non-discover categories derived from emoji');
-const cats = deriveCategories(catalogs, collections);
+const collectionOnlyCats = deriveCategories(catalogs, collections);
+const cats = deriveCategories(catalogs, collections, categoryExceptions);
 const keys = cats.map(c => c.key);
 ok('🎬 Streaming category present', keys.includes('🎬'));
 ok('🎭 Genres present', keys.includes('🎭'));
-ok('🍥 Anime present as own category', keys.includes('🍥'));
+ok('🍥 Anime present as own category for wizard selection', keys.includes('🍥'));
 ok('🌍 World present (flag catalogs)', keys.includes('🌍'));
 ok('Discover emojis NOT in regular categories', !keys.some(k => DISCOVER_EMOJIS.has(k)));
 ok('Excluded emoji groups absent (🌐)', !keys.includes('🌐'));
 ok('Excluded emoji groups absent (📅)', !keys.includes('📅'));
 ok('Excluded emoji groups absent (⌚)', !keys.includes('⌚'));
+ok('Without exceptions, Anime stays under Genres', !collectionOnlyCats.some(c => c.key === '🍥'));
 ok('🎬 count === 28', cats.find(c => c.key === '🎬')?.count === 28);
 ok('🕒 Runtime count === 4', cats.find(c => c.key === '🕒')?.count === 4);
 
-console.log('\n# deriveDiscoverFolders: folder-granular discover section');
-const discover = deriveDiscoverFolders(catalogs);
+console.log('\n# deriveDiscoverFolders: discover section grouped by emoji key');
+const discover = deriveDiscoverFolders(catalogs, collections, categoryExceptions);
 const discoverLabels = discover.map(d => d.label);
-ok('Trakt folder present', discoverLabels.some(l => l.includes('Trakt')));
+const discoverIds = discover.map(d => d.id);
+ok('Recommended folder present', discoverLabels.some(l => l.includes('Recommended')));
 ok('Popular folder present', discoverLabels.some(l => l.includes('Popular')));
 ok('Trending folder present', discoverLabels.some(l => l.includes('Trending')));
 ok('Top Rated folder present', discoverLabels.some(l => l.includes('Top Rated')));
+ok('Discover ids use emoji keys', JSON.stringify(discoverIds) === JSON.stringify(['🎯', '🏆', '🔥', '⭐']));
 ok('Each discover folder has catalogIds', discover.every(d => d.catalogIds.size > 0));
 
 console.log('\n# defaultEnabledCategories: Stremio starts from reference defaults');
-const stremioDefaults = defaultEnabledCategories(catalogs, 'stremio', collections);
+const stremioDefaults = defaultEnabledCategories(catalogs, 'stremio', collections, categoryExceptions);
 ok('Stremio: 🎬 Streaming enabled by default', stremioDefaults.categories.has('🎬'));
 ok('Stremio: 🏰 Studios NOT enabled by default', !stremioDefaults.categories.has('🏰'));
 ok('Stremio: 🌍 World NOT enabled by default', !stremioDefaults.categories.has('🌍'));
 
-const nuvioDefaults = defaultEnabledCategories(nuvioTemplate.config.catalogs, 'nuvio', collections);
+const nuvioDefaults = defaultEnabledCategories(nuvioTemplate.config.catalogs, 'nuvio', collections, categoryExceptions);
 ok('Nuvio: 🏰 Studios enabled by default', nuvioDefaults.categories.has('🏰'));
 ok('Nuvio: 🌍 World enabled by default', nuvioDefaults.categories.has('🌍'));
 ok(
@@ -74,21 +79,25 @@ ok(
   countEnabledCatalogs(
     nuvioTemplate.config.catalogs,
     nuvioDefaults.categories,
-    nuvioDefaults.discoverFolderIds
+    nuvioDefaults.discoverFolderIds,
+    collections,
+    categoryExceptions
   ) === countEnabledCatalogs(
     nuvioTemplate.config.catalogs,
-    new Set(deriveCategories(nuvioTemplate.config.catalogs, collections).map(c => c.key)),
-    new Set(deriveDiscoverFolders(nuvioTemplate.config.catalogs).map(d => d.id))
+    new Set(deriveCategories(nuvioTemplate.config.catalogs, collections, categoryExceptions).map(c => c.key)),
+    new Set(deriveDiscoverFolders(nuvioTemplate.config.catalogs, collections, categoryExceptions).map(d => d.id)),
+    collections,
+    categoryExceptions
   )
 );
 
 console.log('\n# countEnabledCatalogs: Stremio 120-catalog cap enforcement');
 const allEnabledCategories = new Set(cats.map(c => c.key));
-const allDiscoverIds = new Set(discover.map(d => d.label));
-const totalWhenAll = countEnabledCatalogs(catalogs, allEnabledCategories, allDiscoverIds);
+const allDiscoverIds = new Set(discover.map(d => d.id));
+const totalWhenAll = countEnabledCatalogs(catalogs, allEnabledCategories, allDiscoverIds, collections, categoryExceptions);
 ok('All-enabled count > 120 (Stremio would overflow)', totalWhenAll > 120);
 const stremioCount = countEnabledCatalogs(
-  catalogs, stremioDefaults.categories, stremioDefaults.discoverFolderIds
+  catalogs, stremioDefaults.categories, stremioDefaults.discoverFolderIds, collections, categoryExceptions
 );
 ok('Stremio defaults count <= 120', stremioCount <= 120, `got ${stremioCount}`);
 
@@ -96,6 +105,8 @@ console.log('\n# buildAioMetadataConfig: config object ready to POST');
 const cfg = buildAioMetadataConfig(stremioTemplate, {
   enabledCategories: stremioDefaults.categories,
   enabledDiscoverFolderIds: stremioDefaults.discoverFolderIds,
+  collections,
+  categoryExceptions,
   target: 'stremio',
   apiKeys: { tmdb: 'K', tmdbAccess: 'A', tvdb: 'V', gemini: '', rpdb: 't0-free-rpdb' },
   language: 'en-US',
@@ -110,11 +121,36 @@ ok('language set', cfg.config.language === 'en-US');
 const nuvioCfg = buildAioMetadataConfig(nuvioTemplate, {
   enabledCategories: nuvioDefaults.categories,
   enabledDiscoverFolderIds: nuvioDefaults.discoverFolderIds,
+  collections,
+  categoryExceptions,
   target: 'nuvio',
   apiKeys: { tmdb: 'K', tmdbAccess: 'A', tvdb: 'V', gemini: '', rpdb: 't0-free-rpdb' },
   language: 'en-US',
 });
 ok('Nuvio: showInHome=false for ALL enabled catalogs', nuvioCfg.config.catalogs.filter(c => c.enabled).every(c => c.showInHome === false));
+
+const animeSeparatedCfg = buildAioMetadataConfig(stremioTemplate, {
+  enabledCategories: new Set(['🎭']),
+  enabledDiscoverFolderIds: new Set(),
+  collections,
+  categoryExceptions,
+  target: 'stremio',
+  apiKeys: { tmdb: 'K', tmdbAccess: 'A', tvdb: 'V', gemini: '', rpdb: 't0-free-rpdb' },
+  language: 'en-US',
+});
+const animeCatalogIds = new Set(catalogs.filter(c => deriveCategoryKey(c.name) === '🍥').map(c => c.id));
+ok(
+  'Anime catalogs stay disabled when Genres is enabled but Anime is not selected',
+  animeSeparatedCfg.config.catalogs
+    .filter(c => animeCatalogIds.has(c.id))
+    .every(c => c.enabled === false)
+);
+ok(
+  'Regular genre catalogs stay enabled when Genres is selected',
+  animeSeparatedCfg.config.catalogs
+    .filter(c => deriveCategoryKey(c.name) === '🎭')
+    .every(c => c.enabled === true)
+);
 
 // ─── nuvio-collections tests ───────────────────────────────────────────────
 
@@ -122,25 +158,37 @@ console.log('\n# filterCollections: Nuvio collections filtered to enabled catego
 {
   // All enabled: all 8 groups pass through
   const allCats = new Set(['🎬','🎭','🍥','🎨','🏰','🎥','🕒','🌍']);
-  const allDiscover = new Set(deriveDiscoverFolders(catalogs).map(d => d.id));
-  const all = filterCollections(collections, catalogs, { enabledCategories: allCats, enabledDiscoverFolderIds: allDiscover });
+  const allDiscover = new Set(deriveDiscoverFolders(catalogs, collections, categoryExceptions).map(d => d.id));
+  const all = filterCollections(collections, catalogs, {
+    enabledCategories: allCats,
+    enabledDiscoverFolderIds: allDiscover,
+    categoryExceptions,
+  });
   ok('All enabled: all top-level groups present', all.length === collections.length);
 
   // Disable Studios: Studios group should be filtered out (no folders left)
   const noStudios = new Set(['🎬','🎭','🍥','🎨','🎥','🕒','🌍']);
-  const filteredStudios = filterCollections(collections, catalogs, { enabledCategories: noStudios, enabledDiscoverFolderIds: allDiscover });
+  const filteredStudios = filterCollections(collections, catalogs, {
+    enabledCategories: noStudios,
+    enabledDiscoverFolderIds: allDiscover,
+    categoryExceptions,
+  });
   const studioGroup = filteredStudios.find(g => g.title?.includes('Studios'));
   ok('Studios group absent when disabled', !studioGroup || studioGroup.folders.length === 0);
 
   // Disable Anime: Genres group stays but anime folders removed
   const noAnime = new Set(['🎬','🎭','🎨','🏰','🎥','🕒','🌍']);
-  const filteredAnime = filterCollections(collections, catalogs, { enabledCategories: noAnime, enabledDiscoverFolderIds: allDiscover });
+  const filteredAnime = filterCollections(collections, catalogs, {
+    enabledCategories: noAnime,
+    enabledDiscoverFolderIds: allDiscover,
+    categoryExceptions,
+  });
   const genreGroup = filteredAnime.find(g => g.title?.includes('Genres'));
   ok('Genres group still present when only Anime disabled', !!genreGroup);
   // Anime folders reference catalogs with IDs that have deriveCategoryKey(name) === '🍥'
-  const animeCatalogIds = catalogs.filter(c => deriveCategoryKey(c.name) === '🍥').map(c => c.id);
+  const animeCatalogIdList = [...animeCatalogIds];
   const hasAnimeFolders = genreGroup?.folders.some(f =>
-    (f.catalogSources || []).some(s => animeCatalogIds.includes(s.catalogId))
+    (f.catalogSources || []).some(s => animeCatalogIdList.includes(s.catalogId))
   );
   ok('No anime folders in Genres when Anime disabled', !hasAnimeFolders);
 }

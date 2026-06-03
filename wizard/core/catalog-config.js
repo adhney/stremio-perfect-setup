@@ -16,6 +16,7 @@ export const EXCLUDED_CATALOG_IDS = new Set([
 
 // Emoji prefixes for the special "Discover" section (folder-granular, not category-level).
 export const DISCOVER_EMOJIS = new Set(['🎯', '🏆', '🔥', '⭐']);
+const DISCOVER_COLLECTION_GROUP_ID = 'collections.discover';
 
 const DEFAULT_CATEGORY_LABELS = {
   '🎬': '🎬 Streaming',
@@ -27,6 +28,107 @@ const DEFAULT_CATEGORY_LABELS = {
   '🍥': '🍥 Anime',
   '🌍': '🌍 World',
 };
+
+const DEFAULT_DISCOVER_LABELS = {
+  '🎯': '🎯 Trakt Recommendations',
+  '🏆': '🏆 Popular',
+  '🔥': '🔥 Trending',
+  '⭐': '⭐ Top Rated',
+};
+
+function isDiscoverCollectionGroup(group) {
+  return group?.id === DISCOVER_COLLECTION_GROUP_ID;
+}
+
+export function buildCollectionCatalogMetadata(collections) {
+  const labelByCategoryKey = { ...DEFAULT_CATEGORY_LABELS };
+  const categoryByCatalogId = new Map();
+  const discoverByCatalogId = new Map();
+
+  for (const group of collections || []) {
+    if (!group || typeof group !== 'object') continue;
+    const groupTitle = String(group.title || '').trim();
+    const groupKey = deriveCategoryKey(groupTitle);
+    const discoverGroup = isDiscoverCollectionGroup(group);
+
+    if (!discoverGroup && groupKey && groupTitle) {
+      labelByCategoryKey[groupKey] = groupTitle;
+    }
+
+    for (const folder of group.folders || []) {
+      const folderTitle = String(folder?.title || '').trim();
+      const folderKey = String(folder?.coverEmoji || '').trim() || deriveCategoryKey(folderTitle);
+      const discoverLabel = folderKey
+        ? `${folderKey}${folderTitle ? ` ${folderTitle}` : ''}`.trim()
+        : folderTitle;
+
+      for (const source of folder?.catalogSources || []) {
+        const catalogId = String(source?.catalogId || '').trim();
+        if (!catalogId) continue;
+
+        if (discoverGroup) {
+          discoverByCatalogId.set(catalogId, {
+            key: folderKey,
+            label: discoverLabel || DEFAULT_DISCOVER_LABELS[folderKey] || folderKey || catalogId,
+          });
+        } else {
+          categoryByCatalogId.set(catalogId, {
+            key: groupKey,
+            label: groupTitle || labelByCategoryKey[groupKey] || groupKey || catalogId,
+          });
+        }
+      }
+    }
+  }
+
+  return { labelByCategoryKey, categoryByCatalogId, discoverByCatalogId };
+}
+
+function normalizeCategoryExceptions(categoryExceptions) {
+  return new Set((categoryExceptions || []).map((value) => String(value || '').trim()).filter(Boolean));
+}
+
+export function resolveCatalogSelectionEntry(catalog, collections, categoryExceptions = []) {
+  const metadata = buildCollectionCatalogMetadata(collections);
+  return resolveCatalogSelectionEntryWithMetadata(catalog, metadata, normalizeCategoryExceptions(categoryExceptions));
+}
+
+function resolveCatalogSelectionEntryWithMetadata(catalog, metadata, categoryExceptions) {
+  if (!catalog || EXCLUDED_CATALOG_IDS.has(catalog.id)) return null;
+
+  const discover = metadata.discoverByCatalogId.get(catalog.id);
+  if (discover) {
+    return { kind: 'discover', key: discover.key, label: discover.label };
+  }
+
+  const ownKey = deriveCategoryKey(catalog.name);
+  if (categoryExceptions.has(ownKey)) {
+    return {
+      kind: 'category',
+      key: ownKey,
+      label: metadata.labelByCategoryKey[ownKey] || DEFAULT_CATEGORY_LABELS[ownKey] || ownKey,
+    };
+  }
+
+  const mapped = metadata.categoryByCatalogId.get(catalog.id);
+  if (mapped) {
+    return { kind: 'category', key: mapped.key, label: mapped.label };
+  }
+
+  if (DISCOVER_EMOJIS.has(ownKey)) {
+    return {
+      kind: 'discover',
+      key: ownKey,
+      label: catalog.name || DEFAULT_DISCOVER_LABELS[ownKey] || ownKey,
+    };
+  }
+
+  return {
+    kind: 'category',
+    key: ownKey,
+    label: metadata.labelByCategoryKey[ownKey] || DEFAULT_CATEGORY_LABELS[ownKey] || ownKey,
+  };
+}
 
 /**
  * Extract the leading emoji key from a catalog name.
@@ -52,42 +154,44 @@ export function deriveCategoryKey(name) {
  * @param {object[]} catalogs    AIOMetadata catalog array
  * @param {object[]} collections Nuvio-Collections.json groups array
  */
-export function deriveCategories(catalogs, collections) {
-  // Build emoji → human label from nuvio-collections group titles when available,
-  // with stable built-in labels so Stremio does not depend on Nuvio-only templates.
-  const labelByEmoji = { ...DEFAULT_CATEGORY_LABELS };
-  for (const group of collections || []) {
-    const firstChar = [...(group.title || '')][0];
-    if (firstChar) labelByEmoji[firstChar] = group.title;
-  }
+export function deriveCategories(catalogs, collections, categoryExceptions = []) {
+  const metadata = buildCollectionCatalogMetadata(collections);
+  const exceptions = normalizeCategoryExceptions(categoryExceptions);
 
   const map = new Map();
   for (const c of catalogs) {
     if (EXCLUDED_CATALOG_IDS.has(c.id)) continue;
-    const key = deriveCategoryKey(c.name);
-    if (DISCOVER_EMOJIS.has(key)) continue;
-    if (!map.has(key)) {
-      map.set(key, { key, label: labelByEmoji[key] || key, catalogs: [] });
+    const selectionEntry = resolveCatalogSelectionEntryWithMetadata(c, metadata, exceptions);
+    if (!selectionEntry || selectionEntry.kind !== 'category') continue;
+    if (!map.has(selectionEntry.key)) {
+      map.set(selectionEntry.key, { key: selectionEntry.key, label: selectionEntry.label || selectionEntry.key, catalogs: [] });
     }
-    map.get(key).catalogs.push(c);
+    map.get(selectionEntry.key).catalogs.push(c);
   }
   return [...map.values()].map(g => ({ ...g, count: g.catalogs.length }));
 }
 
 /**
- * Build an array of discover folder objects (one per unique discover catalog name).
- * Each entry: { id (= label), emoji, label, catalogIds: Set<string> }
+ * Build an array of discover folder objects (one per discover emoji group).
+ * Each entry: { id (= emoji key), emoji, label, catalogIds: Set<string> }
  */
-export function deriveDiscoverFolders(catalogs) {
+export function deriveDiscoverFolders(catalogs, collections = [], categoryExceptions = []) {
+  const metadata = buildCollectionCatalogMetadata(collections);
+  const exceptions = normalizeCategoryExceptions(categoryExceptions);
   const map = new Map();
   for (const c of catalogs) {
     if (EXCLUDED_CATALOG_IDS.has(c.id)) continue;
-    const key = deriveCategoryKey(c.name);
-    if (!DISCOVER_EMOJIS.has(key)) continue;
-    if (!map.has(c.name)) {
-      map.set(c.name, { id: c.name, emoji: key, label: c.name, catalogIds: new Set() });
+    const selectionEntry = resolveCatalogSelectionEntryWithMetadata(c, metadata, exceptions);
+    if (!selectionEntry || selectionEntry.kind !== 'discover') continue;
+    if (!map.has(selectionEntry.key)) {
+      map.set(selectionEntry.key, {
+        id: selectionEntry.key,
+        emoji: selectionEntry.key,
+        label: selectionEntry.label || c.name || DEFAULT_DISCOVER_LABELS[selectionEntry.key] || selectionEntry.key,
+        catalogIds: new Set(),
+      });
     }
-    map.get(c.name).catalogIds.add(c.id);
+    map.get(selectionEntry.key).catalogIds.add(c.id);
   }
   return [...map.values()];
 }
@@ -101,11 +205,11 @@ export function deriveDiscoverFolders(catalogs) {
  *
  * @returns {{ categories: Set<string>, discoverFolderIds: Set<string> }}
  */
-export function defaultEnabledCategories(catalogs, target, collections) {
+export function defaultEnabledCategories(catalogs, target, collections, categoryExceptions = []) {
   const categories = new Set();
   const discoverFolderIds = new Set();
-  const catObjs = deriveCategories(catalogs, collections);
-  const discoverFolders = deriveDiscoverFolders(catalogs);
+  const catObjs = deriveCategories(catalogs, collections, categoryExceptions);
+  const discoverFolders = deriveDiscoverFolders(catalogs, collections, categoryExceptions);
 
   for (const catObj of catObjs) {
     // A category is "on by default" only if ALL of its catalogs are enabled in the template.
@@ -128,17 +232,19 @@ export function defaultEnabledCategories(catalogs, target, collections) {
  * Count how many catalogs would be enabled given the user's category + discover selections.
  * Used to enforce the ~120-catalog Stremio limit.
  */
-export function countEnabledCatalogs(catalogs, enabledCategories, enabledDiscoverFolderIds) {
+export function countEnabledCatalogs(catalogs, enabledCategories, enabledDiscoverFolderIds, collections = [], categoryExceptions = []) {
+  const metadata = buildCollectionCatalogMetadata(collections);
+  const exceptions = normalizeCategoryExceptions(categoryExceptions);
   let count = 0;
   for (const c of catalogs) {
     if (EXCLUDED_CATALOG_IDS.has(c.id)) continue;
-    const key = deriveCategoryKey(c.name);
-    if (DISCOVER_EMOJIS.has(key)) {
-      // Discover: check if this catalog's folder is enabled
-      // The folder label equals the catalog's name (folder id = c.name)
-      if (enabledDiscoverFolderIds.has(c.name)) count++;
+    const selectionEntry = resolveCatalogSelectionEntryWithMetadata(c, metadata, exceptions);
+    if (!selectionEntry) continue;
+    if (selectionEntry.kind === 'discover') {
+      // Discover: group by emoji key, not by the full catalog label.
+      if (enabledDiscoverFolderIds.has(selectionEntry.key)) count++;
     } else {
-      if (enabledCategories.has(key)) count++;
+      if (enabledCategories.has(selectionEntry.key)) count++;
     }
   }
   return count;
@@ -151,22 +257,24 @@ export function countEnabledCatalogs(catalogs, enabledCategories, enabledDiscove
  * @param {object} baseTemplate  Parsed AIOMetadata.json or AIOMetadata-All.json
  * @param {object} opts
  * @param {Set<string>} opts.enabledCategories       emoji keys
- * @param {Set<string>} opts.enabledDiscoverFolderIds catalog name labels
+ * @param {Set<string>} opts.enabledDiscoverFolderIds discover emoji keys
  * @param {'stremio'|'nuvio'} opts.target
  * @param {object} opts.apiKeys  { tmdb, tmdbAccess, tvdb, gemini, rpdb }
  * @param {string} opts.language e.g. 'en-US'
  */
 export function buildAioMetadataConfig(baseTemplate, {
-  enabledCategories, enabledDiscoverFolderIds, target, apiKeys, language,
+  enabledCategories, enabledDiscoverFolderIds, target, apiKeys, language, collections = [], categoryExceptions = [],
 }) {
   const showInHome = target === 'stremio'; // Stremio: true; Nuvio: false (shown via collections)
+  const metadata = buildCollectionCatalogMetadata(collections);
+  const exceptions = normalizeCategoryExceptions(categoryExceptions);
 
   const catalogs = baseTemplate.config.catalogs.map(c => {
     if (EXCLUDED_CATALOG_IDS.has(c.id)) return { ...c, enabled: false, showInHome: false };
-    const key = deriveCategoryKey(c.name);
-    const enabled = DISCOVER_EMOJIS.has(key)
-      ? enabledDiscoverFolderIds.has(c.name)
-      : enabledCategories.has(key);
+    const selectionEntry = resolveCatalogSelectionEntryWithMetadata(c, metadata, exceptions);
+    const enabled = selectionEntry?.kind === 'discover'
+      ? enabledDiscoverFolderIds.has(selectionEntry.key)
+      : enabledCategories.has(selectionEntry?.key);
     return { ...c, enabled, showInHome: enabled ? showInHome : false };
   });
 

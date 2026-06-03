@@ -60,12 +60,18 @@ export interface WizardLimits {
   stremioMaxCatalogs: number;
 }
 
+export interface WizardAnalyticsConfig {
+  denylist?: string[];
+}
+
 export interface WizardConfig {
   name: string;
   targets: WizardTarget[];
   addonDetailsFilename: string;
+  catalogSelectionExceptions?: string[];
   keys: WizardKeys;
   limits: WizardLimits;
+  analytics?: WizardAnalyticsConfig;
   doneStepNotifications?: WizardNotification[];
   instances: WizardInstances;
   templates: WizardTemplates;
@@ -94,6 +100,13 @@ function normalizeStringArray(value: unknown) {
   if (!Array.isArray(value)) return null;
   const items = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
   return items.length ? items : null;
+}
+
+function normalizeOptionalStringArray(value: unknown) {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    .map((item) => item.trim());
 }
 
 function normalizeInstances(value: unknown): WizardInstances | null {
@@ -177,6 +190,16 @@ function normalizeLimits(value: unknown): WizardLimits | null {
   return { stremioMaxCatalogs: value.stremioMaxCatalogs };
 }
 
+function normalizeAnalytics(value: unknown): WizardAnalyticsConfig | undefined {
+  if (!isRecord(value)) return undefined;
+  const denylist = normalizeOptionalStringArray(value.denylist);
+  if (!denylist || denylist.length === 0) {
+    return undefined;
+  }
+
+  return { denylist };
+}
+
 function normalizeConfigBlock(block: LegacyWizardConfig): WizardConfig | null {
   const { target: _target, account: _account, ...rest } = block as LegacyWizardConfig & { account?: unknown };
   void _target;
@@ -186,6 +209,7 @@ function normalizeConfigBlock(block: LegacyWizardConfig): WizardConfig | null {
   const templates = normalizeTemplates(block.templates);
   const keys = normalizeKeys(block.keys);
   const limits = normalizeLimits(block.limits);
+  const analytics = normalizeAnalytics(block.analytics);
   if (
     !targets.length
     || typeof block.name !== 'string'
@@ -204,8 +228,10 @@ function normalizeConfigBlock(block: LegacyWizardConfig): WizardConfig | null {
     ...rest,
     name: block.name,
     addonDetailsFilename: block.addonDetailsFilename,
+    catalogSelectionExceptions: normalizeOptionalStringArray(block.catalogSelectionExceptions),
     keys,
     limits,
+    analytics,
     instances,
     templates,
     targets,

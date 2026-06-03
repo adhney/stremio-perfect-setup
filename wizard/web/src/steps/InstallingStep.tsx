@@ -122,6 +122,8 @@ export function InstallingStep() {
         baseTemplate: aiometadataBaseTemplate,
         enabledCategories: catalogSelection.enabledCategories,
         enabledDiscoverFolderIds: catalogSelection.enabledDiscoverFolderIds,
+        collections: (templates.collections ?? []) as object[],
+        categoryExceptions: wizardConfig.catalogSelectionExceptions ?? [],
         apiKeys: {
           tmdb:       effectiveCredentials.tmdbApiKey,
           tmdbAccess: effectiveCredentials.tmdbAccessToken,

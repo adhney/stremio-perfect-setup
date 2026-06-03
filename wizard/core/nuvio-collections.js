@@ -1,39 +1,28 @@
 // Filter a Nuvio-Collections.json array to only include groups/folders
 // whose content belongs to the user's enabled catalog categories.
-// Anime folders nested inside the Genres group are filtered per-folder.
+// Emoji exceptions such as Anime can be split into separate wizard categories
+// while remaining nested under their original collections group.
 
-import { deriveCategoryKey, DISCOVER_EMOJIS } from './catalog-config.js';
-
-/**
- * Build a lookup: catalogId → category key (emoji like '🌍' or discover emoji).
- */
-function buildCatalogIndex(catalogs) {
-  const index = new Map();
-  for (const c of catalogs) {
-    index.set(c.id, { key: deriveCategoryKey(c.name), name: c.name });
-  }
-  return index;
-}
+import { resolveCatalogSelectionEntry } from './catalog-config.js';
 
 /**
  * Determine whether a Nuvio folder's content belongs to an enabled category.
  * A folder is kept if ANY of its catalogSources maps to an enabled category.
  */
-function isFolderEnabled(folder, catalogIndex, enabledCategories, enabledDiscoverFolderIds) {
+function isFolderEnabled(folder, catalogById, collections, categoryExceptions, enabledCategories, enabledDiscoverFolderIds) {
   const sources = folder.catalogSources || [];
   if (sources.length === 0) return true; // no catalog sources; keep
 
   for (const src of sources) {
     if (!src.catalogId) continue;
-    const entry = catalogIndex.get(src.catalogId);
-    if (!entry) continue;
-    const { key, name } = entry;
+    const catalog = catalogById.get(src.catalogId);
+    if (!catalog) continue;
 
-    if (DISCOVER_EMOJIS.has(key)) {
-      if (enabledDiscoverFolderIds.has(name)) return true;
-    } else {
-      if (enabledCategories.has(key)) return true;
-    }
+    const selectionEntry = resolveCatalogSelectionEntry(catalog, collections, categoryExceptions);
+    if (!selectionEntry) continue;
+
+    if (selectionEntry.kind === 'discover' && enabledDiscoverFolderIds.has(selectionEntry.key)) return true;
+    if (selectionEntry.kind === 'category' && enabledCategories.has(selectionEntry.key)) return true;
   }
   return false;
 }
@@ -47,15 +36,20 @@ function isFolderEnabled(folder, catalogIndex, enabledCategories, enabledDiscove
  * @param {object}   opts
  * @param {Set}      opts.enabledCategories
  * @param {Set}      opts.enabledDiscoverFolderIds
+ * @param {string[]}   opts.categoryExceptions
  * @returns {object[]} filtered collections array
  */
-export function filterCollections(collections, catalogs, { enabledCategories, enabledDiscoverFolderIds }) {
-  const catalogIndex = buildCatalogIndex(catalogs);
+export function filterCollections(collections, catalogs, {
+  enabledCategories,
+  enabledDiscoverFolderIds,
+  categoryExceptions = [],
+}) {
+  const catalogById = new Map(catalogs.map((catalog) => [catalog.id, catalog]));
   const result = [];
 
   for (const group of collections) {
     const filteredFolders = (group.folders || []).filter(folder =>
-      isFolderEnabled(folder, catalogIndex, enabledCategories, enabledDiscoverFolderIds)
+      isFolderEnabled(folder, catalogById, collections, categoryExceptions, enabledCategories, enabledDiscoverFolderIds)
     );
     if (filteredFolders.length > 0) {
       result.push({ ...group, folders: filteredFolders });

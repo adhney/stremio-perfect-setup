@@ -5,6 +5,7 @@
       "name": "main",
       "targets": ["stremio", "nuvio"],
       "addonDetailsFilename": "MyPerfectSetupAddons.txt",
+      "catalogSelectionExceptions": ["🍥"],
       "proxyBase": "https://proxy.numb3rs.stream",
       "keys": {
         "tmdbApiKeys": [
@@ -38,6 +39,9 @@
       },
       "limits": {
         "stremioMaxCatalogs": 120
+      },
+      "analytics": {
+        "denylist": []
       },
       "instances": {
         "aiostreams": [

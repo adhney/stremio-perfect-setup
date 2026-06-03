@@ -1,4 +1,5 @@
 import type { AioSection } from './aioSections';
+import type { WizardConfig } from './constants';
 import {
   ACTIVE_KEY_SCREENS,
   AIO_SECTION_START_STEP,
@@ -7,7 +8,14 @@ import {
   getDoneStep,
   getInstallStep,
 } from './keyScreens';
+import { DEBRID_SERVICES } from './services';
 import { wizardMetadata } from './integration';
+import type { AccountMode, AioStreamsInputs, CatalogSelection, Credentials, LoadedTemplates } from '../store/wizard';
+
+// @ts-ignore
+import { deriveCategories, deriveDiscoverFolders } from '@core/catalog-config.js';
+// @ts-ignore
+import { isVisible } from '@core/template-engine.js';
 
 const MEASUREMENT_ID = wizardMetadata.ga4Id.trim();
 
@@ -23,11 +31,27 @@ interface StepMeta {
 }
 
 interface CompletionPayload {
-  accountMode: 'create' | 'signin';
-  addonCount: number;
-  debridServiceCount: number;
+  accountMode: AccountMode;
+  eventParams: Record<string, string | number>;
   runId: string;
   target: 'stremio' | 'nuvio';
+}
+
+interface BuildCompletionPayloadOptions {
+  accountMode: AccountMode;
+  addonCount: number;
+  target: 'stremio' | 'nuvio';
+  credentials: Credentials;
+  aioStreamsInputs: AioStreamsInputs;
+  catalogSelection: CatalogSelection;
+  templates: LoadedTemplates | null;
+  wizardConfig: WizardConfig | null;
+}
+
+interface TemplateField {
+  id: string;
+  type?: string;
+  default?: unknown;
 }
 
 export function ensureAnalytics() {
@@ -97,12 +121,7 @@ export function trackWizardCompletion(payload: CompletionPayload) {
   const completionStorageKey = `wizard-completion-sent:${payload.runId}`;
   if (readSessionFlag(completionStorageKey)) return;
 
-  window.gtag('event', COMPLETION_EVENT, {
-    account_mode: payload.accountMode,
-    addon_count: payload.addonCount,
-    debrid_service_count: payload.debridServiceCount,
-    target: payload.target,
-  });
+  window.gtag('event', COMPLETION_EVENT, payload.eventParams);
   writeSessionFlag(completionStorageKey);
 
   if (payload.accountMode !== 'create') return;
@@ -110,12 +129,63 @@ export function trackWizardCompletion(payload: CompletionPayload) {
   const createdStorageKey = `wizard-account-created-sent:${payload.runId}`;
   if (readSessionFlag(createdStorageKey)) return;
 
-  window.gtag('event', ACCOUNT_CREATED_EVENT, {
-    addon_count: payload.addonCount,
-    debrid_service_count: payload.debridServiceCount,
-    target: payload.target,
-  });
+  window.gtag('event', ACCOUNT_CREATED_EVENT, payload.eventParams);
   writeSessionFlag(createdStorageKey);
+}
+
+export function buildWizardCompletionPayload({
+  accountMode,
+  addonCount,
+  target,
+  credentials,
+  aioStreamsInputs,
+  catalogSelection,
+  templates,
+  wizardConfig,
+}: BuildCompletionPayloadOptions): Record<string, string | number> {
+  const params: Record<string, string | number> = {
+    account_mode: accountMode,
+    addon_count: addonCount,
+    target,
+  };
+
+  const deniedParams = new Set(wizardConfig?.analytics?.denylist ?? []);
+
+  const debridNames = credentials.debridServices
+    .map((service) => DEBRID_SERVICES.find(({ id }) => id === service.id)?.name ?? service.id)
+    .filter(Boolean);
+  const debridValue = joinWithinLimit(debridNames);
+  if (debridValue && !deniedParams.has('services_debrid')) params.services_debrid = debridValue;
+
+  const ownKeyIds = [
+    credentials.tmdbApiKey.trim() || credentials.tmdbAccessToken.trim() ? 'tmdb' : '',
+    credentials.tvdbApiKey.trim() ? 'tvdb' : '',
+    credentials.geminiApiKey.trim() ? 'gemini' : '',
+    credentials.rpdbApiKey.trim() ? 'rpdb' : '',
+  ].filter(Boolean);
+  const keysValue = joinWithinLimit(ownKeyIds);
+  if (keysValue && !deniedParams.has('services_keys')) params.services_keys = keysValue;
+
+  const categories = deriveEnabledCatalogCategories(templates, catalogSelection, wizardConfig);
+  const categoryValue = joinWithinLimit(categories);
+  if (categoryValue && !deniedParams.has('catalog_categories')) params.catalog_categories = categoryValue;
+
+  const discoverKeys = deriveEnabledDiscoverKeys(templates, catalogSelection, wizardConfig);
+  const discoverValue = joinWithinLimit(discoverKeys);
+  if (discoverValue && !deniedParams.has('catalog_discover')) params.catalog_discover = discoverValue;
+
+  const visibleAioFields = getVisibleAioFields(templates?.aiostreams, aioStreamsInputs, credentials);
+  for (const field of visibleAioFields) {
+    if (!field.id) continue;
+
+    const paramName = toAioAnalyticsParamName(field.id);
+    if (deniedParams.has(paramName)) continue;
+    const value = formatAioAnalyticsValue(field.type, aioStreamsInputs[field.id] ?? field.default);
+    if (value === undefined) continue;
+    params[paramName] = value;
+  }
+
+  return params;
 }
 
 export function getStepMeta(step: number, aioSections: AioSection[]): StepMeta | null {
@@ -173,4 +243,82 @@ function writeSessionFlag(key: string) {
   } catch {
     // Ignore storage failures; analytics should remain best-effort.
   }
+}
+
+function deriveEnabledCatalogCategories(
+  templates: LoadedTemplates | null,
+  catalogSelection: CatalogSelection,
+  wizardConfig: WizardConfig | null,
+) {
+  const catalogs = (templates?.aiometadata as { config?: { catalogs?: object[] } } | null)?.config?.catalogs ?? [];
+  const collections = (templates?.collections ?? []) as object[];
+  const categoryExceptions = wizardConfig?.catalogSelectionExceptions ?? [];
+  return deriveCategories(catalogs, collections, categoryExceptions)
+    .map((category: { key: string }) => category.key)
+    .filter((key: string) => catalogSelection.enabledCategories.has(key));
+}
+
+function deriveEnabledDiscoverKeys(
+  templates: LoadedTemplates | null,
+  catalogSelection: CatalogSelection,
+  wizardConfig: WizardConfig | null,
+) {
+  const catalogs = (templates?.aiometadata as { config?: { catalogs?: object[] } } | null)?.config?.catalogs ?? [];
+  const collections = (templates?.collections ?? []) as object[];
+  const categoryExceptions = wizardConfig?.catalogSelectionExceptions ?? [];
+  return deriveDiscoverFolders(catalogs, collections, categoryExceptions)
+    .map((discover: { id: string }) => discover.id)
+    .filter((id: string) => catalogSelection.enabledDiscoverFolderIds.has(id));
+}
+
+function getVisibleAioFields(
+  template: unknown,
+  aioStreamsInputs: AioStreamsInputs,
+  credentials: Credentials,
+) {
+  const inputs: TemplateField[] = (template as { metadata?: { inputs?: TemplateField[] } } | null)?.metadata?.inputs ?? [];
+  const services = credentials.debridServices.map((service) => service.id);
+  const isVisibleField = isVisible as (field: TemplateField, ctx: { inputs: AioStreamsInputs; services: string[] }) => boolean;
+  return inputs
+    .filter((field) => field.type !== 'alert' && field.type !== 'socials')
+    .filter((field) => isVisibleField(field, { inputs: aioStreamsInputs, services }));
+}
+
+function formatAioAnalyticsValue(type: string | undefined, value: unknown) {
+  if (Array.isArray(value)) {
+    if (value.length === 0) return 'none';
+    return joinWithinLimit(value.map((entry) => String(entry)));
+  }
+
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return value;
+
+  const stringValue = String(value ?? '').trim();
+  if (!stringValue) return undefined;
+  return stringValue;
+}
+
+function toAioAnalyticsParamName(fieldId: string) {
+  return `aio_${fieldId
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase()}`;
+}
+
+function joinWithinLimit(values: string[], maxLength = 100) {
+  const trimmedValues = values
+    .map((value) => String(value).trim())
+    .filter((value) => value.length > 0);
+  if (trimmedValues.length === 0) return '';
+
+  const kept: string[] = [];
+  for (const value of trimmedValues) {
+    const next = kept.length > 0 ? `${kept.join(',')},${value}` : value;
+    if (next.length > maxLength) break;
+    kept.push(value);
+  }
+
+  if (kept.length > 0) return kept.join(',');
+  return trimmedValues[0].slice(0, maxLength);
 }

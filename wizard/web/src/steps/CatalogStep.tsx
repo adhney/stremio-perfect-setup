@@ -13,6 +13,7 @@ export function CatalogStep() {
   const { target, templates, catalogSelection, setCatalogSelection, nextStep, wizardConfig } = useWizard();
   const template = templates?.aiometadata as { config?: { catalogs?: object[] } } | null;
   const collectionsRaw = (templates?.collections ?? []) as object[];
+  const categoryExceptions = wizardConfig?.catalogSelectionExceptions ?? [];
   const stremioMaxCatalogs = wizardConfig?.limits.stremioMaxCatalogs ?? null;
 
   if (!template?.config?.catalogs) {
@@ -20,14 +21,14 @@ export function CatalogStep() {
   }
 
   const catalogs = template.config.catalogs;
-  const categories: Category[] = deriveCategories(catalogs, collectionsRaw ?? []);
-  const discoverFolders: DiscoverFolder[] = deriveDiscoverFolders(catalogs);
+  const categories: Category[] = deriveCategories(catalogs, collectionsRaw ?? [], categoryExceptions);
+  const discoverFolders: DiscoverFolder[] = deriveDiscoverFolders(catalogs, collectionsRaw ?? [], categoryExceptions);
   const { enabledCategories, enabledDiscoverFolderIds } = catalogSelection;
 
   // Seed defaults once (when Set is empty)
   useEffect(() => {
     if (enabledCategories.size > 0 || enabledDiscoverFolderIds.size > 0) return;
-    const defaults = defaultEnabledCategories(catalogs, target ?? 'stremio', collectionsRaw ?? []);
+    const defaults = defaultEnabledCategories(catalogs, target ?? 'stremio', collectionsRaw ?? [], categoryExceptions);
     setCatalogSelection({
       enabledCategories: defaults.categories,
       enabledDiscoverFolderIds: defaults.discoverFolderIds,
@@ -35,7 +36,13 @@ export function CatalogStep() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const enabledCount: number = countEnabledCatalogs(catalogs, enabledCategories, enabledDiscoverFolderIds);
+  const enabledCount: number = countEnabledCatalogs(
+    catalogs,
+    enabledCategories,
+    enabledDiscoverFolderIds,
+    collectionsRaw ?? [],
+    categoryExceptions,
+  );
   const overLimit = target === 'stremio' && stremioMaxCatalogs !== null && enabledCount > stremioMaxCatalogs;
 
   function tileStyle(selected: boolean): React.CSSProperties {

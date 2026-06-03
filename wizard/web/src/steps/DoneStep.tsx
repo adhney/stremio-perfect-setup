@@ -4,7 +4,7 @@ import { NotificationCards } from '../components/NotificationCards';
 import { WizardShell } from '../components/WizardShell';
 import { useWizard } from '../store/wizard';
 import { getGuideUrl } from '../lib/site';
-import { trackWizardCompletion } from '../lib/analytics';
+import { buildWizardCompletionPayload, trackWizardCompletion } from '../lib/analytics';
 import { wizardMetadata } from '../lib/integration';
 
 function toConfigureUrl(manifestUrl: string) {
@@ -39,7 +39,10 @@ export function DoneStep() {
     nuvioAccount,
     stremioAccount,
     target,
+    templates,
     wizardConfig,
+    aioStreamsInputs,
+    catalogSelection,
   } = useWizard();
   const { aiostreams, aiometadata, addonPasswordSource, warnings, error } = installResult;
   const guideUrl = getGuideUrl();
@@ -163,15 +166,24 @@ export function DoneStep() {
     if (error || !target) return;
 
     const runId = addons.map(addon => addon.uuid).filter(Boolean).join(':') || `${target}-setup`;
+    const eventParams = buildWizardCompletionPayload({
+      accountMode,
+      addonCount: addons.length,
+      target,
+      credentials,
+      aioStreamsInputs,
+      catalogSelection,
+      templates,
+      wizardConfig,
+    });
 
     trackWizardCompletion({
       accountMode,
-      addonCount: addons.length,
-      debridServiceCount: credentials.debridServices.length,
+      eventParams,
       runId,
       target,
     });
-  }, [accountMode, addons, credentials.debridServices.length, error, target]);
+  }, [accountMode, addons, aioStreamsInputs, catalogSelection, credentials, error, target, templates, wizardConfig]);
 
   function handleDownload() {
     if (!addonDetailsFilename) return;

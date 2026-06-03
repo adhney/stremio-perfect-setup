@@ -312,6 +312,7 @@ export async function runNuvioSetup({ instances, account, aiostreamsParams, aiom
   const filteredCollections = filterCollections(collectionsJson, catalogs, {
     enabledCategories,
     enabledDiscoverFolderIds,
+    categoryExceptions: aiometadataParams.categoryExceptions || [],
   });
   await nuvio.pushCollections(auth.token, profileIndex, filteredCollections);
   step('collections', { groupCount: filteredCollections.length });
