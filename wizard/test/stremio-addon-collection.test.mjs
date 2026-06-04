@@ -134,5 +134,50 @@ console.log('\n# hydrateAddonCollection');
   ok('hydrateAddonCollection preserves existing manifests', hydrated[1].manifest?.id === 'existing');
 }
 
+console.log('\n# buildAddonCollection — with Watchly');
+
+{
+  const existing = [
+    {
+      transportUrl: 'https://v3-cinemeta.strem.io/manifest.json',
+      manifest: { id: 'com.linvo.cinemeta', name: 'Cinemeta', resources: ['catalog', 'meta', 'addon_catalog'], catalogs: [] },
+      flags: { official: true },
+    },
+    {
+      transportUrl: 'http://127.0.0.1:11470/local-addon/manifest.json',
+      manifest: { id: 'org.stremio.local', name: 'Local Files (without catalog support)' },
+      flags: { official: true },
+    },
+  ];
+
+  const collection = buildAddonCollection(existing, {
+    aiometadata: 'https://meta.example/stremio/u/manifest.json',
+    aiostreams: 'https://aio.example/stremio/u/p/manifest.json',
+    watchly: 'https://watchly.example/user123/manifest.json',
+  });
+
+  ok('collection with watchly has 5 entries (cinemeta + watchly + meta + aio + local)', collection.length === 5);
+  ok('watchly is second (after cinemeta)', collection[1].transportUrl === 'https://watchly.example/user123/manifest.json');
+  ok('aiometadata is third', collection[2].transportUrl === 'https://meta.example/stremio/u/manifest.json');
+  ok('aiostreams is fourth', collection[3].transportUrl === 'https://aio.example/stremio/u/p/manifest.json');
+  ok('local files is last', collection[4].transportUrl.includes('local-addon'));
+}
+
+{
+  // No Trakt addon should appear when watchly slot is undefined
+  const existing = [
+    { transportUrl: 'https://v3-cinemeta.strem.io/manifest.json', manifest: { id: 'com.linvo.cinemeta', name: 'Cinemeta', resources: [], catalogs: [] }, flags: {} },
+  ];
+
+  const collection = buildAddonCollection(existing, {
+    aiometadata: 'https://meta.example/stremio/u/manifest.json',
+    aiostreams: 'https://aio.example/stremio/u/p/manifest.json',
+  });
+
+  const hasTrakt = collection.some(a => (a.transportUrl || '').includes('trakt'));
+  ok('no Trakt addon in collection when not explicitly added', !hasTrakt,
+    `found Trakt: ${JSON.stringify(collection.map(a => a.transportUrl))}`);
+}
+
 console.log(`\n${failed === 0 ? '✅' : '❌'} ${passed} passed, ${failed} failed\n`);
 process.exit(failed === 0 ? 0 : 1);
