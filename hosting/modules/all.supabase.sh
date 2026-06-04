@@ -159,8 +159,12 @@ if hosting_is_dry_run; then
   mapfile -t schema_rows < <(simulate_schema_rows "${connection_string}" "${selected_addons[@]}")
 else
   "${SCRIPT_DIR}/db/delete-addon-schemas.sh" --connection-string "${connection_string}" --addons "${addons_csv}"
-  mapfile -t schema_rows < <("${SCRIPT_DIR}/db/create-addon-schemas.sh" --connection-string "${connection_string}" --addons "${addons_csv}" --password "${database_password}")
+  schema_output="$("${SCRIPT_DIR}/db/create-addon-schemas.sh" --connection-string "${connection_string}" --addons "${addons_csv}" --password "${database_password}")" \
+    || die "Supabase schema creation failed for ${addons_csv}"
+  mapfile -t schema_rows <<< "${schema_output}"
 fi
+
+(( ${#schema_rows[@]} > 0 )) || die "Supabase schema creation returned no rows for ${addons_csv}"
 
 for row in "${schema_rows[@]}"; do
   IFS=$'\t' read -r addon_name schema_name role_name addon_connection <<< "${row}"

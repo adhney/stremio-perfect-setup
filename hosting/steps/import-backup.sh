@@ -75,11 +75,16 @@ trap 'rm -rf "${extract_dir}"' EXIT
 python3 - "${ZIP_FILE_ARG}" "${extract_dir}" <<'PY'
 import sys
 import zipfile
+from pathlib import Path
 
 archive_path = sys.argv[1]
-extract_dir = sys.argv[2]
+extract_dir = Path(sys.argv[2]).resolve()
 
 with zipfile.ZipFile(archive_path, "r") as zf:
+    for member in zf.namelist():
+        dest = (extract_dir / member).resolve()
+        if not str(dest).startswith(str(extract_dir)):
+            raise SystemExit(f"Refusing unsafe ZIP member path: {member}")
     zf.extractall(extract_dir)
 PY
 

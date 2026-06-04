@@ -1141,3 +1141,34 @@ stage_item() {
 
   printf '%s\t%s\t%s\t%s\n' "${module}" "${source_rel}" "${stage_name}" "${item_type}" >> "${manifest_file}"
 }
+
+# write_zip_archive <source_dir> <archive_path>
+#   Creates a deflate-compressed ZIP from <source_dir>, skipping dotfiles except .env.
+#   All top-level directory contents are walked recursively in sorted order.
+write_zip_archive() {
+  local source_dir="$1"
+  local archive_path="$2"
+
+  python3 - "${source_dir}" "${archive_path}" <<'PY'
+import os
+import sys
+import zipfile
+
+root = sys.argv[1]
+archive = sys.argv[2]
+
+with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    for entry in sorted(os.listdir(root)):
+        if entry.startswith(".") and entry != ".env":
+            continue
+        path = os.path.join(root, entry)
+        if os.path.isdir(path):
+            for dirpath, _, filenames in os.walk(path):
+                for filename in sorted(filenames):
+                    file_path = os.path.join(dirpath, filename)
+                    archive_name = os.path.relpath(file_path, root)
+                    zf.write(file_path, archive_name)
+        else:
+            zf.write(path, entry)
+PY
+}

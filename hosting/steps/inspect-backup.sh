@@ -76,6 +76,10 @@ available_modules_path = Path(sys.argv[4])
 metadata_modules_path = Path(sys.argv[5])
 
 with zipfile.ZipFile(archive_path, "r") as zf:
+    for member in zf.namelist():
+        dest = (extract_dir / member).resolve()
+        if not str(dest).startswith(str(extract_dir.resolve())):
+            raise SystemExit(f"Refusing unsafe ZIP member path: {member}")
     zf.extractall(extract_dir)
 
 apps_root = extract_dir / "apps"

@@ -7,6 +7,7 @@ import {
   AIO_SECTION_START_STEP,
   KEY_SCREEN_START_STEP,
   getCatalogStep,
+  getWatchlyStep,
   getInstallStep,
 } from '../lib/keyScreens';
 
@@ -52,6 +53,7 @@ export function Sidebar({ onClose }: Props) {
 
   const n = aioSections.length;
   const CATALOGS_STEP = getCatalogStep(n);
+  const WATCHLY_STEP = getWatchlyStep(n);
   const INSTALL_STEP = getInstallStep(n);
 
   function goTo(s: number) {
@@ -129,11 +131,15 @@ export function Sidebar({ onClose }: Props) {
           })
         )}
 
-        {/* Catalogs + Install */}
+        {/* Catalogs + Watchly + Install */}
         <div style={{ marginTop: '0.6rem' }}>
           <button className={cls(CATALOGS_STEP)} onClick={() => goTo(CATALOGS_STEP)}>
             <StepIcon s={CATALOGS_STEP} />
             <span>Catalogs</span>
+          </button>
+          <button className={cls(WATCHLY_STEP)} onClick={() => goTo(WATCHLY_STEP)}>
+            <StepIcon s={WATCHLY_STEP} />
+            <span>🍿 Watchly</span>
           </button>
           <button className={cls(INSTALL_STEP)} onClick={() => goTo(INSTALL_STEP)}>
             <StepIcon s={INSTALL_STEP} />

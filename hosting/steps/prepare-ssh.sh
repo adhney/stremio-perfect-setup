@@ -185,7 +185,12 @@ ensure_key_exists() {
   fi
 
   [[ -f "${KEY_PATH}" ]] || die "SSH key does not exist: ${KEY_PATH}"
-  [[ -f "${KEY_PATH}.pub" ]] || die "SSH public key does not exist: ${KEY_PATH}.pub"
+
+  if [[ ! -f "${KEY_PATH}.pub" ]]; then
+    log "Public key ${KEY_PATH}.pub not found; deriving it from the private key."
+    ssh-keygen -y -f "${KEY_PATH}" > "${KEY_PATH}.pub" \
+      || die "Could not derive public key from ${KEY_PATH}. Provide the matching .pub file manually."
+  fi
 
   chmod 600 "${KEY_PATH}"
   chmod 644 "${KEY_PATH}.pub"
