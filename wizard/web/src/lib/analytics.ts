@@ -52,6 +52,7 @@ interface TemplateField {
   id: string;
   type?: string;
   default?: unknown;
+  subOptions?: TemplateField[];
 }
 
 export function ensureAnalytics() {
@@ -180,7 +181,7 @@ export function buildWizardCompletionPayload({
 
     const paramName = toAioAnalyticsParamName(field.id);
     if (deniedParams.has(paramName)) continue;
-    const value = formatAioAnalyticsValue(field.type, aioStreamsInputs[field.id] ?? field.default);
+    const value = formatAioAnalyticsValue(field.type, field.value);
     if (value === undefined) continue;
     params[paramName] = value;
   }
@@ -275,13 +276,33 @@ function getVisibleAioFields(
   template: unknown,
   aioStreamsInputs: AioStreamsInputs,
   credentials: Credentials,
-) {
+): Array<{ id: string; type?: string; value: unknown }> {
   const inputs: TemplateField[] = (template as { metadata?: { inputs?: TemplateField[] } } | null)?.metadata?.inputs ?? [];
   const services = credentials.debridServices.map((service) => service.id);
   const isVisibleField = isVisible as (field: TemplateField, ctx: { inputs: AioStreamsInputs; services: string[] }) => boolean;
-  return inputs
-    .filter((field) => field.type !== 'alert' && field.type !== 'socials')
-    .filter((field) => isVisibleField(field, { inputs: aioStreamsInputs, services }));
+  const ctx = { inputs: aioStreamsInputs, services };
+  const readNested = (id: string): unknown =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    id.split('.').reduce<any>((o, k) => (o == null ? undefined : o[k]), aioStreamsInputs);
+
+  const out: Array<{ id: string; type?: string; value: unknown }> = [];
+  for (const field of inputs) {
+    if (field.type === 'alert' || field.type === 'socials') continue;
+    if (field.type === 'subsection') {
+      // Subsection sub-option values are namespaced under the subsection id.
+      if (!isVisibleField(field, ctx)) continue;
+      for (const child of field.subOptions ?? []) {
+        if (!child.id || child.type === 'alert' || child.type === 'socials' || child.type === 'subsection') continue;
+        if (!isVisibleField(child, ctx)) continue;
+        const path = `${field.id}.${child.id}`;
+        out.push({ id: path, type: child.type, value: readNested(path) ?? child.default });
+      }
+      continue;
+    }
+    if (!isVisibleField(field, ctx)) continue;
+    out.push({ id: field.id, type: field.type, value: readNested(field.id) ?? field.default });
+  }
+  return out;
 }
 
 function formatAioAnalyticsValue(type: string | undefined, value: unknown) {
