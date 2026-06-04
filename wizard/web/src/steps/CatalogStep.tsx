@@ -68,11 +68,12 @@ export function CatalogStep() {
   }
 
   return (
-    <WizardShell>
-      <h2 className="text-xl font-bold mb-1" style={{ textAlign: 'center' }}>🔎 Choose your catalogs</h2>
-      <p className="text-gray-500 text-sm mb-4 leading-relaxed" style={{ textAlign: 'center' }}>
-        Pick which catalog sections you want. Each group adds browsable rows to your app.
-        {target === 'stremio' && stremioMaxCatalogs !== null && ` Stremio supports up to ${stremioMaxCatalogs} catalogs.`}
+    <WizardShell onSubmit={overLimit ? undefined : nextStep}>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.4rem', textAlign: 'center' }}>🔎 Catalogs</h2>
+      <p style={{ fontSize: '0.875rem', color: 'var(--muted)', lineHeight: 1.6, textAlign: 'center', maxWidth: '44rem', margin: '0 auto 1rem' }}>
+        Choose which catalog categories you want to appear in your app from this list of curated options.
+        You can uncheck anything you don't need.
+        {target === 'stremio' && stremioMaxCatalogs !== null && ` Stremio supports up to ${stremioMaxCatalogs} catalogs total.`}
       </p>
 
       {overLimit && (

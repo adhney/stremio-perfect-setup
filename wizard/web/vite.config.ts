@@ -49,7 +49,7 @@ function loadMetadata(metadataPath: string): WizardMetadata {
     description,
     ga4Id,
     wizardPageTitle: `${title} Wizard`.trim(),
-    addonDetailsTitle: `${title} - Add-on Details`.trim(),
+    addonDetailsTitle: `🍿 ${title} - Addon Details`.trim(),
   };
 }
 

@@ -1,6 +1,5 @@
 import type { CSSProperties } from 'react';
 import { WizardShell } from '../components/WizardShell';
-import { NextButton } from '../components/NextButton';
 import { useWizard, type Target } from '../store/wizard';
 import { resolveLogoUrl } from '../lib/services';
 
@@ -53,7 +52,7 @@ export function Welcome() {
             <button
               key={t.id}
               className={`wizard-hover-lift${isSelected ? '' : ' wizard-hover-lift--guide'}`}
-              onClick={() => setTarget(t.id)}
+              onClick={() => { setTarget(t.id); nextStep(); }}
               style={{
                 '--wizard-hover-selected-bg': 'var(--panel-2)',
                 '--wizard-hover-selected-border': 'var(--accent)',
@@ -62,14 +61,14 @@ export function Welcome() {
                 border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
                 borderRadius: '12px',
                 background: isSelected ? 'var(--panel-2)' : 'var(--panel)',
-                textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s',
+                textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s',
               } as CSSProperties}
             >
               {logoUrl ? (
                 <img
                   src={logoUrl}
                   alt={t.name}
-                  style={{ height: '28px', maxWidth: '100px', objectFit: 'contain', marginBottom: '0.75rem', display: 'block' }}
+                  style={{ height: '28px', maxWidth: '100px', objectFit: 'contain', margin: '0 auto 0.75rem', display: 'block' }}
                 />
               ) : (
                 <div style={{ height: '28px', fontWeight: 800, fontSize: '1.1rem', color: 'var(--accent)', marginBottom: '0.75rem' }}>
@@ -83,7 +82,6 @@ export function Welcome() {
         })}
       </div>
 
-      <NextButton onClick={nextStep} disabled={!target} label="Start Setup" />
     </WizardShell>
   );
 }

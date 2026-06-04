@@ -83,6 +83,24 @@ export function Sidebar({ onClose }: Props) {
     );
   }
 
+  function SectionHeader({ label, firstStep, count }: { label: string; firstStep: number; count: number }) {
+    const lastStep = firstStep + count - 1;
+    const isDone = count > 0 && lastStep < step;
+    const isCurrent = count > 0 && step >= firstStep && step <= lastStep;
+    const classes = ['nav-step', isDone ? 'is-done' : '', isCurrent ? 'is-current' : ''].filter(Boolean).join(' ');
+    const icon = isDone
+      ? <Check size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+      : isCurrent
+        ? <ChevronRight size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+        : <span style={{ width: '12px', height: '12px', borderRadius: '50%', border: '1px solid var(--border)', display: 'inline-block', flexShrink: 0 }} />;
+    return (
+      <div className={classes} style={{ cursor: 'default' }}>
+        {icon}
+        <span>{label}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="sidebar__inner">
       {/* Wizard nav steps */}
@@ -90,17 +108,17 @@ export function Sidebar({ onClose }: Props) {
         {/* Welcome */}
         <button className={cls(0)} onClick={() => goTo(0)}>
           <StepIcon s={0} />
-          <span>Welcome</span>
+          <span>🔮 Welcome</span>
         </button>
 
         {/* Account */}
         <button className={cls(1)} onClick={() => goTo(1)}>
           <StepIcon s={1} />
-          <span>Account Setup</span>
+          <span>📝 Account</span>
         </button>
 
         {/* Services & Keys */}
-        <div className="nav-section-label">Services &amp; Keys</div>
+        <SectionHeader label="🔑 Services" firstStep={KEY_SCREEN_START_STEP} count={ACTIVE_KEY_SCREENS.length} />
         {ACTIVE_KEY_SCREENS.map((screen, index) => {
           const stepIndex = KEY_SCREEN_START_STEP + index;
           return (
@@ -112,7 +130,7 @@ export function Sidebar({ onClose }: Props) {
         })}
 
         {/* AIOStreams Config */}
-        <div className="nav-section-label">🔑 AIOStreams Configuration</div>
+        <SectionHeader label="📚 Streams" firstStep={AIO_SECTION_START_STEP} count={n} />
         {n === 0 ? (
           <div style={{ fontSize: '0.78rem', color: 'var(--muted)', padding: '0.35rem 0.65rem', fontStyle: 'italic' }}>
             Loading…
@@ -143,7 +161,7 @@ export function Sidebar({ onClose }: Props) {
           </button>
           <button className={cls(INSTALL_STEP)} onClick={() => goTo(INSTALL_STEP)}>
             <StepIcon s={INSTALL_STEP} />
-            <span>Install</span>
+            <span>🎉 Finish</span>
           </button>
         </div>
       </nav>

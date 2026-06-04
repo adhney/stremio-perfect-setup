@@ -118,7 +118,7 @@ export function AioSectionStep({ sectionIndex }: Props) {
   );
 
   return (
-    <WizardShell>
+    <WizardShell onSubmit={isBlocked ? undefined : nextStep}>
       <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1rem', textAlign: 'center' }}>
         {section.icon} {section.title}
       </h2>

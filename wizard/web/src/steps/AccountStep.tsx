@@ -3,6 +3,7 @@ import { ArrowRight, Loader2, LogIn, UserPlus, UserRound } from 'lucide-react';
 import { WizardShell } from '../components/WizardShell';
 import { MarkdownText } from '../components/MarkdownText';
 import { useWizard } from '../store/wizard';
+import { resolveImageUrl } from '../lib/integration';
 
 // @ts-ignore
 import { createStremioAdapter } from '@core/adapters/stremio.js';
@@ -178,8 +179,15 @@ export function AccountStep() {
     outline: 'none', boxSizing: 'border-box',
   };
 
+  const logoUrl = resolveImageUrl(`services/${isNuvio ? 'nuvio.png' : 'stremio.svg'}`);
+
   return (
-    <WizardShell>
+    <WizardShell onSubmit={canAttempt ? handleContinue : undefined}>
+      {logoUrl && (
+        <div style={{ textAlign: 'center', marginBottom: '0.85rem' }}>
+          <img src={logoUrl} alt={appName} style={{ height: '42px', maxWidth: '140px', objectFit: 'contain', margin: '0 auto', display: 'block' }} />
+        </div>
+      )}
       <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.35rem', textAlign: 'center' }}>
         Your {appName} Account
       </h2>

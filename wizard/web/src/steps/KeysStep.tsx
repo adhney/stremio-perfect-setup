@@ -227,7 +227,7 @@ export function KeysStep({ keyIndex }: Props) {
   const instructionsText = `${screen.instruction}\n\n${sharedInstructionParts.join('\n\n')}`;
 
   return (
-    <WizardShell>
+    <WizardShell onSubmit={continueState.canContinue ? nextStep : undefined}>
       <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.35rem', textAlign: 'center' }}>
         {screen.label}
       </h2>

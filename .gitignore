@@ -9,3 +9,4 @@ hosting/.work
 _site/
 wizard/web/dist/
 wizard/web/node_modules/
+node_modules/

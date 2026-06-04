@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import { Sidebar } from './Sidebar';
@@ -16,10 +16,34 @@ const variants = {
 interface Props {
   children: React.ReactNode;
   showBack?: boolean;
+  onSubmit?: () => void;
 }
 
-export function WizardShell({ children, showBack = true }: Props) {
+export function WizardShell({ children, showBack = true, onSubmit }: Props) {
   const { step, prevStep } = useWizard();
+
+  useEffect(() => {
+    if (!onSubmit) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return;
+      const el = document.activeElement;
+      const tag = el?.tagName ?? '';
+      // Let textareas, links and selects keep native Enter behavior.
+      if (tag === 'TEXTAREA' || tag === 'A' || tag === 'SELECT') return;
+      // Let the Back button activate itself when focused.
+      if (el?.classList.contains('wizard-secondary-btn')) return;
+      if (tag === 'INPUT') {
+        const type = (el as HTMLInputElement).type;
+        if (['checkbox', 'radio', 'submit', 'reset', 'button'].includes(type)) return;
+      }
+      // For any other focused element (incl. selection buttons), suppress the
+      // native click and route Enter to Continue instead.
+      e.preventDefault();
+      onSubmit();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onSubmit]);
   const { theme, toggle } = useTheme();
   const [navOpen, setNavOpen] = useState(false);
 

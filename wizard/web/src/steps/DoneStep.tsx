@@ -54,7 +54,8 @@ export function DoneStep() {
     catalogSelection,
     watchly,
   } = useWizard();
-  const { aiostreams, aiometadata, addonPasswordSource, warnings, error } = installResult;
+  const { aiostreams, aiometadata, addonPasswordSource, warnings: rawWarnings, error } = installResult;
+  const warnings = rawWarnings.filter(w => !w.includes('tried but failed'));
   const guideUrl = getGuideUrl();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
@@ -177,16 +178,6 @@ export function DoneStep() {
         manifestUrl: installResult.watchly.manifestUrl,
         configureUrl: toConfigureUrl(installResult.watchly.manifestUrl),
       } : null,
-      aiostreams
-        ? {
-            id: 'aiostreams',
-            name: '📚 AIOStreams',
-            uuid: aiostreams.uuid,
-            password: aiostreams.password,
-            manifestUrl: aiostreams.manifestUrl,
-            configureUrl: toConfigureUrl(aiostreams.manifestUrl),
-          }
-        : null,
       aiometadata
         ? {
             id: 'aiometadata',
@@ -195,6 +186,16 @@ export function DoneStep() {
             password: aiometadata.password,
             manifestUrl: aiometadata.manifestUrl,
             configureUrl: toConfigureUrl(aiometadata.manifestUrl),
+          }
+        : null,
+      aiostreams
+        ? {
+            id: 'aiostreams',
+            name: '📚 AIOStreams',
+            uuid: aiostreams.uuid,
+            password: aiostreams.password,
+            manifestUrl: aiostreams.manifestUrl,
+            configureUrl: toConfigureUrl(aiostreams.manifestUrl),
           }
         : null,
     ].filter(Boolean)
@@ -373,6 +374,12 @@ export function DoneStep() {
 
           {addons.length > 0 && (
             <>
+              {warnings.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700 mb-4">
+                  <p className="font-semibold mb-1">A few warnings:</p>
+                  {warnings.map((w, i) => <p key={i}>• {w}</p>)}
+                </div>
+              )}
               <div className="text-xs font-mono space-y-4" style={credentialsCardStyle}>
                 <p
                   className="font-sans font-semibold text-sm mb-1"
@@ -505,15 +512,17 @@ export function DoneStep() {
                   }}
                 >
                   <Download size={16} />
-                  Download all add-on details
+                  Download all addon details
                 </button>
               </div>
               {/* Trakt integration card */}
               {(target === 'stremio' || !!aiometadata) && (() => {
                 const traktLogo = resolveLogoUrl('services/trakt.png');
+                const stremioLogo = resolveLogoUrl('services/stremio.svg');
                 const cardStyle = {
-                  padding: '0.9rem', borderRadius: '10px', textAlign: 'left' as const,
+                  padding: '0.9rem', borderRadius: '10px', textAlign: 'center' as const,
                   border: '1px solid rgba(255,230,236,0.2)', transition: 'border-color 0.15s',
+                  display: 'flex', flexDirection: 'column' as const, justifyContent: 'center',
                 };
                 const connectedBadge = (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem', fontWeight: 700, color: 'rgba(167,243,208,1)', background: 'rgba(167,243,208,0.12)', padding: '0.15rem 0.5rem', borderRadius: '10px' }}>
@@ -530,27 +539,29 @@ export function DoneStep() {
                       marginBottom: '1rem',
                       color: 'rgba(255, 255, 255, 0.96)',
                       boxShadow: '0 10px 24px rgba(57, 7, 21, 0.22)',
+                      textAlign: 'center',
                     }}
                   >
-                    <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.3rem', marginTop: 0 }}>
-                      🎯 Connect Trakt
+                    <p style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.3rem', marginTop: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      {traktLogo ? <img src={traktLogo} alt="Trakt" style={{ height: '18px', objectFit: 'contain' }} /> : null}
+                      Trakt Integration
                     </p>
                     <p style={{ fontSize: '0.8rem', marginTop: 0, marginBottom: '0.85rem', opacity: 0.8, lineHeight: 1.5 }}>
-                      Both integrations below are optional. You can connect them now or any time later by revisiting this page.
+                      Trakt is optional, but recommended. You can connect it directly to avoid manual configuration later.
                     </p>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: target === 'stremio' && !!aiometadata ? '1fr 1fr' : '1fr', gap: '0.6rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: target === 'stremio' && !!aiometadata ? '1fr 1fr' : '1fr', gap: '0.6rem', ...(target !== 'stremio' && !!aiometadata ? { width: '30%', margin: '0 auto' } : {}) }}>
 
                       {/* Scrobbling card — Stremio only */}
                       {target === 'stremio' && (
                         <div style={{ ...cardStyle, background: scrobbleStatus === 'connected' ? 'rgba(167,243,208,0.08)' : 'rgba(255,255,255,0.05)', borderColor: scrobbleStatus === 'connected' ? 'rgba(167,243,208,0.4)' : 'rgba(255,230,236,0.2)' }}>
-                          {traktLogo && <img src={traktLogo} alt="Trakt" style={{ height: '22px', objectFit: 'contain', marginBottom: '0.5rem', display: 'block' }} />}
-                          <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          {stremioLogo && <img src={stremioLogo} alt="Stremio" style={{ height: '22px', objectFit: 'contain', marginBottom: '0.5rem', display: 'block', margin: '0 auto 0.5rem' }} />}
+                          <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                             Scrobbling
                             {scrobbleStatus === 'connected' && connectedBadge}
                           </div>
                           <p style={{ fontSize: '0.75rem', opacity: 0.8, lineHeight: 1.45, margin: '0 0 0.6rem' }}>
-                            Automatically logs every movie or episode you watch in Stremio to your Trakt history.
+                            Automatically log what you watch in Stremio to your Trakt history.
                           </p>
                           {scrobbleStatus !== 'connected' && (
                             <>
@@ -563,7 +574,8 @@ export function DoneStep() {
                                   border: '1px solid rgba(255,230,236,0.35)',
                                   background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.95)',
                                   fontSize: '0.8rem', fontWeight: 600, cursor: scrobbleStatus === 'connecting' ? 'default' : 'pointer',
-                                  display: 'flex', alignItems: 'center', gap: '0.3rem',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
+                                  width: 'fit-content', margin: '0 auto',
                                 }}
                               >
                                 {scrobbleStatus === 'connecting'
@@ -583,13 +595,13 @@ export function DoneStep() {
                       {/* AIOMetadata Trakt card */}
                       {!!aiometadata && (
                         <div style={{ ...cardStyle, background: metaTraktStep === 'connected' ? 'rgba(167,243,208,0.08)' : 'rgba(255,255,255,0.05)', borderColor: metaTraktStep === 'connected' ? 'rgba(167,243,208,0.4)' : 'rgba(255,230,236,0.2)' }}>
-                          {traktLogo && <img src={traktLogo} alt="Trakt" style={{ height: '22px', objectFit: 'contain', marginBottom: '0.5rem', display: 'block' }} />}
-                          <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            Catalogs
+                          <div style={{ fontSize: '1.4rem', marginBottom: '0.5rem', lineHeight: 1 }}>🔎</div>
+                          <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            AIOMetadata
                             {metaTraktStep === 'connected' && connectedBadge}
                           </div>
                           <p style={{ fontSize: '0.75rem', opacity: 0.8, lineHeight: 1.45, margin: '0 0 0.6rem' }}>
-                            Adds your Trakt watchlist and history as browsable rows inside AIOMetadata.
+                            Enable AIOMetadata to access personal or public Trakt catalogs.
                           </p>
                           {metaTraktStep === 'connected' ? null : metaTraktStep === 'idle' ? (
                             <button
@@ -600,6 +612,8 @@ export function DoneStep() {
                                 border: '1px solid rgba(255,230,236,0.35)',
                                 background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.95)',
                                 fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 'fit-content', margin: '0 auto',
                               }}
                             >
                               Connect
@@ -655,13 +669,6 @@ export function DoneStep() {
               })()}
               <NotificationCards notifications={wizardConfig?.doneStepNotifications} target={target} />
             </>
-          )}
-
-          {warnings.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700 mb-4">
-              <p className="font-semibold mb-1">A few warnings:</p>
-              {warnings.map((w, i) => <p key={i}>• {w}</p>)}
-            </div>
           )}
 
         </>

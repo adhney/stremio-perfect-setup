@@ -18,7 +18,7 @@ interface Props {
 
 function getLeadingIcon(label: string) {
   if (/start/i.test(label)) return <Sparkles size={16} />;
-  if (/finish/i.test(label)) return <Check size={16} />;
+  if (/finish/i.test(label)) return <Settings2 size={16} />;
   if (/save/i.test(label)) return <Save size={16} />;
   if (/free|p2p|http|skip|shared/i.test(label)) return <Users size={16} />;
   if (/profile/i.test(label)) return <UserRound size={16} />;

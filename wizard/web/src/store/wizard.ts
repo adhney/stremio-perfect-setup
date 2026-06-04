@@ -154,7 +154,11 @@ export const useWizard = create<WizardState>((set) => ({
   }),
   prevStep: () => set(s => ({ step: Math.max(0, s.step - 1) })),
 
-  setTarget: (target) => set({ target }),
+  setTarget: (target) => set(s => ({
+    target,
+    // Watchly is enabled by default in Stremio mode; Nuvio support is still coming soon.
+    watchly: { ...s.watchly, enabled: target === 'stremio' },
+  })),
   setStremioAccount: (a) => set(s => ({ stremioAccount: { ...s.stremioAccount, ...a } })),
   setNuvioAccount: (a) => set(s => ({ nuvioAccount: { ...s.nuvioAccount, ...a } })),
   setCredentials: (c) => set(s => ({ credentials: { ...s.credentials, ...c } })),

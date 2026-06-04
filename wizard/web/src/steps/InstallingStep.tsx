@@ -327,8 +327,6 @@ export function InstallingStep() {
           borderRadius: '10px',
           padding: '1rem',
           minHeight: '160px',
-          maxHeight: '320px',
-          overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
           gap: '0.5rem',

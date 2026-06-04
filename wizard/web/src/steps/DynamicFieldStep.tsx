@@ -89,7 +89,7 @@ export function DynamicFieldStep({ fieldIndex }: Props) {
   const opts = field.options as { value: string; label: string }[] | undefined;
 
   return (
-    <WizardShell>
+    <WizardShell onSubmit={nextStep}>
       {precedingAlerts.map((a, i) => <AlertBanner key={i} field={a} />)}
 
       <h2 className="text-xl font-bold mb-1">{(field.name as string) || (field.id as string)}</h2>
