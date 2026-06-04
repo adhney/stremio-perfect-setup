@@ -16,7 +16,7 @@ export const KEY_SCREENS: KeyScreen[] = [
     id: 'debrid',
     label: '⚡ Debrid',
     description: 'A **Debrid service** is a paid tool that gives you instant access to fast, cached streams with no P2P throttling or legal risk. It dramatically improves streaming quality and reliability. Select one or more services below and enter your API key for each. You can find your API key in each service\'s account or settings page. **Skip if you prefer free 🧲 P2P / 🌐 HTTP mode.**',
-    instruction: 'Select one or more services below, then paste the API key for each selected provider. You can usually find the key in the service\'s account dashboard or API settings page.\n\n✅ **Recommended**: [📦 TorBox](https://torbox.app/subscription?referral=8000643c-a825-4e7b-a33d-1282f76791f1) is the most popular and price-effective option. Check the guide link below to get additional free days.',
+    instruction: 'Select one or more services below, then paste the API key for each selected provider. You can usually find the key in the service\'s account dashboard or API settings page.\n\n✅ **Recommended**: [📦 TorBox](https://torbox.app/subscription?referral=6e80077e-c232-4b71-8914-5b87202b9577) is the most popular and price-effective option. Check the guide link below to get additional free days.',
     optional: true,
   },
   {
