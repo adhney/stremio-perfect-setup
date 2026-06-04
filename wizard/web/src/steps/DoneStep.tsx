@@ -366,10 +366,10 @@ export function DoneStep() {
         <>
           <div className="text-4xl mb-3 text-center">🎉</div>
           <h2 className="text-xl font-bold text-center mb-1">And now you're really done!</h2>
-          <p className="text-gray-500 text-sm text-center mb-5">
+          <p className="page-description" style={{ marginBottom: '2rem' }}>
             {target === 'stremio'
-              ? 'Open Stremio and sign in. Your account is ready and you can start watching.'
-              : 'Open Nuvio and sign in. Your account is ready and you can start watching.'}
+              ? 'Open Stremio and sign in. Your account is ready and you can start watching. Check further down below to optionally integrate Trakt.'
+              : 'Open Nuvio and sign in. Your account is ready and you can start watching. Check further down below to optionally integrate Trakt.'}
           </p>
 
           {addons.length > 0 && (

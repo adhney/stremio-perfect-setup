@@ -12,7 +12,7 @@ export function ServicesStep() {
   return (
     <WizardShell onSubmit={nextStep}>
       <h2 className="text-xl font-bold mb-1">AIOStreams - Select Services</h2>
-      <p className="text-gray-500 text-sm mb-4 leading-relaxed">
+      <p className="page-description not-centered mb-4">
         Confirm your Debrid service (pre-filled from the previous step).
         AIOStreams will use this to fetch cached streams.
       </p>

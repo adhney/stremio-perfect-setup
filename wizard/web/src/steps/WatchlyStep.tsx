@@ -67,7 +67,7 @@ export function WatchlyStep() {
         <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.4rem' }}>
           🤖 Watchly
         </h2>
-        <p style={{ fontSize: '0.875rem', color: 'var(--muted)', lineHeight: 1.6, margin: '0 auto', maxWidth: '44rem' }}>
+        <p className="page-description">
           Watchly is a full-blown recommendations addon that provides real Netflix-like suggestions, and multiple dynamic catalogs depending on what you watch and like. It's optional and free to skip.
         </p>
       </div>
