@@ -33,7 +33,9 @@ const CREDENTIAL_PLACEHOLDERS = {
 // comparison RHS can be recovered verbatim (preserving spaces/parens in values).
 function tokenize(expr) {
   const tokens = [];
-  const re = /\s*(==|!=|>=|<=|>|<|!|\(|\)|'[^']*'|"[^"]*"|[A-Za-z0-9_.]+)\s*/g;
+  // The trailing `[^\s]` is a catch-all so values with non-word characters (e.g.
+  // `HDR10+`) still tokenize; parseComparisonRhs rejoins them verbatim from the source.
+  const re = /\s*(==|!=|>=|<=|>|<|!|\(|\)|'[^']*'|"[^"]*"|[A-Za-z0-9_.]+|[^\s])\s*/g;
   let m;
   let last = 0;
   while ((m = re.exec(expr)) !== null) {

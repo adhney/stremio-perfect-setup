@@ -63,6 +63,10 @@ console.log('\n# multi-word comparison RHS');
   ok('multi-word RHS equals', evalExpr('inputs.lang == Portuguese (Brazil)', c({ lang: 'Portuguese (Brazil)' })) === true);
   ok('multi-word RHS then and', evalExpr('inputs.lang == Portuguese (Brazil) and inputs.x', c({ lang: 'Portuguese (Brazil)', x: true })) === true);
   ok('single-word RHS still works', evalExpr('inputs.lang != none', c({ lang: 'English' })) === true);
+  // RHS values with non-word characters (e.g. "HDR10+") must tokenize and rejoin verbatim.
+  ok('RHS with + via includes', evalExpr('inputs.dev includes HDR10+', c({ dev: ['HDR10+', '4k'] })) === true);
+  ok('RHS with + equals', evalExpr('inputs.tag == HDR10+', c({ tag: 'HDR10+' })) === true);
+  ok('RHS with + then or', evalExpr('inputs.tag == HDR10+ or inputs.x', c({ tag: 'HDR10+', x: false })) === true);
 }
 
 console.log('\n# nested subsection defaults + deep-merge');
