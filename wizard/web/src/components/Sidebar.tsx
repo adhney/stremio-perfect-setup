@@ -112,7 +112,7 @@ export function Sidebar({ onClose }: Props) {
         })}
 
         {/* AIOStreams Config */}
-        <div className="nav-section-label">AIOStreams Configuration</div>
+        <div className="nav-section-label">🔑 AIOStreams Configuration</div>
         {n === 0 ? (
           <div style={{ fontSize: '0.78rem', color: 'var(--muted)', padding: '0.35rem 0.65rem', fontStyle: 'italic' }}>
             Loading…
@@ -135,11 +135,11 @@ export function Sidebar({ onClose }: Props) {
         <div style={{ marginTop: '0.6rem' }}>
           <button className={cls(CATALOGS_STEP)} onClick={() => goTo(CATALOGS_STEP)}>
             <StepIcon s={CATALOGS_STEP} />
-            <span>Catalogs</span>
+            <span>🔎 Catalogs</span>
           </button>
           <button className={cls(WATCHLY_STEP)} onClick={() => goTo(WATCHLY_STEP)}>
             <StepIcon s={WATCHLY_STEP} />
-            <span>🍿 Watchly</span>
+            <span>🤖 Watchly</span>
           </button>
           <button className={cls(INSTALL_STEP)} onClick={() => goTo(INSTALL_STEP)}>
             <StepIcon s={INSTALL_STEP} />

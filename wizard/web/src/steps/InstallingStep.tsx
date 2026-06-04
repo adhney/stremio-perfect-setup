@@ -307,7 +307,7 @@ export function InstallingStep() {
 
   return (
     <WizardShell showBack={false}>
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
         <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.35rem' }}>
           {done ? 'All done! 🎉' : fatal ? 'Setup failed' : 'Setting everything up…'}
         </h2>

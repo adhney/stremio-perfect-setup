@@ -180,12 +180,12 @@ export function AccountStep() {
 
   return (
     <WizardShell>
-      <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.35rem' }}>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', marginBottom: '0.35rem', textAlign: 'center' }}>
         Your {appName} Account
       </h2>
       <MarkdownText
         text={descriptions[descKey] ?? ''}
-        style={{ color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '1.25rem', lineHeight: 1.6 }}
+        style={{ color: 'var(--muted)', fontSize: '0.875rem', marginBottom: '1.25rem', lineHeight: 1.6, textAlign: 'center' }}
       />
 
       <div className="wizard-notice" style={{ marginBottom: '1.25rem' }}>

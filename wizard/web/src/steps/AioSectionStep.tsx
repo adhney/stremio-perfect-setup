@@ -119,7 +119,7 @@ export function AioSectionStep({ sectionIndex }: Props) {
 
   return (
     <WizardShell>
-      <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1rem' }}>
+      <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text)', marginBottom: '1rem', textAlign: 'center' }}>
         {section.icon} {section.title}
       </h2>
 
@@ -459,9 +459,8 @@ function FieldRenderer({ field, value, onChange }: FieldProps) {
           background: 'var(--panel-2)', border: '1px solid var(--border)', borderRadius: '8px',
           padding: '0.6rem 0.8rem', fontSize: '0.8125rem', color: 'var(--muted)', margin: 0,
         }}>
-          Configure <strong>{field.name || field.id}</strong> directly in AIOStreams — the
-          <code style={{ margin: '0 0.25rem' }}>{field.type || 'unknown'}</code>
-          option type isn’t supported in this wizard.
+          Configure <strong>{field.name || field.id}</strong> directly in AIOStreams.
+          The <code style={{ margin: '0 0.25rem' }}>{field.type}</code> option type is not supported in this wizard.
         </p>
       )}
     </div>

@@ -69,8 +69,8 @@ export function CatalogStep() {
 
   return (
     <WizardShell>
-      <h2 className="text-xl font-bold mb-1">Choose your catalogs</h2>
-      <p className="text-gray-500 text-sm mb-4 leading-relaxed">
+      <h2 className="text-xl font-bold mb-1" style={{ textAlign: 'center' }}>🔎 Choose your catalogs</h2>
+      <p className="text-gray-500 text-sm mb-4 leading-relaxed" style={{ textAlign: 'center' }}>
         Pick which catalog sections you want. Each group adds browsable rows to your app.
         {target === 'stremio' && stremioMaxCatalogs !== null && ` Stremio supports up to ${stremioMaxCatalogs} catalogs.`}
       </p>
@@ -133,7 +133,7 @@ export function CatalogStep() {
 
       <p className="text-xs text-gray-400 mt-3 text-right">{enabledCount} catalogs enabled</p>
 
-      <NextButton onClick={nextStep} disabled={overLimit} label="Finish Setup" />
+      <NextButton onClick={nextStep} disabled={overLimit} label="Continue" />
     </WizardShell>
   );
 }
