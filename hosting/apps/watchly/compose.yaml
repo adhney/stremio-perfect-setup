@@ -5,12 +5,6 @@ services:
     restart: unless-stopped
     volumes:
       - ${DOCKER_DATA_DIR}/watchly/redis:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
     profiles:
       - watchly
       - all
@@ -22,8 +16,7 @@ services:
     env_file:
       - .env
     depends_on:
-      watchly-redis:
-        condition: service_healthy
+      - watchly-redis
     expose:
       - "8000"
     labels:
