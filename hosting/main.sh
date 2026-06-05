@@ -716,7 +716,7 @@ section "Template fetch"
 "${HOSTING_ROOT}/steps/sync-bundled-apps.sh" --template-dir "${TEMPLATE_DIR_ABS}"
 
 if is_interactive; then
-  show_message "Custom Modules" "The upstream template has been downloaded into ${TEMPLATE_DIR_ABS}. If you want to add any extra app folders under ${TEMPLATE_DIR_ABS}/apps now, do that before module discovery continues. Each extra module must live in its own folder and contain a compose.yaml or compose.yml file so the script can detect it."
+  show_message "Custom Modules" "The upstream template has been downloaded into ${TEMPLATE_DIR_ABS}, and any apps bundled under ${HOSTING_ROOT}/apps have already been merged into ${TEMPLATE_DIR_ABS}/apps. If you want to add any further one-off app folders under ${TEMPLATE_DIR_ABS}/apps now, do that before module discovery continues. Each extra module must live in its own folder and contain a compose.yaml or compose.yml file so the script can detect it. For apps you want available on every run, add them under ${HOSTING_ROOT}/apps instead."
   prompt_yes_no "Have you finished adding any custom app folders under ${TEMPLATE_DIR_ABS}/apps so module discovery can continue?" yes || die "Module discovery cancelled."
 fi
 

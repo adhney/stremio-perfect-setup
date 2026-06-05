@@ -183,6 +183,10 @@ The script downloads the upstream Docker template into a temporary work area und
 
 This is intentional. It does not directly edit your final deployment folder first. Instead, it prepares everything in a staging area so the script can validate and modify files before deployment.
 
+Right after the upstream template is fetched, the script overlays any **bundled apps** shipped in this repo's `hosting/apps/` folder onto the template's `apps/` directory. This is how apps that are not part of the upstream template (for example `watchly`) are added to the installable module list: each folder under `hosting/apps/` that contains a `compose.yaml` (or `compose.yml`) is copied in and becomes a selectable module in Phase 5. Upstream apps are preserved; a bundled app whose folder name matches an upstream app overrides it.
+
+You can still add one-off apps by hand too: when running interactively, the script pauses after the fetch so you can drop extra app folders directly into `hosting/.work/docker/apps/` before module discovery continues. Use `hosting/apps/` for apps you want tracked in the repo and available on every run; use the interactive pause for a quick, one-time addition.
+
 ### Phase 5: Module Selection
 
 This is the checklist UI you mentioned.
@@ -409,6 +413,8 @@ Run the whole thing unattended from your local computer (prepares SSH, copies th
 - `main.sh`: the main guided setup entrypoint
 - `steps/`: reusable setup steps such as SSH prep, Docker install, deploy, backup, and start
 - `modules/`: addon-specific automation hooks
+- `apps/`: bundled apps not in the upstream template; each folder with a `compose.yaml` is overlaid onto the fetched template and offered as a selectable module
+- `configs/`: shared config data used by hooks (for example the Honey dashboard catalog `honey.json`)
 - `db/`: Supabase-related helper scripts and SQL
 - `lib/`: shared Bash helpers for prompts, staging, and template logic
 - `defaults.env`: default values used by the scripts
