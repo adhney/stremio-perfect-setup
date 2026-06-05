@@ -5,6 +5,7 @@ import {
   EXCLUDED_CATALOG_IDS, DISCOVER_EMOJIS,
   deriveCategoryKey, deriveCategories, deriveDiscoverFolders,
   defaultEnabledCategories, countEnabledCatalogs, buildAioMetadataConfig,
+  normalizeCategoryOrder, normalizeDiscoverFolderOrder,
 } from '../core/catalog-config.js';
 import { filterCollections } from '../core/nuvio-collections.js';
 
@@ -53,6 +54,23 @@ ok('Excluded emoji groups absent (⌚)', !keys.includes('⌚'));
 ok('Without exceptions, Anime stays under Genres', !collectionOnlyCats.some(c => c.key === '🍥'));
 ok('🎬 count === 28', cats.find(c => c.key === '🎬')?.count === 28);
 ok('🕒 Runtime count === 4', cats.find(c => c.key === '🕒')?.count === 4);
+
+console.log('\n# normalizeCategoryOrder / normalizeDiscoverFolderOrder');
+ok(
+  'Stremio category order keeps Anime independent',
+  JSON.stringify(normalizeCategoryOrder(['🍥', '🎬', '🎭', '🎨'], ['🎬', '🎭', '🍥', '🎨'], 'stremio'))
+    === JSON.stringify(['🍥', '🎬', '🎭', '🎨'])
+);
+ok(
+  'Nuvio category order couples Genres + Anime into one block',
+  JSON.stringify(normalizeCategoryOrder(['🍥', '🎬', '🎭', '🎨'], ['🎬', '🎭', '🍥', '🎨'], 'nuvio'))
+    === JSON.stringify(['🎭', '🍥', '🎬', '🎨'])
+);
+ok(
+  'Discover folder order preserves explicit drag order',
+  JSON.stringify(normalizeDiscoverFolderOrder(['⭐', '🔥', '🏆', '🎯'], ['🎯', '🏆', '🔥', '⭐']))
+    === JSON.stringify(['⭐', '🔥', '🏆', '🎯'])
+);
 
 console.log('\n# deriveDiscoverFolders: discover section grouped by emoji key');
 const discover = deriveDiscoverFolders(catalogs, collections, categoryExceptions);
@@ -152,6 +170,42 @@ ok(
     .every(c => c.enabled === true)
 );
 
+const reorderedCfg = buildAioMetadataConfig(stremioTemplate, {
+  enabledCategories: new Set(['🎬', '🎭', '🍥', '🎨', '🏰', '🎥', '🕒', '🌍']),
+  enabledDiscoverFolderIds: new Set(['🎯', '🏆', '🔥', '⭐']),
+  categoryOrder: ['🍥', '🎬', '🎭', '🎨', '🏰', '🎥', '🕒', '🌍'],
+  discoverFolderOrder: ['⭐', '🔥', '🏆', '🎯'],
+  collections,
+  categoryExceptions,
+  target: 'stremio',
+  apiKeys: { tmdb: 'K', tmdbAccess: 'A', tvdb: 'V', gemini: '', rpdb: 't0-free-rpdb' },
+  language: 'en-US',
+});
+ok(
+  'AIOMetadata discover catalogs reorder within Discover while Discover stays first',
+  reorderedCfg.config.catalogs.slice(0, 2).every(c => c.id === 'tmdb.top_rated')
+);
+ok(
+  'Stremio AIOMetadata can move Anime ahead of Streaming',
+  deriveCategoryKey(reorderedCfg.config.catalogs[8]?.name) === '🍥'
+);
+
+const nuvioReorderedCfg = buildAioMetadataConfig(nuvioTemplate, {
+  enabledCategories: new Set(['🎬', '🎭', '🍥', '🎨', '🏰', '🎥', '🕒', '🌍']),
+  enabledDiscoverFolderIds: new Set(['🎯', '🏆', '🔥', '⭐']),
+  categoryOrder: ['🍥', '🎬', '🎭', '🎨', '🏰', '🎥', '🕒', '🌍'],
+  discoverFolderOrder: ['⭐', '🔥', '🏆', '🎯'],
+  collections,
+  categoryExceptions,
+  target: 'nuvio',
+  apiKeys: { tmdb: 'K', tmdbAccess: 'A', tvdb: 'V', gemini: '', rpdb: 't0-free-rpdb' },
+  language: 'en-US',
+});
+ok(
+  'Nuvio AIOMetadata keeps Genres ahead of Anime even when Anime is dragged first',
+  deriveCategoryKey(nuvioReorderedCfg.config.catalogs[8]?.name) === '🎭'
+);
+
 // ─── nuvio-collections tests ───────────────────────────────────────────────
 
 console.log('\n# filterCollections: Nuvio collections filtered to enabled categories');
@@ -191,6 +245,40 @@ console.log('\n# filterCollections: Nuvio collections filtered to enabled catego
     (f.catalogSources || []).some(s => animeCatalogIdList.includes(s.catalogId))
   );
   ok('No anime folders in Genres when Anime disabled', !hasAnimeFolders);
+
+  const reorderedCollections = filterCollections(collections, nuvioTemplate.config.catalogs, {
+    enabledCategories: allCats,
+    enabledDiscoverFolderIds: allDiscover,
+    categoryOrder: ['🎨', '🍥', '🎬', '🎭', '🏰', '🎥', '🕒', '🌍'],
+    discoverFolderOrder: ['⭐', '🔥', '🏆', '🎯'],
+    categoryExceptions,
+  });
+  ok('Discover group stays first after reordering', reorderedCollections[0]?.id === 'collections.discover');
+  ok(
+    'Discover folders reorder within Discover only',
+    reorderedCollections[0]?.folders?.map(f => f.id).slice(0, 2).join(',')
+      === 'collections.discover.top-rated,collections.discover.trending'
+  );
+  ok(
+    'Themes can move ahead of Streaming in Nuvio collections',
+    reorderedCollections[1]?.title === '🎨 Themes'
+  );
+
+  const animeOnlyCollections = filterCollections(collections, nuvioTemplate.config.catalogs, {
+    enabledCategories: new Set(['🍥']),
+    enabledDiscoverFolderIds: new Set(),
+    categoryOrder: ['🎬', '🍥', '🎭', '🎨', '🏰', '🎥', '🕒', '🌍'],
+    discoverFolderOrder: [],
+    categoryExceptions,
+  });
+  ok(
+    'Anime-only Nuvio output still creates the Genres group',
+    animeOnlyCollections[0]?.id === 'collections.genres'
+  );
+  ok(
+    'Anime-only Nuvio output keeps only the Anime folder',
+    animeOnlyCollections[0]?.folders?.length === 1 && animeOnlyCollections[0]?.folders?.[0]?.id === 'collections.genres.anime'
+  );
 }
 
 console.log(`\n${failed === 0 ? '✅' : '❌'} ${passed} passed, ${failed} failed\n`);

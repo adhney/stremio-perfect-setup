@@ -1,13 +1,13 @@
 ---
 layout: guide
-title: "🖥️ Self Hosting"
+title: "🖥️ Self-Hosting"
 ---
 
-# 🖥️ Self Hosting
+# 🖥️ Self-Hosting
 
-This guide covers running personal instances of **AIOStreams**, **AIOMetadata**, and **AIOManager** on a VPS using the `hosting/` scripts. The great news is that almost everything is automated. You only answer a few questions, and the scripts take care of the rest. Let's walk through this step by step.
+Self-hosting is the next level for achieving the ultimate streaming experience. It's totally optional, but it might be necessary in a few cases that we will discuss further below. This guide covers running personal instances of multiple addons and tools on a VPS using the scripts in my `hosting/`. The great news is that almost everything is automated. You only answer a few questions, and the scripts take care of the rest. Let's walk through this step by step.
 
-## 🤔 Why Self Host?
+## 🤔 Why Self-Host?
 
 * **Your own private URLs**: You get exclusive access to your addon instances, not shared with anyone else
 * **No rate limits**: Public shared instances sometimes have rate limiting. Your own instance gives you full access without those constraints
@@ -168,7 +168,7 @@ During Phase 5, you will see a checklist where you toggle modules with Space and
 * **Traefik**: the reverse proxy that handles HTTPS and routes traffic to your services
 
 **Optional modules** you can enable or disable based on your needs:
-* **AIOStreams**, **AIOMetadata**, **AIOManager**: the three main Stremio addons. Pick the ones you want to self host.
+* **AIOStreams**, **AIOMetadata**, **AIOManager**: the three main Stremio addons. Pick the ones you want to self-host.
 * **Authelia**: adds a login screen to protect your services from unauthorized access. Highly recommended.
 * **Cloudflare DDNS**: keeps your DNS records updated automatically if your server IP changes. Only useful if your domain is on Cloudflare.
 * **Honey**: a visual homepage showing all your services with clickable links. Nice to have for easy access.

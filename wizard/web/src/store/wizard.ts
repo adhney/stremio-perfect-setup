@@ -46,6 +46,8 @@ export interface AioStreamsInputs {
 export interface CatalogSelection {
   enabledCategories: Set<string>;
   enabledDiscoverFolderIds: Set<string>;
+  categoryOrder: string[];
+  discoverFolderOrder: string[];
 }
 
 export interface InstallResult {
@@ -137,7 +139,12 @@ export const useWizard = create<WizardState>((set) => ({
   aioStreamsInstance: '',
   aioStreamsInputs: {},
   aiometadataInstance: '',
-  catalogSelection: { enabledCategories: new Set(), enabledDiscoverFolderIds: new Set() },
+  catalogSelection: {
+    enabledCategories: new Set(),
+    enabledDiscoverFolderIds: new Set(),
+    categoryOrder: [],
+    discoverFolderOrder: [],
+  },
   installResult: { aiostreams: null, aiometadata: null, watchly: null, addonPasswordSource: null, warnings: [], error: null },
   templates: null,
   aioSections: [],
@@ -195,6 +202,8 @@ export const useWizard = create<WizardState>((set) => ({
     catalogSelection: {
       enabledCategories: sel.enabledCategories ?? s.catalogSelection.enabledCategories,
       enabledDiscoverFolderIds: sel.enabledDiscoverFolderIds ?? s.catalogSelection.enabledDiscoverFolderIds,
+      categoryOrder: sel.categoryOrder ?? s.catalogSelection.categoryOrder,
+      discoverFolderOrder: sel.discoverFolderOrder ?? s.catalogSelection.discoverFolderOrder,
     },
   })),
   setTemplates: (templates) => set({ templates }),

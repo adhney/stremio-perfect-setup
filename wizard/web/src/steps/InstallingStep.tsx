@@ -123,6 +123,8 @@ export function InstallingStep() {
         baseTemplate: aiometadataBaseTemplate,
         enabledCategories: catalogSelection.enabledCategories,
         enabledDiscoverFolderIds: catalogSelection.enabledDiscoverFolderIds,
+        categoryOrder: catalogSelection.categoryOrder,
+        discoverFolderOrder: catalogSelection.discoverFolderOrder,
         collections: (templates.collections ?? []) as object[],
         categoryExceptions: wizardConfig.catalogSelectionExceptions ?? [],
         apiKeys: {

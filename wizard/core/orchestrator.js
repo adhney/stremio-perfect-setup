@@ -175,7 +175,7 @@ async function applyNuvioProfileSettings(nuvio, token, profileIndex, settingsTem
  * @param {object} p.instances         { aiostreams: string[], aiometadata: string[], watchly?: string[] } – ordered list; first is primary, rest are fallbacks
  * @param {object} p.account           { mode: 'create'|'signin', email, password }
  * @param {object} p.aiostreamsParams  { template, inputs, services, credentials }
- * @param {object} p.aiometadataParams { baseTemplate, enabledCategories, enabledDiscoverFolderIds, apiKeys, language }
+ * @param {object} p.aiometadataParams { baseTemplate, enabledCategories, enabledDiscoverFolderIds, categoryOrder, discoverFolderOrder, apiKeys, language }
  * @param {object} [p.watchlyBody]     Merged Watchly TokenRequest body (null/undefined = skip Watchly)
  * @param {function} p.onStep          (name, data) => void; progress callback
  */
@@ -265,7 +265,7 @@ export async function runStremioSetup({ instances, account, aiostreamsParams, ai
  * @param {object} p.instances           { aiostreams: string[], aiometadata: string[], watchly?: string[] } – ordered list; first is primary, rest are fallbacks
  * @param {object} p.account             { mode: 'create'|'signin', email, password }
  * @param {object} p.aiostreamsParams    { template, inputs, services, credentials }
- * @param {object} p.aiometadataParams   { baseTemplate, enabledCategories, enabledDiscoverFolderIds, apiKeys, language }
+ * @param {object} p.aiometadataParams   { baseTemplate, enabledCategories, enabledDiscoverFolderIds, categoryOrder, discoverFolderOrder, apiKeys, language }
  * @param {object} [p.watchlyBody]       Merged Watchly TokenRequest body (null/undefined = skip Watchly)
  * @param {object[]} p.collectionsJson   Nuvio-Collections.json array
  * @param {object} p.nuvioSettingsTemplate Nuvio-Settings.json platform map
@@ -362,10 +362,17 @@ export async function runNuvioSetup({ instances, account, aiostreamsParams, aiom
   // p_collections_json is a real JSON value, not a JSON-encoded string (verified Task 2).
   // pushCollections signature: (token, profileId, collections)
   const catalogs = aiometadataParams.baseTemplate.config.catalogs;
-  const { enabledCategories, enabledDiscoverFolderIds } = aiometadataParams;
+  const {
+    enabledCategories,
+    enabledDiscoverFolderIds,
+    categoryOrder,
+    discoverFolderOrder,
+  } = aiometadataParams;
   const filteredCollections = filterCollections(collectionsJson, catalogs, {
     enabledCategories,
     enabledDiscoverFolderIds,
+    categoryOrder,
+    discoverFolderOrder,
     categoryExceptions: aiometadataParams.categoryExceptions || [],
   });
   await nuvio.pushCollections(auth.token, profileIndex, filteredCollections);

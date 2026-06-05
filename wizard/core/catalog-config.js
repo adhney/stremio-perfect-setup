@@ -88,6 +88,49 @@ function normalizeCategoryExceptions(categoryExceptions) {
   return new Set((categoryExceptions || []).map((value) => String(value || '').trim()).filter(Boolean));
 }
 
+function normalizeOrderedKeys(orderKeys, availableKeys) {
+  const normalizedAvailableKeys = (availableKeys || []).map((value) => String(value || '').trim()).filter(Boolean);
+  const available = new Set(normalizedAvailableKeys);
+  const seen = new Set();
+  const ordered = [];
+
+  for (const key of [...(orderKeys || []), ...normalizedAvailableKeys]) {
+    const normalizedKey = String(key || '').trim();
+    if (!normalizedKey || !available.has(normalizedKey) || seen.has(normalizedKey)) continue;
+    seen.add(normalizedKey);
+    ordered.push(normalizedKey);
+  }
+
+  return ordered;
+}
+
+export function normalizeDiscoverFolderOrder(orderKeys, availableKeys) {
+  return normalizeOrderedKeys(orderKeys, availableKeys);
+}
+
+export function normalizeCategoryOrder(orderKeys, availableKeys, target = 'stremio') {
+  const normalized = normalizeOrderedKeys(orderKeys, availableKeys);
+  if (target !== 'nuvio') return normalized;
+
+  const linkedKeys = ['🎭', '🍥'].filter((key) => normalized.includes(key));
+  if (linkedKeys.length < 2) return normalized;
+
+  const linkedKeySet = new Set(linkedKeys);
+  const firstLinkedIndex = normalized.findIndex((key) => linkedKeySet.has(key));
+  const insertAt = normalized
+    .slice(0, firstLinkedIndex === -1 ? normalized.length : firstLinkedIndex)
+    .filter((key) => !linkedKeySet.has(key))
+    .length;
+  const withoutLinkedKeys = normalized.filter((key) => !linkedKeySet.has(key));
+
+  withoutLinkedKeys.splice(insertAt, 0, ...linkedKeys);
+  return withoutLinkedKeys;
+}
+
+function buildOrderIndex(orderKeys) {
+  return new Map(orderKeys.map((key, index) => [key, index]));
+}
+
 export function resolveCatalogSelectionEntry(catalog, collections, categoryExceptions = []) {
   const metadata = buildCollectionCatalogMetadata(collections);
   return resolveCatalogSelectionEntryWithMetadata(catalog, metadata, normalizeCategoryExceptions(categoryExceptions));
@@ -250,6 +293,70 @@ export function countEnabledCatalogs(catalogs, enabledCategories, enabledDiscove
   return count;
 }
 
+export function sortCatalogsForOutput(catalogs, {
+  collections = [],
+  categoryExceptions = [],
+  categoryOrder = [],
+  discoverFolderOrder = [],
+  target = 'stremio',
+} = {}) {
+  const metadata = buildCollectionCatalogMetadata(collections);
+  const exceptions = normalizeCategoryExceptions(categoryExceptions);
+  const categoryIndex = buildOrderIndex(normalizeCategoryOrder(
+    categoryOrder,
+    deriveCategories(catalogs, collections, categoryExceptions).map((category) => category.key),
+    target,
+  ));
+  const discoverIndex = buildOrderIndex(normalizeDiscoverFolderOrder(
+    discoverFolderOrder,
+    deriveDiscoverFolders(catalogs, collections, categoryExceptions).map((folder) => folder.id),
+  ));
+
+  return catalogs
+    .map((catalog, originalIndex) => {
+      if (EXCLUDED_CATALOG_IDS.has(catalog.id)) {
+        return {
+          catalog,
+          originalIndex,
+          sectionOrder: 2,
+          groupOrder: originalIndex,
+        };
+      }
+
+      const selectionEntry = resolveCatalogSelectionEntryWithMetadata(catalog, metadata, exceptions);
+      if (!selectionEntry) {
+        return {
+          catalog,
+          originalIndex,
+          sectionOrder: 2,
+          groupOrder: originalIndex,
+        };
+      }
+
+      if (selectionEntry.kind === 'discover') {
+        return {
+          catalog,
+          originalIndex,
+          sectionOrder: 0,
+          groupOrder: discoverIndex.get(selectionEntry.key) ?? Number.MAX_SAFE_INTEGER,
+        };
+      }
+
+      return {
+        catalog,
+        originalIndex,
+        sectionOrder: 1,
+        groupOrder: categoryIndex.get(selectionEntry.key) ?? Number.MAX_SAFE_INTEGER,
+      };
+    })
+    .sort((left, right) => (
+      left.sectionOrder - right.sectionOrder
+      || left.groupOrder - right.groupOrder
+      || left.originalIndex - right.originalIndex
+    ))
+    .map(({ catalog }) => catalog);
+}
+
 /**
  * Build the final AIOMetadata config object from the base template + user selections.
  * Ready to POST to /api/config/save.
@@ -258,24 +365,41 @@ export function countEnabledCatalogs(catalogs, enabledCategories, enabledDiscove
  * @param {object} opts
  * @param {Set<string>} opts.enabledCategories       emoji keys
  * @param {Set<string>} opts.enabledDiscoverFolderIds discover emoji keys
+ * @param {string[]} opts.categoryOrder              ordered category keys
+ * @param {string[]} opts.discoverFolderOrder        ordered discover keys
  * @param {'stremio'|'nuvio'} opts.target
  * @param {object} opts.apiKeys  { tmdb, tmdbAccess, tvdb, gemini, rpdb }
  * @param {string} opts.language e.g. 'en-US'
  */
 export function buildAioMetadataConfig(baseTemplate, {
-  enabledCategories, enabledDiscoverFolderIds, target, apiKeys, language, collections = [], categoryExceptions = [],
+  enabledCategories,
+  enabledDiscoverFolderIds,
+  categoryOrder = [],
+  discoverFolderOrder = [],
+  target,
+  apiKeys,
+  language,
+  collections = [],
+  categoryExceptions = [],
 }) {
   const showInHome = target === 'stremio'; // Stremio: true; Nuvio: false (shown via collections)
   const metadata = buildCollectionCatalogMetadata(collections);
   const exceptions = normalizeCategoryExceptions(categoryExceptions);
 
-  const catalogs = baseTemplate.config.catalogs.map(c => {
+  const configuredCatalogs = baseTemplate.config.catalogs.map(c => {
     if (EXCLUDED_CATALOG_IDS.has(c.id)) return { ...c, enabled: false, showInHome: false };
     const selectionEntry = resolveCatalogSelectionEntryWithMetadata(c, metadata, exceptions);
     const enabled = selectionEntry?.kind === 'discover'
       ? enabledDiscoverFolderIds.has(selectionEntry.key)
       : enabledCategories.has(selectionEntry?.key);
     return { ...c, enabled, showInHome: enabled ? showInHome : false };
+  });
+  const catalogs = sortCatalogsForOutput(configuredCatalogs, {
+    collections,
+    categoryExceptions,
+    categoryOrder,
+    discoverFolderOrder,
+    target,
   });
 
   const config = {

@@ -3,7 +3,24 @@
 // Emoji exceptions such as Anime can be split into separate wizard categories
 // while remaining nested under their original collections group.
 
-import { resolveCatalogSelectionEntry } from './catalog-config.js';
+import {
+  deriveCategories,
+  deriveCategoryKey,
+  deriveDiscoverFolders,
+  normalizeCategoryOrder,
+  normalizeDiscoverFolderOrder,
+  resolveCatalogSelectionEntry,
+} from './catalog-config.js';
+
+const DISCOVER_COLLECTION_GROUP_ID = 'collections.discover';
+
+function buildOrderIndex(orderKeys) {
+  return new Map(orderKeys.map((key, index) => [key, index]));
+}
+
+function resolveDiscoverFolderKey(folder) {
+  return String(folder?.coverEmoji || '').trim() || deriveCategoryKey(folder?.title);
+}
 
 /**
  * Determine whether a Nuvio folder's content belongs to an enabled category.
@@ -36,24 +53,64 @@ function isFolderEnabled(folder, catalogById, collections, categoryExceptions, e
  * @param {object}   opts
  * @param {Set}      opts.enabledCategories
  * @param {Set}      opts.enabledDiscoverFolderIds
+ * @param {string[]} opts.categoryOrder
+ * @param {string[]} opts.discoverFolderOrder
  * @param {string[]}   opts.categoryExceptions
  * @returns {object[]} filtered collections array
  */
 export function filterCollections(collections, catalogs, {
   enabledCategories,
   enabledDiscoverFolderIds,
+  categoryOrder = [],
+  discoverFolderOrder = [],
   categoryExceptions = [],
 }) {
   const catalogById = new Map(catalogs.map((catalog) => [catalog.id, catalog]));
   const result = [];
+  const categoryIndex = buildOrderIndex(normalizeCategoryOrder(
+    categoryOrder,
+    deriveCategories(catalogs, collections, categoryExceptions).map((category) => category.key),
+    'nuvio',
+  ));
+  const discoverIndex = buildOrderIndex(normalizeDiscoverFolderOrder(
+    discoverFolderOrder,
+    deriveDiscoverFolders(catalogs, collections, categoryExceptions).map((folder) => folder.id),
+  ));
 
-  for (const group of collections) {
+  for (const [groupIndex, group] of collections.entries()) {
     const filteredFolders = (group.folders || []).filter(folder =>
       isFolderEnabled(folder, catalogById, collections, categoryExceptions, enabledCategories, enabledDiscoverFolderIds)
     );
     if (filteredFolders.length > 0) {
-      result.push({ ...group, folders: filteredFolders });
+      const folders = group.id === DISCOVER_COLLECTION_GROUP_ID
+        ? filteredFolders
+            .map((folder, folderIndex) => ({ folder, folderIndex }))
+            .sort((left, right) => (
+              (discoverIndex.get(resolveDiscoverFolderKey(left.folder)) ?? Number.MAX_SAFE_INTEGER)
+              - (discoverIndex.get(resolveDiscoverFolderKey(right.folder)) ?? Number.MAX_SAFE_INTEGER)
+              || left.folderIndex - right.folderIndex
+            ))
+            .map(({ folder }) => folder)
+        : filteredFolders;
+
+      result.push({ group, groupIndex, folders });
     }
   }
-  return result;
+
+  return result
+    .sort((left, right) => {
+      const leftIsDiscover = left.group.id === DISCOVER_COLLECTION_GROUP_ID;
+      const rightIsDiscover = right.group.id === DISCOVER_COLLECTION_GROUP_ID;
+      if (leftIsDiscover || rightIsDiscover) {
+        if (leftIsDiscover && rightIsDiscover) return left.groupIndex - right.groupIndex;
+        return leftIsDiscover ? -1 : 1;
+      }
+
+      return (
+        (categoryIndex.get(deriveCategoryKey(left.group.title)) ?? Number.MAX_SAFE_INTEGER)
+        - (categoryIndex.get(deriveCategoryKey(right.group.title)) ?? Number.MAX_SAFE_INTEGER)
+        || left.groupIndex - right.groupIndex
+      );
+    })
+    .map(({ group, folders }) => ({ ...group, folders }));
 }
