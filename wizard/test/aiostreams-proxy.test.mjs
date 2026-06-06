@@ -145,6 +145,81 @@ console.log('\n# AIOStreams retries with broken internal addon disabled');
   ok('createWithFallbacks still returns a primary result', retried.primary?.manifestUrl === 'https://instance-a.example/stremio/uuid-1/enc-1/manifest.json');
 }
 
+console.log('\n# AIOStreams disables addon when the error appends an identifier to its name');
+{
+  // Real AIOStreams errors are "Failed to fetch manifest for <name> <identifier>: <reason>"
+  // (getAddonName appends a displayIdentifier/identifier). The preset name is just "Comet",
+  // so an exact-equality match against "Comet TorBox" would never disable it.
+  const names = extractFailedManifestAddons('Failed to fetch manifest for Comet TorBox: fetch failed');
+  ok('extractFailedManifestAddons captures name with identifier', JSON.stringify(names) === JSON.stringify(['Comet TorBox']));
+
+  const config = {
+    presets: [
+      { type: 'comet', instanceId: 'com', enabled: true, options: { name: 'Comet' } },
+      { type: 'torrentio', instanceId: 'tio', enabled: true, options: { name: 'Torrentio' } },
+    ],
+  };
+  const result = disableInternalAddons(config, names);
+  ok('disableInternalAddons matches preset despite appended identifier', JSON.stringify(result.disabledAddonNames) === JSON.stringify(['Comet']));
+  ok('disableInternalAddons flips the identifier-suffixed preset off', result.config.presets[0].enabled === false);
+}
+
+console.log('\n# AIOStreams clears multiple broken addons across retry rounds');
+{
+  // fetchManifests uses Promise.all, so only ONE broken addon surfaces per attempt.
+  // The wizard must keep disabling + retrying until the config is accepted.
+  let requestCount = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    requestCount++;
+    const { config } = JSON.parse(options.body);
+    const enabled = (name) => config.presets.find((p) => p.options?.name === name)?.enabled !== false;
+
+    if (enabled('Comet')) {
+      return {
+        status: 400,
+        async json() { return { error: { message: 'Failed to fetch manifest for Comet TorBox: fetch failed' } }; },
+        async text() { return 'Failed to fetch manifest for Comet TorBox: fetch failed'; },
+      };
+    }
+    if (enabled('HD Hub')) {
+      return {
+        status: 400,
+        async json() { return { error: { message: 'Failed to fetch manifest for HD Hub: ETIMEDOUT' } }; },
+        async text() { return 'Failed to fetch manifest for HD Hub: ETIMEDOUT'; },
+      };
+    }
+    return {
+      status: 201,
+      async json() { return { data: { uuid: 'uuid-multi', encryptedPassword: 'enc-multi' } }; },
+    };
+  };
+
+  const retried = await createWithFallbacks(
+    ['https://only-instance.example'],
+    {
+      template: {
+        metadata: { inputs: [] },
+        config: {
+          presets: [
+            { type: 'comet', instanceId: 'com', enabled: true, options: { name: 'Comet' } },
+            { type: 'hdhub', instanceId: 'hdh', enabled: true, options: { name: 'HD Hub' } },
+            { type: 'torrentio', instanceId: 'tio', enabled: true, options: { name: 'Torrentio' } },
+          ],
+        },
+      },
+      inputs: {},
+      services: [],
+      credentials: {},
+      serviceCredentials: {},
+      password: 'secret',
+    }
+  );
+
+  ok('createWithFallbacks retries until all broken addons are disabled', requestCount === 3);
+  ok('createWithFallbacks reports every disabled addon', JSON.stringify(retried.disabledInternalAddons) === JSON.stringify(['Comet', 'HD Hub']));
+  ok('createWithFallbacks succeeds after clearing broken addons', retried.primary?.manifestUrl === 'https://only-instance.example/stremio/uuid-multi/enc-multi/manifest.json');
+}
+
 console.log('\n# AIOStreams stops after first successful instance');
 {
   const seen = [];

@@ -49,7 +49,7 @@ Here are the main links:
 * [**Collections Assets**](https://github.com/luckynumb3rs/stremio-perfect-setup/tree/main/collections/)
 * [**AIOMetadata Catalogs**](https://numb3rs.stream/templates/AIOMetadata-All-Catalogs.json) (*JSON*) [**Only catalogs** for existing setups, import into AIOMetadata *Catalogs* tab]
 * [**AIOMetadata Full Configuration**](https://numb3rs.stream/templates/AIOMetadata-All.json) (*JSON*) [**Full** for new setups, import into AIOMetadata *Configuration* tab]
-* [**Nuvio Community Collections Pack**](https://nuvioapp.space/community-collections/nuvio-perfect-collections-incl-dynamic-backdrops-2) [**Import directly** into Nuvio account]
+* [**Nuvio Community Collections Pack**](https://nuvio.tv/community-collections/nuvio-perfect-collections-incl-dynamic-backdrops-2) [**Import directly** into Nuvio account]
 * [**Nuvio Collections**](https://numb3rs.stream/templates/Nuvio-Collections.json) (*JSON*) [**Alternative** file for manual import]
 
 Hope you like it. Enjoy!

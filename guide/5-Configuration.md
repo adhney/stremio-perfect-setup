@@ -48,7 +48,7 @@ Go to [**this**](https://cinebye.elfhosted.com/) **Cinebye** instance and:
 ## **🚀 Nuvio**
 
 1. **Install Addons**: Once you have the Manifest URLs ready, go back to Nuvio in your browser.
-   1. Open [**nuvioapp.space**](https://nuvioapp.space/).
+   1. Open [**nuvio.tv**](https://nuvio.tv/).
    2. Go to your **Account** section.
    3. If you have more than one profile, make sure the profile you want to configure is selected from the top header menu.
       * *This is important because addons and collections can be profile-specific. If you configure the wrong profile, you may open the app later and think nothing worked, even though you simply added everything to another profile.*
@@ -72,7 +72,7 @@ Go to [**this**](https://cinebye.elfhosted.com/) **Cinebye** instance and:
       * *In addition to supporting Stremio addons, such as **AIOStreams** you installed above, which also includes HTTP sources that are properly filtered and formatted, Nuvio also supports **Plugins**, which can provide many additional HTTP sources. They don't go through AIOStreams unfortunately, so you won't get the optimized sources list like that addon does, but you would get additional stream sources. This is not necessary if you go for the **P2P** or **Debrid** configuration on AIOStreams above, but recommended for **HTTP** if you notice you are not getting enough streams from it.*
 
 2. **Collections Pack**: Now let's add the collections pack with *Dynamic Backdrops*, as described in [**🚀 Nuvio**](Nuvio.md), that organizes the installed *AIOMetadata* catalogs together into the groups described in [**🔎 AIOMetadata**](4-AIOMetadata.md).
-   1. Go to [**this**](https://nuvioapp.space/community-collections/nuvio-perfect-collections-incl-dynamic-backdrops-2) **Nuvio Collections Pack**.
+   1. Go to [**this**](https://nuvio.tv/community-collections/nuvio-perfect-collections-incl-dynamic-backdrops-2) **Nuvio Collections Pack**.
    2. Click **Add Pack**.
    3. Make sure the correct profile is selected.
       * *Again, if you have more than one profile, double-check this. Otherwise you may install the pack on the wrong profile.*

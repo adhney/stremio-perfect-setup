@@ -326,6 +326,17 @@ export function AccountStep() {
         </div>
       )}
 
+      {account.mode === 'signin' && (
+        <div style={{
+          background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px',
+          padding: '0.7rem 0.85rem', marginTop: '0.75rem', fontSize: '0.8125rem', color: '#92400e', lineHeight: 1.55,
+        }}>
+          <strong style={{ display: 'block', marginBottom: '0.2rem' }}>⚠️ IMPORTANT: Existing addons will be removed!</strong>
+          Completing this wizard replaces every addon currently installed on your {appName} account.
+          If you have addons you want to keep, copy their manifest URLs from your {appName} settings now so you can reinstall them afterwards.
+        </div>
+      )}
+
       <button
         type="button"
         className="wizard-primary-btn"

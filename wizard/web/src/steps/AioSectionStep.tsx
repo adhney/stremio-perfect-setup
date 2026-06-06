@@ -1,5 +1,5 @@
-import { useState, type CSSProperties } from 'react';
-import { ListChecks, ChevronDown } from 'lucide-react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
+import { ListChecks, ChevronDown, KeyRound } from 'lucide-react';
 import { WizardShell } from '../components/WizardShell';
 import { NextButton } from '../components/NextButton';
 import { MarkdownText } from '../components/MarkdownText';
@@ -11,6 +11,9 @@ import { isVisible as isVisibleRaw } from '@core/template-engine.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isVisible = isVisibleRaw as (field: any, ctx: { inputs: Record<string, any>; services: string[] }) => boolean;
+
+// Direct link to where a Debridio user finds the API key used by the Debridio AIOStreams addon.
+const DEBRIDIO_API_KEY_URL = 'https://debridio.com/account';
 
 interface TemplateField {
   id: string;
@@ -148,12 +151,22 @@ export function AioSectionStep({ sectionIndex }: Props) {
         }
         const field = inputsById[item.id];
         if (!field || !isVisible(field, ctx)) return null;
+        // The Debridio API key is rendered inside the Debridio toggle card (as its footer),
+        // not as a standalone field below it.
+        if (field.id === 'debridioApiKey') return null;
         return (
           <FieldRenderer
             key={field.id}
             field={field}
             value={readNested(aioStreamsInputs, field.id) ?? field.default}
             onChange={(val: unknown) => setAioStreamsInput(field.id, val)}
+            footer={field.id === 'debridio' ? (
+              <DebridioKeyField
+                value={(readNested(aioStreamsInputs, 'debridioApiKey') as string) ?? ''}
+                onChange={(v) => setAioStreamsInput('debridioApiKey', v)}
+                required={Boolean(inputsById['debridioApiKey']?.required)}
+              />
+            ) : undefined}
           />
         );
       })}
@@ -227,9 +240,49 @@ interface FieldProps {
   field: TemplateField;
   value: unknown;
   onChange: (v: unknown) => void;
+  /** Extra content rendered inside a boolean field's card, below the toggle, only when enabled. */
+  footer?: ReactNode;
 }
 
-function FieldRenderer({ field, value, onChange }: FieldProps) {
+/** Debridio API key input with a "Get API Key" link, rendered inside the Debridio toggle card. */
+function DebridioKeyField({ value, onChange, required }: { value: string; onChange: (v: string) => void; required: boolean }) {
+  return (
+    <label style={{ display: 'block' }}>
+      <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text)' }}>
+        Debridio API Key{required && <span style={{ color: '#e53e3e', marginLeft: '0.2rem' }}>*</span>}
+      </span>
+      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem', alignItems: 'stretch' }}>
+        <input
+          type="password"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Paste your Debridio API key..."
+          style={{
+            flex: 1, border: '1px solid var(--border)', borderRadius: '8px',
+            padding: '0.5rem 0.75rem', fontSize: '0.875rem',
+            background: 'var(--panel)', color: 'var(--text)', outline: 'none', boxSizing: 'border-box',
+          }}
+        />
+        <a
+          href={DEBRIDIO_API_KEY_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="wizard-secondary-btn"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.35rem',
+            padding: '0.5rem 0.75rem', fontSize: '0.8125rem',
+            whiteSpace: 'nowrap', textDecoration: 'none',
+          }}
+        >
+          <KeyRound size={14} style={{ flex: '0 0 auto' }} />
+          Get API Key
+        </a>
+      </div>
+    </label>
+  );
+}
+
+function FieldRenderer({ field, value, onChange, footer }: FieldProps) {
   const isEnabled = Boolean(value);
   const inputStyle: CSSProperties = {
     width: '100%', border: '1px solid var(--border)', borderRadius: '8px',
@@ -258,74 +311,88 @@ function FieldRenderer({ field, value, onChange }: FieldProps) {
   if (field.type === 'boolean') {
     return (
       <div style={{ marginBottom: '1.25rem' }}>
-        <button
-          type="button"
+        <div
           className={`wizard-hover-lift${isEnabled ? '' : ' wizard-hover-lift--guide'}`}
-          onClick={() => onChange(!value)}
-          aria-pressed={isEnabled}
           style={{
             '--wizard-hover-selected-bg': 'var(--panel-2)',
             '--wizard-hover-selected-border': 'var(--accent)',
             '--wizard-hover-selected-color': 'var(--text)',
-            width: '100%',
             borderRadius: '14px',
             border: `2px solid ${isEnabled ? 'var(--accent)' : 'var(--border)'}`,
             background: isEnabled ? 'var(--panel-2)' : 'var(--panel)',
-            color: 'var(--text)',
-            cursor: 'pointer',
-            textAlign: 'left',
-            padding: '0.95rem 1rem',
             transition: 'all 0.15s',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: '1rem',
+            overflow: 'hidden',
           } as CSSProperties}
         >
-          <div style={{ minWidth: 0, flex: '1 1 auto' }}>
-            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>
-              {field.name || field.id}
-              {field.required && <span style={{ color: '#e53e3e', marginLeft: '0.25rem' }}>*</span>}
+          <button
+            type="button"
+            onClick={() => onChange(!value)}
+            aria-pressed={isEnabled}
+            style={{
+              width: '100%',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--text)',
+              cursor: 'pointer',
+              textAlign: 'left',
+              padding: '0.95rem 1rem',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: '1rem',
+            }}
+          >
+            <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>
+                {field.name || field.id}
+                {field.required && <span style={{ color: '#e53e3e', marginLeft: '0.25rem' }}>*</span>}
+              </div>
+              {field.description && (
+                <MarkdownText
+                  text={field.description}
+                  style={{ color: 'var(--muted)', fontSize: '0.8125rem', marginTop: '0.3rem', lineHeight: 1.55 }}
+                />
+              )}
             </div>
-            {field.description && (
-              <MarkdownText
-                text={field.description}
-                style={{ color: 'var(--muted)', fontSize: '0.8125rem', marginTop: '0.3rem', lineHeight: 1.55 }}
-              />
-            )}
-          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.45rem', flex: '0 0 auto' }}>
-            <div
-              aria-hidden="true"
-              style={{
-                width: '3rem',
-                height: '1.7rem',
-                borderRadius: '999px',
-                background: isEnabled ? 'var(--accent)' : 'color-mix(in srgb, var(--border) 70%, var(--panel) 30%)',
-                border: `1px solid ${isEnabled ? 'var(--accent)' : 'var(--border)'}`,
-                padding: '0.12rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: isEnabled ? 'flex-end' : 'flex-start',
-                transition: 'all 0.15s',
-              }}
-            >
-              <span
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.45rem', flex: '0 0 auto' }}>
+              <div
+                aria-hidden="true"
                 style={{
-                  width: '1.2rem',
-                  height: '1.2rem',
+                  width: '3rem',
+                  height: '1.7rem',
                   borderRadius: '999px',
-                  background: '#fff',
-                  display: 'block',
+                  background: isEnabled ? 'var(--accent)' : 'color-mix(in srgb, var(--border) 70%, var(--panel) 30%)',
+                  border: `1px solid ${isEnabled ? 'var(--accent)' : 'var(--border)'}`,
+                  padding: '0.12rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: isEnabled ? 'flex-end' : 'flex-start',
+                  transition: 'all 0.15s',
                 }}
-              />
+              >
+                <span
+                  style={{
+                    width: '1.2rem',
+                    height: '1.2rem',
+                    borderRadius: '999px',
+                    background: '#fff',
+                    display: 'block',
+                  }}
+                />
+              </div>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isEnabled ? 'var(--accent)' : 'var(--muted)' }}>
+                {isEnabled ? 'Enabled' : 'Disabled'}
+              </span>
             </div>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isEnabled ? 'var(--accent)' : 'var(--muted)' }}>
-              {isEnabled ? 'Enabled' : 'Disabled'}
-            </span>
-          </div>
-        </button>
+          </button>
+
+          {isEnabled && footer && (
+            <div style={{ borderTop: '1px solid var(--accent)', padding: '0.85rem 1rem' }}>
+              {footer}
+            </div>
+          )}
+        </div>
       </div>
     );
   }

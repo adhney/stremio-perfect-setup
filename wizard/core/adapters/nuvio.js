@@ -1,24 +1,4 @@
 // Nuvio adapter: talks to the Supabase-backed Nuvio Public API.
-//
-// VERIFIED (2026-05-30) via NuvioTV/AddonSyncService.kt, CollectionSyncService.kt,
-//   ProfileSyncService.kt, SupabaseModels.kt, NuvioMobile/supabaseSyncService.ts
-//
-// VERIFIED: CORS = open (Access-Control-Allow-Origin: * confirmed via OPTIONS probe)
-// VERIFIED (2026-06-01): anon key matches the current public Nuvio web bundle
-//   at https://nuvioapp.space/assets/index-D5lbBHTr.js
-// VERIFIED: auth response field = access_token  (standard Supabase auth shape)
-// VERIFIED: profile id field = profile_index    (Int, default 1 = primary profile)
-// VERIFIED (2026-06-01): profiles are written via sync_push_profiles with
-//   { p_profiles: [{ profile_index, name, avatar_color_hex, uses_primary_addons,
-//     uses_primary_plugins, avatar_id, avatar_url }] }.
-// VERIFIED (2026-06-01): add-ons are profile-scoped rows in /rest/v1/addons
-//   with user_id + profile_id filters, not the older sync_push_addons RPC path.
-// VERIFIED: sync_push_collections p_collections_json = real JSON value (NOT a string)
-//   Shape: { p_profile_id: number, p_collections_json: JsonArray }
-// VERIFIED: sync_pull_profiles = called with {}; returns SupabaseProfile[] with profile_index field
-// VERIFIED (2026-06-01): profile settings blobs are synced via
-//   sync_pull_profile_settings_blob / sync_push_profile_settings_blob with
-//   { p_profile_id, p_platform, p_settings_json }.
 
 const SUPABASE_BASE = 'https://dpyhjjcoabcglfmgecug.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRweWhqamNvYWJjZ2xmbWdlY3VnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3ODYyNDcsImV4cCI6MjA4NjM2MjI0N30.U-3QSNDdpsnvRk_7ZL419AFTOtggHJJcmkodxeXjbkg';

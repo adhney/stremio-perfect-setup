@@ -272,6 +272,14 @@
         "default": false
       },
       {
+        "__if": "inputs.debridio",
+        "id": "debridioApiKey",
+        "name": "🧊 Debridio API Key",
+        "description": "Paste your Debridio API key, found in your Debridio [account settings](https://debridio.com/account). The same key is used for both the Debridio Scraper and the Watchtower addon.",
+        "type": "password",
+        "required": true
+      },
+      {
         "id": "httpAddons",
         "name": "🌐 HTTP Addons",
         "description": "Select if you want addons for **HTTP** streams to be installed. These addons rely on free online hosters and generally have less reliable sources and speeds, but can be good backup options if you don't or can't use Debrid and/or P2P. You can select: \n* **None** to not include any HTTP addons at all. \n* **Install Additional HTTP Addons** to install them in addition to the Debrid/P2P addons. \n* **Install Only HTTP Addons** to not include any Debrid/P2P addons and only use HTTP addons. CHOOSE THIS IF P2P IS AN ISSUE IN YOUR COUNTRY AND YOU'RE NOT USING DEBRID (*Do not select this option if you ARE using a Debrid*).",
@@ -456,7 +464,7 @@
         "options": {
           "name": "Debridio",
           "timeout": "{{inputs.timeout}}",
-          "debridioApiKey": "<template_placeholder>"
+          "debridioApiKey": "{{inputs.debridioApiKey}}"
         }
       },
       {
@@ -650,7 +658,7 @@
           "resources": [
             "stream"
           ],
-          "debridioApiKey": "<template_placeholder>",
+          "debridioApiKey": "{{inputs.debridioApiKey}}",
           "mediaTypes": []
         }
       },

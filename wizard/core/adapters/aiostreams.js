@@ -24,7 +24,20 @@ function resolveConfigPayload({ template, inputs, services, credentials, service
 }
 
 function normalizeAddonName(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  // Collapse runs of non-alphanumerics to single spaces (instead of stripping them) so we keep
+  // word boundaries. This lets us tell "Comet" apart from "Comet TorBox": AIOStreams' real error
+  // is "Failed to fetch manifest for <name> <identifier>" (getAddonName appends a
+  // displayIdentifier/identifier), so the error name is the preset name plus a trailing label.
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+// True when a preset name and an error-derived addon name refer to the same addon. They match when
+// equal, or when one is a leading word-prefix of the other — covering the identifier AIOStreams
+// appends to the preset name in manifest-failure errors (e.g. preset "Comet" vs error "Comet TorBox").
+function addonNameMatches(presetName, targetName) {
+  if (!presetName || !targetName) return false;
+  if (presetName === targetName) return true;
+  return targetName.startsWith(`${presetName} `) || presetName.startsWith(`${targetName} `);
 }
 
 export function extractFailedManifestAddons(message) {
@@ -43,8 +56,8 @@ export function disableInternalAddons(config, addonNames) {
     return { config, disabledAddonNames: [] };
   }
 
-  const targets = new Set(addonNames.map(normalizeAddonName).filter(Boolean));
-  if (targets.size === 0) return { config, disabledAddonNames: [] };
+  const targets = addonNames.map(normalizeAddonName).filter(Boolean);
+  if (targets.length === 0) return { config, disabledAddonNames: [] };
 
   const nextConfig = structuredClone(config);
   const disabledAddonNames = [];
@@ -57,7 +70,7 @@ export function disableInternalAddons(config, addonNames) {
       preset?.instanceId,
     ].map(normalizeAddonName);
 
-    if (!presetNames.some((name) => name && targets.has(name))) continue;
+    if (!presetNames.some((name) => targets.some((target) => addonNameMatches(name, target)))) continue;
     if (preset.enabled === false) continue;
 
     preset.enabled = false;
@@ -207,10 +220,15 @@ export function createAioStreamsAdapter(instanceUrl, { proxyBase = '' } = {}) {
 // only attempted if earlier instances fail. params may include `proxyBase` for CORS proxy
 // support and `_postResolveOverride` to patch the resolved config before POSTing
 // (useful for testing without a TMDB key).
+// One internal addon can fail per attempt (AIOStreams' fetchManifests uses Promise.all, so only
+// the first rejection surfaces). Bound how many addons we're willing to disable across retry rounds
+// so a misbehaving instance can't loop forever.
+const MAX_DISABLE_ROUNDS = 12;
+
 export async function createWithFallbacks(instances, params) {
   const { proxyBase, _postResolveOverride, ...createParams } = params;
   const configOverride = _postResolveOverride || undefined;
-  const baseConfig = resolveConfigPayload({ ...createParams, configOverride });
+  let currentConfig = resolveConfigPayload({ ...createParams, configOverride });
 
   const createAttempt = async (instanceUrl, config) => {
     const adapter = createAioStreamsAdapter(instanceUrl, { proxyBase });
@@ -221,27 +239,33 @@ export async function createWithFallbacks(instances, params) {
     });
   };
 
-  let retryWarnings = [];
-  let disabledInternalAddons = [];
-  let { primary, results } = await tryCreateUntilSuccess(instances, (instanceUrl) => createAttempt(instanceUrl, baseConfig));
-  const allResults = [...results];
+  const disabledInternalAddons = [];
+  const allResults = [];
+  let primary = null;
+  let results = [];
 
-  if (!primary) {
-    const manifestAddons = sharedFailedManifestAddons(results);
-    if (manifestAddons.length > 0) {
-      const retryConfigResult = disableInternalAddons(baseConfig, manifestAddons);
-      if (retryConfigResult.disabledAddonNames.length > 0) {
-        disabledInternalAddons = retryConfigResult.disabledAddonNames;
-        retryWarnings = [
-          `AIOStreams disabled ${disabledInternalAddons.join(', ')} because ${disabledInternalAddons.length === 1 ? 'it was' : 'they were'} not reachable at the moment. Your account was created successfully and it is fine to continue using it. You can log in to the AIOStreams configuration later and try re-enabling ${disabledInternalAddons.length === 1 ? 'it' : 'them'} manually, or leave ${disabledInternalAddons.length === 1 ? 'it' : 'them'} disabled if you prefer.`,
-        ];
-        const retried = await tryCreateUntilSuccess(instances, (instanceUrl) => createAttempt(instanceUrl, retryConfigResult.config));
-        primary = retried.primary;
-        results = retried.results;
-        allResults.push(...retried.results);
-      }
-    }
+  // Keep disabling the internal addon that failed on every instance and retrying, until an
+  // instance accepts the config or there is nothing left we can disable.
+  for (let round = 0; round <= MAX_DISABLE_ROUNDS; round++) {
+    const attempt = await tryCreateUntilSuccess(instances, (instanceUrl) => createAttempt(instanceUrl, currentConfig));
+    results = attempt.results;
+    allResults.push(...attempt.results);
+    if (attempt.primary) { primary = attempt.primary; break; }
+
+    const manifestAddons = sharedFailedManifestAddons(attempt.results);
+    if (manifestAddons.length === 0) break;
+    const { config: nextConfig, disabledAddonNames } = disableInternalAddons(currentConfig, manifestAddons);
+    if (disabledAddonNames.length === 0) break;
+    disabledInternalAddons.push(...disabledAddonNames);
+    currentConfig = nextConfig;
   }
+
+  const uniqueDisabled = [...new Set(disabledInternalAddons)];
+  const retryWarnings = uniqueDisabled.length > 0
+    ? [
+        `AIOStreams disabled ${uniqueDisabled.join(', ')} because ${uniqueDisabled.length === 1 ? 'it was' : 'they were'} not reachable at the moment. Your account was created successfully and it is fine to continue using it. You can log in to the AIOStreams configuration later and try re-enabling ${uniqueDisabled.length === 1 ? 'it' : 'them'} manually, or leave ${uniqueDisabled.length === 1 ? 'it' : 'them'} disabled if you prefer.`,
+      ]
+    : [];
 
   if (!primary) {
     const allCors = results.every((r) => r.error?.includes('[CORS]'));
@@ -260,5 +284,5 @@ export async function createWithFallbacks(instances, params) {
     }
     throw new Error(`All AIOStreams instances failed:\n\n${errors}`);
   }
-  return { primary, all: allResults, disabledInternalAddons, retryWarnings };
+  return { primary, all: allResults, disabledInternalAddons: uniqueDisabled, retryWarnings };
 }

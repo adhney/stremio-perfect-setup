@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { ReactNode } from 'react';
-import { Gift, KeyRound, Search, TriangleAlert, Users } from 'lucide-react';
+import { Gift, KeyRound, Search, TriangleAlert, UserPlus, Users } from 'lucide-react';
 import { WizardShell } from '../components/WizardShell';
 import { NextButton } from '../components/NextButton';
 import { MarkdownText } from '../components/MarkdownText';
@@ -257,37 +257,71 @@ export function KeysStep({ keyIndex }: Props) {
             {DEBRID_SERVICES.map((service) => {
               const selected = credentials.debridServices.some(d => d.id === service.id);
               const logoUrl = resolveLogoUrl(service.logo);
+              const divider = selected ? 'var(--accent)' : 'var(--border)';
               return (
-                <button
+                <div
                   key={service.id}
-                  type="button"
-                  className={`wizard-hover-lift${selected ? '' : ' wizard-hover-lift--guide'}`}
-                  onClick={() => toggleDebridService(service.id)}
                   style={{
-                    '--wizard-hover-selected-bg': 'var(--panel-2)',
-                    '--wizard-hover-selected-border': 'var(--accent)',
-                    '--wizard-hover-selected-color': 'var(--text)',
-                    padding: '0.6rem 0.4rem',
                     border: `2px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
                     borderRadius: '10px',
                     background: selected ? 'var(--panel-2)' : 'var(--panel)',
+                    overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
+                    transition: 'border-color 0.15s ease, background 0.15s ease',
                   } as CSSProperties}
                 >
-                  {logoUrl ? (
-                    <img src={logoUrl} alt={service.name} style={{ height: '24px', width: '100%', objectFit: 'contain' }} />
-                  ) : (
-                    <span style={{ fontWeight: 700, fontSize: '0.75rem', color: 'var(--muted)' }}>{service.name[0]}</span>
+                  <button
+                    type="button"
+                    className="debrid-card__select"
+                    onClick={() => toggleDebridService(service.id)}
+                    aria-pressed={selected}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: 'inherit',
+                      cursor: 'pointer',
+                      padding: '0.6rem 0.4rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      width: '100%',
+                    }}
+                  >
+                    {logoUrl ? (
+                      <img src={logoUrl} alt={service.name} style={{ height: '24px', width: '100%', objectFit: 'contain' }} />
+                    ) : (
+                      <span style={{ fontWeight: 700, fontSize: '0.75rem', color: 'var(--muted)' }}>{service.name[0]}</span>
+                    )}
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text)', textAlign: 'center', lineHeight: 1.2 }}>
+                      {service.name}
+                    </span>
+                  </button>
+                  {service.url && (
+                    <a
+                      href={service.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="debrid-card__link"
+                      style={{
+                        borderTop: `1px solid ${divider}`,
+                        padding: '0.4rem 0.3rem',
+                        fontSize: '0.68rem',
+                        fontWeight: 600,
+                        color: 'var(--accent)',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.25rem',
+                      }}
+                    >
+                      <UserPlus size={11} style={{ flex: '0 0 auto' }} />
+                      Create Account
+                    </a>
                   )}
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text)', textAlign: 'center', lineHeight: 1.2 }}>
-                    {service.name}
-                  </span>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -304,13 +338,35 @@ export function KeysStep({ keyIndex }: Props) {
                     <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>
                       {service?.name} API Key
                     </span>
-                    <input
-                      type="password"
-                      value={debridService.apiKey}
-                      onChange={e => setDebridApiKey(debridService.id, e.target.value)}
-                      placeholder={`Paste your ${service?.name} API key...`}
-                      style={{ ...inputStyle, marginTop: '0.35rem' }}
-                    />
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.35rem', alignItems: 'stretch' }}>
+                      <input
+                        type="password"
+                        value={debridService.apiKey}
+                        onChange={e => setDebridApiKey(debridService.id, e.target.value)}
+                        placeholder={`Paste your ${service?.name} API key...`}
+                        style={{ ...inputStyle, flex: 1 }}
+                      />
+                      {service?.apiKeyUrl && (
+                        <a
+                          href={service.apiKeyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="wizard-secondary-btn"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            padding: '0.5rem 0.75rem',
+                            fontSize: '0.8125rem',
+                            whiteSpace: 'nowrap',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          <KeyRound size={14} style={{ flex: '0 0 auto' }} />
+                          Get API Key
+                        </a>
+                      )}
+                    </div>
                   </label>
                 );
               })}

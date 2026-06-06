@@ -157,7 +157,7 @@ export function Sidebar({ onClose }: Props) {
           </button>
           <button className={cls(WATCHLY_STEP)} onClick={() => goTo(WATCHLY_STEP)}>
             <StepIcon s={WATCHLY_STEP} />
-            <span>🤖 Watchly</span>
+            <span>🤖 Recommendations</span>
           </button>
           <button className={cls(INSTALL_STEP)} onClick={() => goTo(INSTALL_STEP)}>
             <StepIcon s={INSTALL_STEP} />

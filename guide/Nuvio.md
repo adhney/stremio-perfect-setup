@@ -50,7 +50,7 @@ Here are the main files and resources:
 * [**AIOMetadata Full Configuration**](../templates/AIOMetadata-All.json) (*JSON*)
    * Use this if you want the complete AIOMetadata configuration from this guide, import it in the *Configuration* tab.
    * This is the easiest option if you are starting fresh or want the closest match to the setup described here.
-* [**Nuvio Community Collections Pack**](https://nuvioapp.space/community-collections/nuvio-perfect-collections-incl-dynamic-backdrops-2)
+* [**Nuvio Community Collections Pack**](https://nuvio.tv/community-collections/nuvio-perfect-collections-incl-dynamic-backdrops-2)
    * This is the easiest way to add the collections pack directly through Nuvio.
    * If you already followed the setup steps above, this is usually the simplest option.
 * [**Nuvio Collections**](../templates/Nuvio-Collections.json) (*JSON*)

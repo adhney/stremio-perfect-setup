@@ -146,6 +146,24 @@
   transform: translateY(-1px);
 }
 
+/* Debrid service card: the selectable top zone and the "Create Account" link each
+   highlight on their own hover, with distinct treatments. */
+.debrid-card__select {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.debrid-card__select:hover,
+.debrid-card__select:focus-visible {
+  background: var(--panel-2);
+}
+.debrid-card__link {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.debrid-card__link:hover,
+.debrid-card__link:focus-visible {
+  background: var(--accent);
+  color: var(--text-on-accent) !important;
+}
+
 .wizard-catalog-list {
   display: flex;
   flex-direction: column;

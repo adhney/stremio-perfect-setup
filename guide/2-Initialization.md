@@ -31,10 +31,10 @@ For *Stremio* proceed directly [below](#️-stremio), for *Nuvio* scroll further
 ---
 ## **🚀 Nuvio**
 
-1. Create an account on [**Nuvio**](https://nuvioapp.space/) if you haven't created one yet.
+1. Create an account on [**Nuvio**](https://nuvio.tv/) if you haven't created one yet.
    * *This will be the account that stores your Nuvio profiles, addon setup, collections, and app settings.*
    * *Do not confuse this with your Stremio account. Nuvio uses its own account system.*
-2. Install the **Nuvio** app for your platform as linked on the [**Nuvio**](https://nuvioapp.space/) homepage.
+2. Install the **Nuvio** app for your platform as linked on the [**Nuvio**](https://nuvio.tv/) homepage.
    * **📢 IMPORTANT**: *Nuvio is not on all official app stores yet, so installation depends on your platform and may require sideloading or a manual install.*
    * *For Android and Android TV, it is already available on [**Play Store**](https://play.google.com/store/apps/details?id=com.nuvio.app).
    * *If you are using Windows, iOS, Tizen, WebOS, or any other platform, the process may be different. This is one of the reasons this chapter is still marked as work in progress.*
