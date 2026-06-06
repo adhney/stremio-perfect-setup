@@ -45,6 +45,14 @@ if [[ -z "${current_secret_key}" ]] && is_interactive; then
 fi
 env_upsert "${TERMINAL_ENV}" TURNSTILE_SECRET_KEY "${current_secret_key}"
 
+# Generate COOKIE_SECRET if not already set
+current_cookie_secret="$(env_get "${TERMINAL_ENV}" COOKIE_SECRET || true)"
+if [[ -z "${current_cookie_secret}" ]]; then
+  current_cookie_secret="$(openssl rand -hex 32)"
+  log "Generated COOKIE_SECRET for terminal service"
+fi
+env_upsert "${TERMINAL_ENV}" COOKIE_SECRET "${current_cookie_secret}"
+
 # Prompt for Terminal Hostname
 TERMINAL_HOSTNAME="$(env_get "${HOSTING_ROOT_ENV}" TERMINAL_HOSTNAME || true)"
 if [[ -z "${TERMINAL_HOSTNAME}" ]] && is_interactive; then
@@ -58,4 +66,4 @@ fi
 # Update root .env with TERMINAL_HOSTNAME
 env_upsert "${HOSTING_ROOT_ENV}" TERMINAL_HOSTNAME "${TERMINAL_HOSTNAME}"
 
-success "Configured terminal service: ${TERMINAL_HOSTNAME}"
+success "Configured terminal service: ${TERMINAL_HOSTNAME} (COOKIE_SECRET auto-generated)"
