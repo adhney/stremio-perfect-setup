@@ -1,4 +1,4 @@
-.sidebar-footer img {
+.sidebar-footer img:not(.sidebar-stats-platform-card__logo):not(.sidebar-stats-icon-item__logo) {
   width: 100%;
   max-width: 160px;
   height: auto;
