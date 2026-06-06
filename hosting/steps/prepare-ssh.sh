@@ -220,7 +220,7 @@ Before you configure the SSH alias, make sure the public key will be accepted by
 
 1. If you are still creating the VPS, paste the contents of ${KEY_PATH}.pub into the provider's SSH key field or upload that public key in the provider panel.
 2. If the VPS already exists, add the same public key with the provider's console or documented SSH-key flow.
-3. If password SSH access is available later, the script will show you an ssh-copy-id command after the next step.
+3. If password SSH access is available, the script can run ssh-copy-id for you after the next step.
 
 Public key file: ${KEY_PATH}.pub
 Review or copy it now with: cat ${KEY_PATH}.pub
@@ -296,6 +296,27 @@ update_ssh_config() {
   } >> "${SSH_CONFIG}"
 }
 
+try_ssh_copy_id() {
+  if ! is_interactive; then
+    return 0
+  fi
+
+  if [[ -z "${SSH_HOST}" || -z "${SSH_USER}" || -z "${KEY_PATH}" ]]; then
+    return 0
+  fi
+
+  if ! prompt_yes_no "Run ssh-copy-id now to install your public key on the VPS? The VPS will prompt you for its password." no; then
+    return 0
+  fi
+
+  log "Running ssh-copy-id — enter the VPS password when prompted."
+  if ssh-copy-id -i "${KEY_PATH}.pub" "${SSH_USER}@${SSH_HOST}"; then
+    success "SSH public key successfully installed on ${SSH_HOST}."
+  else
+    warn "ssh-copy-id failed. You will need to add the public key manually."
+  fi
+}
+
 show_final_instructions() {
   local message=""
   local copy_command=""
@@ -336,6 +357,7 @@ show_key_install_guidance
 collect_connection_details
 configure_ssh_alias
 update_ssh_config
+try_ssh_copy_id
 
 if [[ -n "${HOSTING_SSH_TARGET_FILE:-}" ]]; then
   {
