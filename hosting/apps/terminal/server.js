@@ -12,10 +12,16 @@ app.use(cookieParser());
 // Configuration from environment
 const TURNSTILE_SITE_KEY = process.env.TURNSTILE_SITE_KEY || '';
 const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || '';
-const TERMINAL_MAX_CLIENTS = parseInt(process.env.TERMINAL_MAX_CLIENTS || '5');
-const SESSION_TIMEOUT_SECONDS = parseInt(process.env.SESSION_TIMEOUT_SECONDS || '1800');
-const COOKIE_SECRET = crypto.randomBytes(32).toString('hex');
+const TERMINAL_MAX_CLIENTS = Math.max(1, parseInt(process.env.TERMINAL_MAX_CLIENTS || '5') || 5);
+const SESSION_TIMEOUT_SECONDS = Math.max(30, parseInt(process.env.SESSION_TIMEOUT_SECONDS || '1800') || 1800);
+const COOKIE_SECRET = process.env.COOKIE_SECRET || crypto.randomBytes(32).toString('hex');
 const COOKIE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// Validate required environment variables
+if (!TURNSTILE_SITE_KEY || !TURNSTILE_SECRET_KEY) {
+  console.error('Error: TURNSTILE_SITE_KEY or TURNSTILE_SECRET_KEY not set in environment');
+  process.exit(1);
+}
 
 // Start WeTTY subprocess on internal port 3001
 let wettyProcess = null;
@@ -57,12 +63,15 @@ function verifyCookie(cookie) {
   if (parts.length !== 3) return null;
 
   const [sessionId, timestamp, providedHmac] = parts;
+  const ts = parseInt(timestamp);
+  if (isNaN(ts)) return null;
+
   const data = `${sessionId}|${timestamp}`;
   const expectedHmac = crypto.createHmac('sha256', COOKIE_SECRET).update(data).digest('base64');
 
   if (providedHmac !== expectedHmac) return null;
 
-  const age = Date.now() - parseInt(timestamp);
+  const age = Date.now() - ts;
   if (age > COOKIE_TTL) return null;
 
   return sessionId;
@@ -124,6 +133,7 @@ app.post('/validate', async (req, res) => {
         secret: TURNSTILE_SECRET_KEY,
         response: token,
       }),
+      timeout: 5000,
     });
 
     const { success, error_codes } = await verification.json();
