@@ -1,3 +1,48 @@
+/*
+ * Terminal Service Express Gateway and Authentication Handler
+ *
+ * Purpose:
+ *   This Express.js application serves as an authentication and proxy gateway
+ *   for the browser-based terminal service. It implements a Cloudflare
+ *   Turnstile challenge-based authentication flow, issues HMAC-signed session
+ *   cookies upon successful challenge completion, and proxies authenticated
+ *   requests to the WeTTY terminal daemon (WebSocket proxy for xterm.js).
+ *
+ * Architecture:
+ *   - Express gateway on port 3000 (external)
+ *   - WeTTY daemon subprocess on localhost:3001 (internal)
+ *   - HTTP proxy with WebSocket upgrade for terminal sessions
+ *
+ * Request Flow:
+ *   1. Unauthenticated GET / -> Landing page with Turnstile widget
+ *   2. POST /validate with Turnstile token -> Validate via Cloudflare API
+ *   3. On success -> Issue signed HMAC-SHA256 cookie, redirect to /term/
+ *   4. GET /term/* with valid cookie -> Proxy to WeTTY daemon
+ *   5. Expired/invalid cookies -> Redirect back to landing page
+ *
+ * Security Model:
+ *   - Turnstile Challenge: Prevents automated abuse via Cloudflare's
+ *     managed challenge (CAPTCHA/device fingerprint by Cloudflare)
+ *   - HMAC Cookie Signing: Ensures cookies cannot be forged; tampering is
+ *     detectable via signature verification
+ *   - Cookie TTL: 24 hours (COOKIE_TTL); older cookies are rejected
+ *   - HTTPOnly + Secure + SameSite=Strict: Standard session hardening
+ *   - Session Isolation: run-session.sh ensures per-connection tmpfs isolation
+ *
+ * Environment Variables:
+ *   - TURNSTILE_SITE_KEY: Public site key for Turnstile widget (required)
+ *   - TURNSTILE_SECRET_KEY: Private secret for server-side validation (required)
+ *   - COOKIE_SECRET: HMAC-SHA256 key for signing session cookies (required)
+ *   - TERMINAL_MAX_CLIENTS: Max concurrent WeTTY sessions (default 5)
+ *   - SESSION_TIMEOUT_SECONDS: Hard timeout per session, sec (default 1800)
+ *   - GIT_REPO_OWNER: GitHub account for sparse clone (default ssterjo)
+ *
+ * Notes:
+ *   - WeTTY is restarted automatically if it exits (5s retry delay)
+ *   - Proxy errors are caught and return a 502 "Terminal service unavailable"
+ *   - All 404s and unmatched routes return "Not found"
+ */
+
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
