@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:20-slim
 
 # Install system tools needed by main.sh and terminal operations
 RUN apk add --no-cache \
@@ -24,7 +24,7 @@ RUN npm install --production
 COPY --chown=root:root hosting/apps/terminal/server.js /app/
 
 # Copy per-session wrapper script
-COPY --chown=root:root hosting/apps/terminal/run-session.sh /usr/local/bin/
+COPY --chown=root:root apps/terminal/run-session.sh /usr/local/bin/
 RUN chmod 755 /usr/local/bin/run-session.sh
 
 EXPOSE 3000
