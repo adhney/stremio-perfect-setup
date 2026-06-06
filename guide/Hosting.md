@@ -20,12 +20,12 @@ Self-hosting is the next level for achieving the ultimate streaming experience. 
 
 * **Server / VPS**: Obviously the most important component for self-hosting, either a local server at home, or a cloud VPS. Check out [**Viren's Guide**](https://guides.viren070.me/selfhosting/oracle) for instructions on how to prepare one of the best free VPS solutions currently around.
 * **Domain Name**: Needed for publicly accessing your instances through HTTPS URLs like `aiostreams.yourdomain.com`.
-* **Cloudflare Account**: Optional, but highly recommended to protect your server's IP and access by proxying it through Cloudflare, and if you want *Cloudflare DDNS* to automatically update DNS records when you make changes.
-* **Supabase Account**: Optional if you want to separate the data layer by storing the tables (currently automated for *AIOStreams*, *AIOMetadata*, and/or *AIOManager*) on a cloud database instead of locally.
+* **Cloudflare Account**: *Optional*, but highly recommended to protect your server's IP and access by proxying it through Cloudflare, and if you want *Cloudflare DDNS* to automatically update DNS records when you make changes.
+* **Supabase Account**: *Optional* if you want to separate the data layer by storing the tables (currently automated for *AIOStreams*, *AIOMetadata*, and/or *AIOManager*) on a cloud database instead of locally.
 
 >**📢 DISCLAIMER:**
 >* The setup scripts guide you step by step through everything. Normally you don't need to understand Docker, DNS, or server administration beforehand. However, as mentioned in the beginning, you do need to have at least some basic technical understanding to be able to work through this, and even debug in case issues arise. These are complex topics and may vary depending on many factors, and I cannot address them all. Please take everything with a grain of salt and tread carefully. 
-> This guide and scripts are currently a work in progress. I am not responsible for anything that might happen to your data, server, configurations, or anything else. The files are openly available for anyone to study and tinker with, and I'm doing this for fun and just trying to help. Please don't come to me with any complaints or asking for support on this, I really can't help you.
+>This guide and scripts are currently a **work in progress**. I am not responsible for anything that might happen to your data, server, configurations, or anything else. The files are openly available for anyone to study and tinker with, and I'm doing this for fun and just trying to help. Please don't come to me with any complaints or asking for support on this, I really can't help you.
 >* 🙏 This guide is based of the amazing work of [**Viren**](https://guides.viren070.me/selfhosting), and the scripts here actually fetch [**Viren's Docker Templates**](https://github.com/Viren070/docker-compose-template) from GitHub dynamically to make use of the latest configurations and modules and adds the automation layer on top. So a big thanks to **Viren** for all the effort put into the templates.
 
 ## Instructions
