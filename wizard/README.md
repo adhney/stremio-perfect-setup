@@ -96,7 +96,7 @@ back to the catalog name emoji and built-in labels.
 ### Dynamic AIOStreams Params
 
 Each visible non-alert field in `templates/AIOStreams.json` is sent as a dynamic GA4 param unless
-denied in config. The param name is derived from the template field id with:
+denied in config, with password fields excluded. The param name is derived from the template field id with:
 
 - camelCase -> snake_case
 - non-alphanumeric chars -> `_`

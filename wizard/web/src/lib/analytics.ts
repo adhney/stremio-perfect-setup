@@ -10,6 +10,7 @@ import {
 } from './keyScreens';
 import { DEBRID_SERVICES } from './services';
 import { wizardMetadata } from './integration';
+import { formatAioAnalyticsValue, shouldTrackAioField, toAioAnalyticsParamName } from './analytics-helpers';
 import type { AccountMode, AioStreamsInputs, CatalogSelection, Credentials, LoadedTemplates } from '../store/wizard';
 
 // @ts-ignore
@@ -178,6 +179,7 @@ export function buildWizardCompletionPayload({
   const visibleAioFields = getVisibleAioFields(templates?.aiostreams, aioStreamsInputs, credentials);
   for (const field of visibleAioFields) {
     if (!field.id) continue;
+    if (!shouldTrackAioField(field)) continue;
 
     const paramName = toAioAnalyticsParamName(field.id);
     if (deniedParams.has(paramName)) continue;
@@ -303,28 +305,6 @@ function getVisibleAioFields(
     out.push({ id: field.id, type: field.type, value: readNested(field.id) ?? field.default });
   }
   return out;
-}
-
-function formatAioAnalyticsValue(type: string | undefined, value: unknown) {
-  if (Array.isArray(value)) {
-    if (value.length === 0) return 'none';
-    return joinWithinLimit(value.map((entry) => String(entry)));
-  }
-
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  if (typeof value === 'number') return value;
-
-  const stringValue = String(value ?? '').trim();
-  if (!stringValue) return undefined;
-  return stringValue;
-}
-
-function toAioAnalyticsParamName(fieldId: string) {
-  return `aio_${fieldId
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .replace(/[^A-Za-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .toLowerCase()}`;
 }
 
 function joinWithinLimit(values: string[], maxLength = 100) {
