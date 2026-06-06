@@ -65,7 +65,28 @@
             <span>Buy me a coffee</span>
           </a>
         </div>
-        <section class="sidebar-stat-card" aria-label="Guide and wizard activity">
+        <section class="sidebar-stat-card" aria-label="Guide and wizard activity" data-sidebar-stats-card data-sidebar-stats-open="false">
+          <button
+            class="sidebar-stat-toggle"
+            type="button"
+            data-sidebar-stats-toggle
+            aria-expanded="false"
+            hidden
+          >
+            <span class="sidebar-stat-toggle__label">Setup stats</span>
+            <span class="sidebar-stat-toggle__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <path d="M4 15 12 8l8 7" />
+              </svg>
+            </span>
+          </button>
+          <div class="sidebar-stats-panel" data-sidebar-stats-panel aria-hidden="true">
+            <div class="sidebar-stats-panel__header">
+              <strong>Wizard Setup Statistics</strong>
+              <span>Most common completion choices</span>
+            </div>
+            <div class="sidebar-stats-panel__content" data-sidebar-stats-panel-content></div>
+          </div>
           <div class="sidebar-stat-grid">
             <div class="sidebar-stat-item">
               <span class="sidebar-stat-item__label">Guide completed</span>

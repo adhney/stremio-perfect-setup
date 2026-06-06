@@ -6,6 +6,7 @@
   var homeUrl = "/";
   var statsUrl = "";
   var guideCompletionState = null;
+  var sidebarStatsPanelsInitialized = false;
 
   if (docsData) {
     try {
@@ -553,6 +554,304 @@
     });
   }
 
+  function clearNode(node) {
+    while (node && node.firstChild) {
+      node.removeChild(node.firstChild);
+    }
+  }
+
+  function setSidebarStatsOpen(card, open) {
+    if (!card) return;
+    var toggle = card.querySelector("[data-sidebar-stats-toggle]");
+    var panel = card.querySelector("[data-sidebar-stats-panel]");
+    card.setAttribute("data-sidebar-stats-open", open ? "true" : "false");
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    if (panel) {
+      panel.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+    if (open) {
+      updateSidebarStatsPanelLayout(card);
+    }
+  }
+
+  function closeSidebarStatsPanels(exceptCard) {
+    var cards = document.querySelectorAll("[data-sidebar-stats-card]");
+    Array.prototype.forEach.call(cards, function (card) {
+      if (exceptCard && card === exceptCard) return;
+      setSidebarStatsOpen(card, false);
+    });
+  }
+
+  function setupSidebarStatsPanels() {
+    if (sidebarStatsPanelsInitialized) return;
+    sidebarStatsPanelsInitialized = true;
+
+    document.addEventListener("click", function (event) {
+      var cards = document.querySelectorAll("[data-sidebar-stats-card]");
+      Array.prototype.forEach.call(cards, function (card) {
+        if (card.contains(event.target)) return;
+        setSidebarStatsOpen(card, false);
+      });
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key !== "Escape") return;
+      closeSidebarStatsPanels();
+    });
+
+    window.addEventListener("resize", function () {
+      var cards = document.querySelectorAll("[data-sidebar-stats-card]");
+      Array.prototype.forEach.call(cards, function (card) {
+        updateSidebarStatsPanelLayout(card);
+      });
+    });
+  }
+
+  function updateSidebarStatsPanelLayout(card) {
+    if (!card) return;
+    var rootStyle = window.getComputedStyle(document.documentElement);
+    var headerHeight = parseFloat(rootStyle.getPropertyValue("--header-height")) || 74;
+    var rect = card.getBoundingClientRect();
+    var availableHeight = Math.max(250, Math.floor(rect.top - headerHeight - 8));
+    card.style.setProperty("--sidebar-stats-max-height", availableHeight + "px");
+  }
+
+  function resolveStatsAssetPath(path) {
+    if (!path) return "";
+    return new URL(String(path).replace(/^\/+/, ""), new URL(homeUrl, window.location.href)).toString();
+  }
+
+  function createStatsModeIcon(type) {
+    var svgNs = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(svgNs, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    svg.classList.add("sidebar-stats-mode-icon");
+
+    function path(d) {
+      var el = document.createElementNS(svgNs, "path");
+      el.setAttribute("d", d);
+      el.setAttribute("fill", "none");
+      el.setAttribute("stroke", "currentColor");
+      el.setAttribute("stroke-width", "2");
+      el.setAttribute("stroke-linecap", "round");
+      el.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(el);
+    }
+
+    if (type === "create") {
+      path("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2");
+      path("M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z");
+      path("M19 8v6");
+      path("M22 11h-6");
+      return svg;
+    }
+
+    path("M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4");
+    path("m10 17 5-5-5-5");
+    path("M15 12H3");
+    return svg;
+  }
+
+  function createStatsImage(path, alt, className) {
+    var img = document.createElement("img");
+    img.className = className;
+    img.src = resolveStatsAssetPath(path);
+    img.alt = alt || "";
+    img.loading = "lazy";
+    return img;
+  }
+
+  function renderSidebarStatsRow(labelText, items, variant) {
+    var row = document.createElement("section");
+    row.className = "sidebar-stats-row";
+
+    var label = document.createElement("div");
+    label.className = "sidebar-stats-row__label";
+    label.textContent = labelText;
+    row.appendChild(label);
+
+    var grid = document.createElement("div");
+    grid.className = "sidebar-stats-icon-row sidebar-stats-icon-row--" + variant;
+
+    (Array.isArray(items) ? items : []).forEach(function (item) {
+      var box = document.createElement("div");
+      box.className = "sidebar-stats-icon-item";
+      if (item && item.title) {
+        box.setAttribute("title", item.title);
+      }
+
+      var iconWrap = document.createElement("div");
+      iconWrap.className = "sidebar-stats-icon-item__icon";
+
+      if (item.logoPath) {
+        iconWrap.appendChild(createStatsImage(item.logoPath, item.label || item.title || "", "sidebar-stats-icon-item__logo"));
+      } else if (item.emoji) {
+        var emoji = document.createElement("span");
+        emoji.className = "sidebar-stats-icon-item__emoji";
+        emoji.textContent = item.emoji;
+        iconWrap.appendChild(emoji);
+      } else if (item.iconSvg) {
+        iconWrap.appendChild(item.iconSvg);
+      }
+
+      box.appendChild(iconWrap);
+
+      var count = document.createElement("strong");
+      count.className = "sidebar-stats-icon-item__count";
+      count.textContent = item.countText || formatNumber(asNonNegativeInteger(item.count));
+      box.appendChild(count);
+      grid.appendChild(box);
+    });
+
+    row.appendChild(grid);
+    return row;
+  }
+
+  function renderSidebarStatsAccounts(summary) {
+    var section = document.createElement("section");
+    section.className = "sidebar-stats-accounts";
+
+    var totalCard = document.createElement("div");
+    totalCard.className = "sidebar-stats-total-card";
+
+    var totalLabel = document.createElement("span");
+    totalLabel.className = "sidebar-stats-total-card__label";
+    totalLabel.textContent = "Total";
+    totalCard.appendChild(totalLabel);
+
+    var totalValue = document.createElement("strong");
+    totalValue.className = "sidebar-stats-total-card__value";
+    totalValue.textContent = formatNumber(asNonNegativeInteger(summary && summary.accounts ? summary.accounts.total : 0));
+    totalCard.appendChild(totalValue);
+
+    section.appendChild(totalCard);
+
+    var platformGrid = document.createElement("div");
+    platformGrid.className = "sidebar-stats-platform-grid";
+
+    (summary && summary.accounts && Array.isArray(summary.accounts.platforms) ? summary.accounts.platforms : []).forEach(function (platform) {
+      var card = document.createElement("div");
+      card.className = "sidebar-stats-platform-card";
+
+      var head = document.createElement("div");
+      head.className = "sidebar-stats-platform-card__head";
+      if (platform.logoPath) {
+        head.appendChild(createStatsImage(platform.logoPath, platform.label || "", "sidebar-stats-platform-card__logo"));
+      }
+      card.appendChild(head);
+
+      var total = document.createElement("strong");
+      total.className = "sidebar-stats-platform-card__value";
+      total.textContent = formatNumber(asNonNegativeInteger(platform.total));
+      card.appendChild(total);
+
+      var modes = document.createElement("div");
+      modes.className = "sidebar-stats-platform-card__modes";
+
+      [
+        { type: "signin", value: platform.signin, title: "Existing" },
+        { type: "create", value: platform.create, title: "New" }
+      ].forEach(function (mode) {
+        var modeBox = document.createElement("div");
+        modeBox.className = "sidebar-stats-platform-card__mode";
+        modeBox.setAttribute("title", mode.title);
+        modeBox.appendChild(createStatsModeIcon(mode.type));
+        var modeValue = document.createElement("strong");
+        modeValue.textContent = formatNumber(asNonNegativeInteger(mode.value));
+        modeBox.appendChild(modeValue);
+        modes.appendChild(modeBox);
+      });
+
+      card.appendChild(modes);
+      platformGrid.appendChild(card);
+    });
+
+    section.appendChild(platformGrid);
+    return section;
+  }
+
+  function renderSidebarStatsSummary(summary) {
+    var cards = document.querySelectorAll("[data-sidebar-stats-card]");
+    if (!cards.length) return;
+
+    Array.prototype.forEach.call(cards, function (card) {
+      var toggle = card.querySelector("[data-sidebar-stats-toggle]");
+      var panel = card.querySelector("[data-sidebar-stats-panel]");
+      var content = card.querySelector("[data-sidebar-stats-panel-content]");
+      var header = panel ? panel.querySelector(".sidebar-stats-panel__header span") : null;
+      var hasSummary = !!(
+        summary
+        && asNonNegativeInteger(summary.rowCount) > 0
+      );
+
+      if (!toggle || !panel || !content || !hasSummary) {
+        if (toggle) toggle.hidden = true;
+        if (content) clearNode(content);
+        setSidebarStatsOpen(card, false);
+        return;
+      }
+
+      toggle.hidden = false;
+      clearNode(content);
+
+      content.appendChild(renderSidebarStatsAccounts(summary));
+      updateSidebarStatsPanelLayout(card);
+
+      if (summary.debrid && summary.debrid.length) {
+        content.appendChild(renderSidebarStatsRow("Debrid", summary.debrid, "logos"));
+      }
+      if (summary.audio && summary.audio.length) {
+        content.appendChild(renderSidebarStatsRow("Audio", summary.audio, "emoji"));
+      }
+      if (summary.subtitles && summary.subtitles.length) {
+        content.appendChild(renderSidebarStatsRow("Subtitles", summary.subtitles, "emoji"));
+      }
+      if (summary.catalogs && summary.catalogs.discover && summary.catalogs.discover.length) {
+        content.appendChild(renderSidebarStatsRow("Discover", summary.catalogs.discover, "discover"));
+      }
+      if (summary.catalogs && summary.catalogs.categories && summary.catalogs.categories.length) {
+        content.appendChild(renderSidebarStatsRow("Categories", summary.catalogs.categories, "categories"));
+      }
+      if (summary.formatter && summary.formatter.length) {
+        content.appendChild(renderSidebarStatsRow("Formatter", summary.formatter, "formatter"));
+      }
+
+      content.appendChild(
+        renderSidebarStatsRow(
+          "Addons",
+          [
+            { emoji: "🍥", title: "Anime", count: summary.addons ? summary.addons.anime : 0 },
+            {
+              emoji: "🌐",
+              title: "HTTP",
+              countText: "➕ " + formatNumber(asNonNegativeInteger(summary.addons ? summary.addons.httpInstall : 0)) + " / 🔒 " + formatNumber(asNonNegativeInteger(summary.addons ? summary.addons.httpOnly : 0))
+            },
+            { emoji: "🧊", title: "Debridio", count: summary.addons ? summary.addons.debridio : 0 }
+          ],
+          "addons"
+        )
+      );
+
+      if (header) {
+        header.textContent = "Popular Choices";
+      }
+
+      toggle.onclick = function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        var isOpen = card.getAttribute("data-sidebar-stats-open") === "true";
+        closeSidebarStatsPanels(card);
+        setSidebarStatsOpen(card, !isOpen);
+      };
+    });
+
+    setupSidebarStatsPanels();
+  }
+
   function loadGuideCompletionCount() {
     var guideNodes = document.querySelectorAll("[data-guide-completion-count]");
     var wizardNodes = document.querySelectorAll("[data-wizard-account-count]");
@@ -571,6 +870,7 @@
     }).then(function (stats) {
       applyGuideCompletionCount(stats.totalCompletions, stats.updatedAt, true);
       applyWizardAccountCount(stats && stats.wizard ? stats.wizard.totalAccountsCreated : 0, stats.updatedAt, true);
+      renderSidebarStatsSummary(stats && stats.wizard && stats.wizard.analytics ? stats.wizard.analytics.summary : null);
     }).catch(function () {});
   }
 

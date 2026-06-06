@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
-import { ChevronRight, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ChevronRight, Check, LogIn, UserPlus } from 'lucide-react';
 import { useWizard } from '../store/wizard';
-import { getGuideStatsUrl } from '../lib/site';
+import { getGuideStatsUrl, resolveSiteUrl } from '../lib/site';
 import {
   ACTIVE_KEY_SCREENS,
   AIO_SECTION_START_STEP,
@@ -15,27 +15,139 @@ interface Props {
   onClose: () => void;
 }
 
+interface SidebarStatsLogoItem {
+  id: string;
+  label: string;
+  logoPath: string;
+  count: number;
+}
+
+interface SidebarStatsEmojiItem {
+  emoji?: string;
+  title?: string;
+  count: number;
+}
+
+interface SidebarStatsFormatterItem {
+  id: string;
+  emoji?: string;
+  label: string;
+  title?: string;
+  count: number;
+}
+
+interface SidebarStatsPlatform {
+  id: string;
+  label: string;
+  logoPath: string;
+  total: number;
+  signin: number;
+  create: number;
+}
+
+interface SidebarStatsSummary {
+  accounts?: {
+    total: number;
+    platforms: SidebarStatsPlatform[];
+  };
+  debrid?: SidebarStatsLogoItem[];
+  audio?: SidebarStatsEmojiItem[];
+  subtitles?: SidebarStatsEmojiItem[];
+  catalogs?: {
+    discover: SidebarStatsEmojiItem[];
+    categories: SidebarStatsEmojiItem[];
+  };
+  formatter?: SidebarStatsFormatterItem[];
+  addons?: {
+    anime: number;
+    debridio: number;
+    httpInstall: number;
+    httpOnly: number;
+  };
+  rowCount?: number;
+}
+
+interface GuideStatsResponse {
+  totalCompletions?: number;
+  wizard?: {
+    totalAccountsCreated?: number;
+    analytics?: {
+      summary?: SidebarStatsSummary;
+    };
+  };
+}
+
 export function Sidebar({ onClose }: Props) {
   const { step, maxReachedStep, aioSections, setStep } = useWizard();
   const guideCountRef = useRef<HTMLSpanElement>(null);
   const wizardCountRef = useRef<HTMLSpanElement>(null);
+  const statsCardRef = useRef<HTMLElement>(null);
+  const [statsSummary, setStatsSummary] = useState<SidebarStatsSummary | null>(null);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
 
   // Load and animate the guide and wizard counts
   useEffect(() => {
     const BASELINE = 15000;
     fetch(getGuideStatsUrl(), { cache: 'no-store' })
       .then(r => r.json())
-      .then((data: { totalCompletions?: number; wizard?: { totalAccountsCreated?: number } }) => {
+      .then((data: GuideStatsResponse) => {
         const guideTotal = data?.totalCompletions ?? BASELINE;
         const wizardTotal = data?.wizard?.totalAccountsCreated ?? 0;
         animateCount(guideCountRef.current, guideTotal);
         animateCount(wizardCountRef.current, wizardTotal);
+        setStatsSummary(data?.wizard?.analytics?.summary?.rowCount ? data.wizard.analytics.summary : null);
       })
       .catch(() => {
         if (guideCountRef.current) guideCountRef.current.textContent = new Intl.NumberFormat().format(BASELINE);
         if (wizardCountRef.current) wizardCountRef.current.textContent = '0';
+        setStatsSummary(null);
       });
   }, []);
+
+  useEffect(() => {
+    if (!isStatsOpen) return;
+
+    function handleClick(event: MouseEvent) {
+      const card = statsCardRef.current;
+      if (!card || card.contains(event.target as Node)) return;
+      setIsStatsOpen(false);
+    }
+
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsStatsOpen(false);
+      }
+    }
+
+    document.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [isStatsOpen]);
+
+  useEffect(() => {
+    if (!statsSummary?.rowCount) {
+      setIsStatsOpen(false);
+    }
+  }, [statsSummary]);
+
+  useEffect(() => {
+    function updateLayout() {
+      const card = statsCardRef.current;
+      if (!card) return;
+      const rootStyle = getComputedStyle(document.documentElement);
+      const headerHeight = Number.parseFloat(rootStyle.getPropertyValue('--header-height')) || 74;
+      const rect = card.getBoundingClientRect();
+      const availableHeight = Math.max(250, Math.floor(rect.top - headerHeight - 8));
+      card.style.setProperty('--sidebar-stats-max-height', `${availableHeight}px`);
+    }
+
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
+  }, [isStatsOpen, statsSummary]);
 
   function animateCount(node: HTMLElement | null, target: number) {
     if (!node) return;
@@ -50,6 +162,8 @@ export function Sidebar({ onClose }: Props) {
     }
     requestAnimationFrame(frame);
   }
+
+  const hasStatsSummary = Boolean(statsSummary?.rowCount);
 
   const n = aioSections.length;
   const CATALOGS_STEP = getCatalogStep(n);
@@ -193,7 +307,43 @@ export function Sidebar({ onClose }: Props) {
             <span>Buy me a coffee</span>
           </a>
         </div>
-        <section className="sidebar-stat-card" aria-label="Guide and wizard activity">
+        <section
+          ref={statsCardRef}
+          className="sidebar-stat-card"
+          aria-label="Guide and wizard activity"
+          data-sidebar-stats-card
+          data-sidebar-stats-open={isStatsOpen ? 'true' : 'false'}
+        >
+          <button
+            className="sidebar-stat-toggle"
+            type="button"
+            aria-expanded={isStatsOpen}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              if (!hasStatsSummary) return;
+              setIsStatsOpen(open => !open);
+            }}
+            hidden={!hasStatsSummary}
+          >
+            <span className="sidebar-stat-toggle__label">Toggle setup stats</span>
+            <span className="sidebar-stat-toggle__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <path d="M4 15 12 8l8 7" />
+              </svg>
+            </span>
+          </button>
+          <div className="sidebar-stats-panel" aria-hidden={!isStatsOpen}>
+            <div className="sidebar-stats-panel__header">
+              <strong>Wizard Setup Statistics</strong>
+              <span>Popular Choices</span>
+            </div>
+            <div className="sidebar-stats-panel__content">
+              {hasStatsSummary ? (
+                <SidebarStatsSummaryPanel summary={statsSummary!} />
+              ) : null}
+            </div>
+          </div>
           <div className="sidebar-stat-grid">
             <div className="sidebar-stat-item">
               <span className="sidebar-stat-item__label">Guide completed</span>
@@ -213,5 +363,129 @@ export function Sidebar({ onClose }: Props) {
         </div>
       </div>
     </div>
+  );
+}
+
+function SidebarStatsSummaryPanel({ summary }: { summary: SidebarStatsSummary }) {
+  const debrid = summary.debrid ?? [];
+  const audio = summary.audio ?? [];
+  const subtitles = summary.subtitles ?? [];
+  const discover = summary.catalogs?.discover ?? [];
+  const categories = summary.catalogs?.categories ?? [];
+  const formatter = summary.formatter ?? [];
+
+  return (
+    <>
+      <section className="sidebar-stats-accounts">
+        <div className="sidebar-stats-total-card">
+          <span className="sidebar-stats-total-card__label">Total</span>
+          <strong className="sidebar-stats-total-card__value">{new Intl.NumberFormat().format(summary.accounts?.total ?? 0)}</strong>
+        </div>
+        <div className="sidebar-stats-platform-grid">
+          {(summary.accounts?.platforms ?? []).map((platform) => (
+            <div key={platform.id} className="sidebar-stats-platform-card">
+              <div className="sidebar-stats-platform-card__head">
+                <img className="sidebar-stats-platform-card__logo" src={resolveSiteUrl(platform.logoPath)} alt={platform.label} />
+              </div>
+              <strong className="sidebar-stats-platform-card__value">{new Intl.NumberFormat().format(platform.total)}</strong>
+              <div className="sidebar-stats-platform-card__modes">
+                <div className="sidebar-stats-platform-card__mode" title="Existing">
+                  <LogIn size={12} className="sidebar-stats-mode-icon" />
+                  <strong>{new Intl.NumberFormat().format(platform.signin)}</strong>
+                </div>
+                <div className="sidebar-stats-platform-card__mode" title="New">
+                  <UserPlus size={12} className="sidebar-stats-mode-icon" />
+                  <strong>{new Intl.NumberFormat().format(platform.create)}</strong>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {debrid.length > 0 ? (
+        <StatsRow
+          label="Debrid"
+          variant="logos"
+          items={debrid.map((item) => ({
+            key: item.id,
+            title: item.label,
+            count: item.count,
+            logoPath: item.logoPath,
+          }))}
+        />
+      ) : null}
+
+      {audio.length > 0 ? <StatsRow label="Audio" variant="emoji" items={audio.map(toEmojiRowItem)} /> : null}
+      {subtitles.length > 0 ? <StatsRow label="Subtitles" variant="emoji" items={subtitles.map(toEmojiRowItem)} /> : null}
+      {discover.length > 0 ? <StatsRow label="Discover" variant="discover" items={discover.map(toEmojiRowItem)} /> : null}
+      {categories.length > 0 ? <StatsRow label="Categories" variant="categories" items={categories.map(toEmojiRowItem)} /> : null}
+      {formatter.length > 0 ? (
+        <StatsRow
+          label="Formatter"
+          variant="formatter"
+          items={formatter.map((item) => ({
+            key: item.id,
+            title: item.title ?? item.label,
+            count: item.count,
+            emoji: item.emoji,
+          }))}
+        />
+      ) : null}
+
+      <StatsRow
+        label="Addons"
+        variant="addons"
+        items={[
+          { key: 'anime', title: 'Anime', count: summary.addons?.anime ?? 0, emoji: '🍥' },
+          {
+            key: 'http',
+            title: 'HTTP',
+            countText: `➕ ${new Intl.NumberFormat().format(summary.addons?.httpInstall ?? 0)} / 🔒 ${new Intl.NumberFormat().format(summary.addons?.httpOnly ?? 0)}`,
+            emoji: '🌐',
+          },
+          { key: 'debridio', title: 'Debridio', count: summary.addons?.debridio ?? 0, emoji: '🧊' },
+        ]}
+      />
+    </>
+  );
+}
+
+function toEmojiRowItem(item: SidebarStatsEmojiItem, index: number) {
+  return {
+    key: `${item.title ?? item.emoji ?? 'item'}-${index}`,
+    title: item.title ?? item.emoji ?? '',
+    count: item.count,
+    emoji: item.emoji,
+  };
+}
+
+interface StatsRowItem {
+  key: string;
+  title: string;
+  count?: number;
+  countText?: string;
+  emoji?: string;
+  logoPath?: string;
+}
+
+function StatsRow({ label, items, variant }: { label: string; items: StatsRowItem[]; variant: string }) {
+  return (
+    <section className="sidebar-stats-row">
+      <div className="sidebar-stats-row__label">{label}</div>
+      <div className={`sidebar-stats-icon-row sidebar-stats-icon-row--${variant}`}>
+        {items.map((item) => (
+          <div key={item.key} className="sidebar-stats-icon-item" title={item.title}>
+            <div className="sidebar-stats-icon-item__icon">
+              {item.logoPath ? <img className="sidebar-stats-icon-item__logo" src={resolveSiteUrl(item.logoPath)} alt={item.title} /> : null}
+              {!item.logoPath && item.emoji ? <span className="sidebar-stats-icon-item__emoji">{item.emoji}</span> : null}
+            </div>
+            <strong className="sidebar-stats-icon-item__count">
+              {item.countText ?? new Intl.NumberFormat().format(item.count ?? 0)}
+            </strong>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

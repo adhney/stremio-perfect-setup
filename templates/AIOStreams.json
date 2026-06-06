@@ -274,7 +274,7 @@
       {
         "__if": "inputs.debridio",
         "id": "debridioApiKey",
-        "name": "🧊 Debridio API Key",
+        "name": "Debridio API Key",
         "description": "Paste your Debridio API key, found in your Debridio [account settings](https://debridio.com/account). The same key is used for both the Debridio Scraper and the Watchtower addon.",
         "type": "password",
         "required": true

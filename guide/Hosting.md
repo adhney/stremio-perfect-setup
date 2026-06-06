@@ -178,7 +178,7 @@ The scripts have been designed in a modular approach, meaning they can be extend
 * **`modules/`**: one script per addon or task (for example `aiostreams.sh` sets AIOStreams defaults, `all.supabase.sh` provisions Supabase schemas). The script discovers and runs the ones matching your selection. Add your own here to extend the setup.
 * **`lib/`**: shared helpers for logging, prompts, `.env` editing, ZIP creation, and template logic.
 * **`db/`**: SQL for creating and deleting Supabase schemas, runnable by hand if needed.
-* **`apps/`**: bundled apps that are not in Viren's upstream template (for example `watchly`, `cors-proxy`), where ach folder with a `compose.yaml` is overlaid onto the template and offered as a selectable module.
+* **`apps/`**: bundled apps that are not in Viren's upstream template (for example `watchly`, `proxy`), where ach folder with a `compose.yaml` is overlaid onto the template and offered as a selectable module.
 * **`configs/`**: shared config data used by the hooks, for example `presets.json` defines the pre-selected packages, and `honey.json` is the Honey dashboard catalog of services, icons, and URL templates that are not included in Viren's template.
 * **`defaults.env`**: fallback values for every setting, used when you do not pass a flag.
 

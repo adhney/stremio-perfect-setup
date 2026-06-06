@@ -19,6 +19,10 @@
 #   PORT=8000             Port for the local server. Default: 8000
 #   SKIP_NPM_INSTALL=1    Skip automatic `npm ci` when wizard/web/node_modules is missing
 #
+# Local credentials:
+# - If `${REPO_ROOT}/.env.local` exists, this script will source it before building stats.
+# - This is intended only for local development convenience.
+#
 # What to open after startup:
 #   Guide root:   http://127.0.0.1:8000/
 #   Wizard root:  http://127.0.0.1:8000/wizard/
@@ -41,6 +45,7 @@ REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 SITE_DIR="${REPO_ROOT}/_site"
 WIZARD_WEB_DIR="${REPO_ROOT}/wizard/web"
 STAGED_SOURCE_DIR="$(mktemp -d)"
+ENV_LOCAL_PATH="${REPO_ROOT}/.env.local"
 
 cleanup() {
   rm -rf "${STAGED_SOURCE_DIR}"
@@ -68,6 +73,22 @@ require_cmd python3
 require_cmd node
 require_cmd npm
 require_cmd jekyll
+
+if [[ -f "${ENV_LOCAL_PATH}" ]]; then
+  echo "==> Loading local env from ${ENV_LOCAL_PATH}"
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    trimmed="${line#"${line%%[![:space:]]*}"}"
+    if [[ -z "${trimmed}" || "${trimmed}" == \#* || "${trimmed}" != *=* ]]; then
+      continue
+    fi
+    key="${trimmed%%=*}"
+    value="${trimmed#*=}"
+    if [[ "${key}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+      printf -v "${key}" '%s' "${value}"
+      export "${key}"
+    fi
+  done < "${ENV_LOCAL_PATH}"
+fi
 
 echo "==> Building guide stats"
 python3 "${REPO_ROOT}/scripts/build-guide-stats.py"

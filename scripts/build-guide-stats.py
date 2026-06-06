@@ -6,13 +6,42 @@ import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT_DIR / "assets" / "js" / "guide-completion-config.js"
 OUTPUT_PATH = ROOT_DIR / "assets" / "data" / "guide-stats.json"
+TEMPLATE_PATH = ROOT_DIR / "templates" / "AIOStreams.json"
 GA4_EARLIEST_VALID_DATE = "2026-01-01"
 WIZARD_COUNTER_EVENT = "wizard_completed"
+BIGQUERY_STATS_VIEW = "stremio-perfect-setup.public_reports.vw_wizard_completed_github_stats"
+
+ACCOUNT_PLATFORM_LABELS = {
+    "nuvio": {"label": "Nuvio"},
+    "stremio": {"label": "Stremio"},
+}
+ACCOUNT_MODE_LABELS = {
+    "signin": {"label": "Sign in"},
+    "create": {"label": "Create"},
+}
+FORMATTER_STYLE_LABELS = {
+    "flat": {"label": "Flat"},
+    "color": {"label": "Color"},
+}
+ACCOUNT_LOGO_PATHS = {
+    "nuvio": "assets/images/services/nuvio.png",
+    "stremio": "assets/images/services/stremio.svg",
+}
+DEBRID_LOGO_PATHS = {
+    "TorBox": "assets/images/services/torbox.svg",
+    "Real-Debrid": "assets/images/services/realdebrid.png",
+    "AllDebrid": "assets/images/services/alldebrid.png",
+    "Premiumize": "assets/images/services/premiumize.svg",
+    "Debrid-Link": "assets/images/services/debridlink.svg",
+    "Debrider": "assets/images/services/debrider.svg",
+    "EasyDebrid": "assets/images/services/easydebrid.png",
+}
 
 
 def load_completion_config() -> dict:
@@ -68,6 +97,296 @@ def fetch_analytics_totals(property_id: str, service_account_json: str, event_na
     return total_users, event_count
 
 
+def fetch_bigquery_rows(service_account_json: str) -> list[dict[str, Any]]:
+    from google.cloud import bigquery
+    from google.oauth2 import service_account
+
+    service_account_info = json.loads(service_account_json)
+    credentials = service_account.Credentials.from_service_account_info(service_account_info)
+    client = bigquery.Client(
+        project=service_account_info.get("project_id") or "stremio-perfect-setup",
+        credentials=credentials,
+    )
+
+    query = f"""
+        SELECT
+          sort_order,
+          category,
+          name,
+          value,
+          true_count,
+          false_count
+        FROM `{BIGQUERY_STATS_VIEW}`
+        ORDER BY sort_order, category, name, true_count DESC, value
+    """
+
+    rows = client.query(query).result()
+    return [
+        {
+            "sortOrder": int(row["sort_order"]),
+            "category": str(row["category"]),
+            "name": str(row["name"]),
+            "value": str(row["value"]),
+            "trueCount": int(row["true_count"]),
+            "falseCount": int(row["false_count"]),
+        }
+        for row in rows
+    ]
+
+
+def load_template_option_maps() -> dict[str, dict[str, dict[str, str]]]:
+    raw = json.loads(TEMPLATE_PATH.read_text(encoding="utf-8"))
+    inputs = raw.get("metadata", {}).get("inputs", [])
+
+    maps: dict[str, dict[str, dict[str, str]]] = {}
+    for field in inputs:
+        field_id = str(field.get("id") or "").strip()
+        options = field.get("options")
+        if not field_id or not isinstance(options, list):
+            continue
+        option_map: dict[str, dict[str, str]] = {}
+        for option in options:
+            value = str(option.get("value") or "").strip()
+            label = str(option.get("label") or "").strip()
+            if not value or not label:
+                continue
+            emoji, plain_label = split_emoji_label(label)
+            option_map[value] = {
+                "label": plain_label,
+                "shortLabel": shorten_option_label(field_id, value, plain_label),
+                "emoji": emoji,
+                "title": plain_label,
+            }
+        if option_map:
+            maps[field_id] = option_map
+    return maps
+
+
+def split_emoji_label(label: str) -> tuple[str, str]:
+    trimmed = label.strip()
+    if not trimmed:
+        return "", ""
+    parts = trimmed.split(maxsplit=1)
+    if len(parts) == 2 and not parts[0][:1].isalnum():
+        return parts[0], parts[1].strip()
+    return "", trimmed
+
+
+def shorten_option_label(field_id: str, value: str, label: str) -> str:
+    normalized = label.strip()
+
+    if field_id == "formatterChoice":
+        return FORMATTER_STYLE_LABELS.get(value, {}).get("label", normalized)
+    if field_id == "httpAddons":
+        return {
+            "none": "Off",
+            "install": "Extra",
+            "only": "Only HTTP",
+        }.get(value, normalized)
+    if field_id in {"language", "seeders"}:
+        return {
+            "default": "Default",
+            "medium": "Medium",
+            "high": "High",
+        }.get(value, normalized)
+    return normalized
+
+
+def build_display_item(
+    raw_value: str,
+    count: int,
+    *,
+    label_map: dict[str, dict[str, str]] | None = None,
+    fallback_label: str | None = None,
+) -> dict[str, Any]:
+    details = (label_map or {}).get(raw_value, {})
+    label = details.get("label") or fallback_label or humanize_value(raw_value)
+    short_label = details.get("shortLabel") or label
+    emoji = details.get("emoji") or ""
+    title = details.get("title") or label
+    return {
+        "value": raw_value,
+        "label": label,
+        "shortLabel": short_label,
+        "emoji": emoji,
+        "title": title,
+        "count": count,
+    }
+
+
+def humanize_value(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text.isupper():
+        return text
+    if " " in text:
+        return text
+    return text.replace("_", " ").replace("-", " ").title()
+
+
+def get_row_total(index: dict[tuple[str, str], list[dict[str, Any]]], category: str, name: str, value: str) -> int:
+    for row in index.get((category, name), []):
+        if row["value"] == value:
+            return int(row["trueCount"])
+    return 0
+
+
+def get_boolean_total(index: dict[tuple[str, str], list[dict[str, Any]]], category: str, name: str) -> int:
+    return get_row_total(index, category, name, "Selected")
+
+
+def get_top_items(
+    index: dict[tuple[str, str], list[dict[str, Any]]],
+    category: str,
+    name: str,
+    limit: int,
+    *,
+    label_map: dict[str, dict[str, str]] | None = None,
+) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for row in index.get((category, name), []):
+        count = int(row["trueCount"])
+        if count <= 0:
+            continue
+        items.append(
+            build_display_item(
+                row["value"],
+                count,
+                label_map=label_map,
+            )
+        )
+        if len(items) >= limit:
+            break
+    return items
+
+
+def build_wizard_analytics_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    if not rows:
+        return {
+            "accounts": {"total": 0, "platforms": []},
+            "debrid": [],
+            "audio": [],
+            "subtitles": [],
+            "catalogs": {"discover": [], "categories": []},
+            "formatter": [],
+            "addons": {"anime": 0, "debridio": 0, "httpInstall": 0, "httpOnly": 0},
+            "rowCount": 0,
+        }
+
+    option_maps = load_template_option_maps()
+    index: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in rows:
+        index.setdefault((row["category"], row["name"]), []).append(row)
+
+    total_completions = get_row_total(index, "Total", "Completions", "wizard_completed")
+
+    account_platforms = []
+    for platform_value in ("nuvio", "stremio"):
+        platform_total = get_row_total(index, "Account", "Platform", platform_value)
+        if platform_total <= 0:
+            continue
+        platform_label = ACCOUNT_PLATFORM_LABELS.get(platform_value, {}).get("label", humanize_value(platform_value))
+        account_platforms.append(
+            {
+                "id": platform_value,
+                "label": platform_label,
+                "logoPath": ACCOUNT_LOGO_PATHS.get(platform_value, ""),
+                "total": platform_total,
+                "signin": get_row_total(index, "Account", f"Mode ({platform_label})", "signin"),
+                "create": get_row_total(index, "Account", f"Mode ({platform_label})", "create"),
+            }
+        )
+
+    debrid_items = []
+    for row in index.get(("Services", "Debrid"), [])[:5]:
+        count = int(row["trueCount"])
+        if count <= 0:
+            continue
+        debrid_items.append(
+            {
+                "id": str(row["value"]).lower().replace("-", "").replace(" ", ""),
+                "label": str(row["value"]),
+                "logoPath": DEBRID_LOGO_PATHS.get(str(row["value"]), ""),
+                "count": count,
+            }
+        )
+
+    audio_items = []
+    for item in get_top_items(index, "Languages", "Preferred", 5, label_map=option_maps.get("languages")):
+        audio_items.append(
+            {
+                "emoji": item.get("emoji") or item.get("value", ""),
+                "title": item.get("title") or item.get("label"),
+                "count": int(item["count"]),
+            }
+        )
+
+    subtitle_items = []
+    for item in get_top_items(index, "Languages", "Subtitles", 5, label_map=option_maps.get("subtitles")):
+        subtitle_items.append(
+            {
+                "emoji": item.get("emoji") or item.get("value", ""),
+                "title": item.get("title") or item.get("label"),
+                "count": int(item["count"]),
+            }
+        )
+
+    discover_items = []
+    for row in index.get(("Catalogs", "Discover"), [])[:4]:
+        discover_items.append(
+            {
+                "emoji": str(row["value"]),
+                "title": str(row["value"]),
+                "count": int(row["trueCount"]),
+            }
+        )
+
+    category_items = []
+    for row in index.get(("Catalogs", "Categories"), [])[:8]:
+        category_items.append(
+            {
+                "emoji": str(row["value"]),
+                "title": str(row["value"]),
+                "count": int(row["trueCount"]),
+            }
+        )
+
+    formatter_items = []
+    for item in get_top_items(index, "Formatter", "Style", 2, label_map=option_maps.get("formatterChoice", FORMATTER_STYLE_LABELS)):
+        formatter_items.append(
+            {
+                "id": str(item["value"]),
+                "emoji": item.get("emoji") or "",
+                "label": item.get("shortLabel") or item.get("label") or str(item["value"]),
+                "title": item.get("title") or item.get("label"),
+                "count": int(item["count"]),
+            }
+        )
+
+    return {
+        "accounts": {
+            "total": total_completions,
+            "platforms": account_platforms,
+        },
+        "debrid": debrid_items,
+        "audio": audio_items,
+        "subtitles": subtitle_items,
+        "catalogs": {
+            "discover": discover_items,
+            "categories": category_items,
+        },
+        "formatter": formatter_items,
+        "addons": {
+            "anime": get_boolean_total(index, "Addons", "Anime"),
+            "debridio": get_boolean_total(index, "Addons", "Debridio"),
+            "httpInstall": get_row_total(index, "Addons", "HTTP", "install"),
+            "httpOnly": get_row_total(index, "Addons", "HTTP", "only"),
+        },
+        "rowCount": len(rows),
+    }
+
+
 def build_payload(config: dict) -> dict:
     baseline = config["legacyCompletions"]
     event_name = config["completionEventName"]
@@ -80,6 +399,9 @@ def build_payload(config: dict) -> dict:
     wizard_counter_event_count = 0
     source = "baseline_only"
     error = None
+    bigquery_rows: list[dict[str, Any]] = []
+    bigquery_source = "unavailable"
+    bigquery_error = None
 
     if property_id and service_account_json:
         try:
@@ -98,6 +420,15 @@ def build_payload(config: dict) -> dict:
             source = "baseline_fallback"
             error = str(exc)
 
+        try:
+            bigquery_rows = fetch_bigquery_rows(service_account_json)
+            bigquery_source = "bigquery"
+        except Exception as exc:  # pragma: no cover - best effort fallback in CI
+            bigquery_source = "bigquery_fallback"
+            bigquery_error = str(exc)
+
+    wizard_analytics_summary = build_wizard_analytics_summary(bigquery_rows)
+
     payload = {
         "eventName": event_name,
         "legacyCompletions": baseline,
@@ -113,11 +444,19 @@ def build_payload(config: dict) -> dict:
             "analyticsUniqueUsers": wizard_counter_unique_users,
             "analyticsEventCount": wizard_counter_event_count,
             "totalAccountsCreated": wizard_counter_event_count,
+            "analytics": {
+                "source": bigquery_source,
+                "view": BIGQUERY_STATS_VIEW,
+                "rows": bigquery_rows,
+                "summary": wizard_analytics_summary,
+            },
         },
     }
 
     if error:
         payload["error"] = error
+    if bigquery_error:
+        payload["wizard"]["analyticsError"] = bigquery_error
 
     return payload
 

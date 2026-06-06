@@ -4,7 +4,7 @@
 #
 # Purpose:
 #   The upstream template ships its own apps/. Anything under hosting/apps/ is an
-#   additional app that is NOT in upstream (e.g. watchly, cors-proxy). After the
+#   additional app that is NOT in upstream (e.g. watchly, proxy). After the
 #   template is fetched into the work dir, this step copies those folders into the
 #   template's apps/ so they become discoverable, selectable modules. Existing
 #   upstream apps are preserved (overlay, no --delete); a bundled app whose name

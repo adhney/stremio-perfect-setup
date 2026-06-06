@@ -128,11 +128,11 @@
         "icon": "https://raw.githubusercontent.com/homarr-labs/dashboard-icons/HEAD/svg/bitmagnet.svg"
       }
     ],
-    "cors-proxy": [
+    "proxy": [
       {
-        "slug": "cors-proxy",
+        "slug": "proxy",
         "hostname_env": null,
-        "href_template": "https://cors-proxy.${DOMAIN}",
+        "href_template": "https://proxy.${DOMAIN}",
         "name": "CORS Proxy",
         "desc": "Browser-facing proxy for cross-origin addon setup calls.",
         "icon": "https://corsfix.com/logo.png"

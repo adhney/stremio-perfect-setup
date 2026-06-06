@@ -10,3 +10,5 @@ _site/
 wizard/web/dist/
 wizard/web/node_modules/
 node_modules/
+.env*
+*__pycache__/
