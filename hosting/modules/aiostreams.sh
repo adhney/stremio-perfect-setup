@@ -38,25 +38,6 @@ read -r -d '' PARAMETERS <<'JSON' || true
 }
 JSON
 
-prompt_aiostreams_auth_value() {
-  local current_auth_value="$1"
-  local auth_value="${current_auth_value}"
-
-  if is_interactive; then
-    if dialog_ui_available; then
-      auth_value="$(
-        whiptail_capture_on_tty \
-          --title "AIOStreams Proxy" \
-          --inputbox "Optional: Here you can set built-in proxy users for use in AIOStreams. Use comma-separated username:password pairs, for example user1:pass1,user2:pass2.\n\nLeave empty to skip." \
-          13 84 "${current_auth_value}"
-      )" || die "Prompt cancelled."
-    else
-      auth_value="$(prompt_value "Optional: Set built-in proxy users for use in AIOStreams. Use comma-separated username:password pairs, for example user1:pass1,user2:pass2. Leave empty to skip [AIOSTREAMS_AUTH]" "${current_auth_value}")"
-    fi
-  fi
-
-  printf '%s' "${auth_value}"
-}
 
 build_final_parameters_json() {
   local base_parameters_json="$1"
@@ -134,14 +115,16 @@ AIOSTREAMS_ENV="${HOSTING_CONFIG_DIR}/AIOSTREAMS.env"
 [[ -f "${AIOSTREAMS_ENV}" ]] || die "Missing staged AIOStreams env file: ${AIOSTREAMS_ENV}"
 
 current_secret_key="$(env_get "${AIOSTREAMS_ENV}" SECRET_KEY || true)"
-current_auth_value="$(env_get "${AIOSTREAMS_ENV}" AIOSTREAMS_AUTH || true)"
+staged_auth="$(env_get "${AIOSTREAMS_ENV}" AIOSTREAMS_AUTH || true)"
 
 AIOSTREAMS_ENABLE_LOCAL_STREMTHRU=0
 if selected_module_enabled "${STREMTHRU_MODULE}"; then
   AIOSTREAMS_ENABLE_LOCAL_STREMTHRU=1
 fi
 
-auth_value="$(prompt_aiostreams_auth_value "${current_auth_value}")"
+auth_value="$(module_get_param "auth" "string" "false" \
+  "AIOStreams proxy users (comma-separated username:password pairs, e.g. user1:pass1,user2:pass2)" \
+  "${staged_auth}")" || true
 
 apply_parameters_json \
   "${AIOSTREAMS_ENV}" \

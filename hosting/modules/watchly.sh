@@ -56,21 +56,12 @@ WATCHLY_ENV="${HOSTING_CONFIG_DIR}/WATCHLY.env"
 current_token_salt="$(env_get "${WATCHLY_ENV}" TOKEN_SALT || true)"
 env_upsert "${WATCHLY_ENV}" TOKEN_SALT "${current_token_salt:-$(generate_secret_hex)}"
 
-# ── TMDB_API_KEY: optional prompt (whiptail + console fallback). ────────────────
-current_tmdb_key="$(env_get "${WATCHLY_ENV}" TMDB_API_KEY || true)"
-tmdb_key="${current_tmdb_key}"
-if is_interactive; then
-  if dialog_ui_available; then
-    tmdb_key="$(
-      whiptail_capture_on_tty \
-        --title "Watchly TMDB API Key" \
-        --inputbox "Optional: enter a TMDB API key for Watchly catalogs.\n\nLeave empty to skip." \
-        12 84 "${current_tmdb_key}"
-    )" || die "Prompt cancelled."
-  else
-    tmdb_key="$(prompt_value "Optional: enter a TMDB API key for Watchly. Leave empty to skip [TMDB_API_KEY]" "${current_tmdb_key}")"
-  fi
-fi
+# ── TMDB_API_KEY: optional prompt ─────────────────────────────────────────────
+staged_tmdb="$(env_get "${WATCHLY_ENV}" TMDB_API_KEY || true)"
+
+tmdb_key="$(module_get_param "tmdb_api_key" "string" "false" \
+  "TMDB API key for Watchly catalogs (optional, leave blank to skip)" \
+  "${staged_tmdb}")" || true
 env_upsert "${WATCHLY_ENV}" TMDB_API_KEY "${tmdb_key}"
 
 # ── Register WATCHLY_HOSTNAME in Authelia's Stremio-addon bypass list. ──────────

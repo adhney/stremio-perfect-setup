@@ -18,7 +18,10 @@
 #   HOSTING_MANIFEST_FILE=./hosting/.work/config/.stage-map.tsv \
 #   HOSTING_SELECTED_MODULES_FILE=./hosting/.work/selected-modules.txt \
 #   HOSTING_ROOT_ENV=./hosting/.work/config/.env \
-#   HOSTING_CLOUDFLARE_API_TOKEN='token' \
+#
+# Expected environment variables (from module_get_param):
+#   CLOUDFLARE_API_TOKEN - Cloudflare API token for DNS operations
+#   CLOUDFLARE_PROXIED - Whether to create proxied orange-cloud DNS records
 #   ./hosting/modules/cloudflare-ddns.sh
 
 set -Eeuo pipefail
@@ -55,14 +58,15 @@ if ! selected_module_enabled "${MODULE_NAME}"; then
   exit 0
 fi
 
-token_value="${HOSTING_CLOUDFLARE_API_TOKEN:-$(env_get "${HOSTING_ROOT_ENV}" CLOUDFLARE_API_TOKEN)}"
-proxied_value="${HOSTING_CLOUDFLARE_PROXIED:-$(env_get "${HOSTING_ROOT_ENV}" CLOUDFLARE_PROXIED)}"
-proxied_value="${proxied_value:-${DEFAULT_PROXIED_WHEN_ENABLED}}"
+staged_token="$(env_get "${HOSTING_ROOT_ENV}" CLOUDFLARE_API_TOKEN || true)"
 
-if [[ -z "${token_value}" ]] && is_interactive; then
+if [[ -z "${staged_token}" ]] && is_interactive; then
   show_message "Cloudflare DDNS" "Cloudflare DDNS creates DNS records for the selected services and also switches Traefik to use the Cloudflare DNS challenge for Let's Encrypt. Only continue if this domain already uses Cloudflare nameservers and you have an API token with the required DNS permissions."
-  token_value="$(prompt_secret "Enter the Cloudflare API token so the script can create DNS records and enable the Traefik DNS challenge, or leave blank to disable this module [CLOUDFLARE_API_TOKEN]")"
 fi
+
+token_value="$(module_get_param "api_token" "secret" "false" \
+  "Cloudflare API token (leave blank to disable this module)" \
+  "${staged_token}")" || true
 
 if [[ -z "${token_value}" ]]; then
   warn "cloudflare-ddns was selected without a token. Disabling it."
@@ -71,13 +75,10 @@ if [[ -z "${token_value}" ]]; then
   exit 0
 fi
 
-if [[ -z "${HOSTING_CLOUDFLARE_PROXIED:-}" ]] && is_interactive; then
-  if prompt_yes_no "Should Cloudflare create proxied orange-cloud DNS records for the selected hostnames? Choose yes if you want Cloudflare to sit in front of the traffic, or no for DNS-only records [CLOUDFLARE_PROXIED]" yes; then
-    proxied_value=true
-  else
-    proxied_value=false
-  fi
-fi
+proxied_value="$(module_get_param "proxied" "bool" "false" \
+  "Create proxied (orange-cloud) Cloudflare DNS records for the selected hostnames" \
+  "$(env_get "${HOSTING_ROOT_ENV}" CLOUDFLARE_PROXIED || true)" \
+  "${DEFAULT_PROXIED_WHEN_ENABLED}")" || true
 
 env_upsert "${HOSTING_ROOT_ENV}" CLOUDFLARE_API_TOKEN "${token_value}"
 env_upsert "${HOSTING_ROOT_ENV}" CLOUDFLARE_PROXIED "${proxied_value}"
