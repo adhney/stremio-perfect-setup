@@ -516,9 +516,11 @@ export function DoneStep() {
                 </button>
               </div>
               {/* Trakt integration card */}
-              {(target === 'stremio' || !!aiometadata) && (() => {
+              {((target === 'stremio' || target === 'nuvio') || !!aiometadata) && (() => {
                 const traktLogo = resolveLogoUrl('services/trakt.png');
                 const stremioLogo = resolveLogoUrl('services/stremio.svg');
+                const nuvioLogo = resolveLogoUrl('services/nuvio.png');
+                const traktCardCount = Number(target === 'stremio' || target === 'nuvio') + Number(!!aiometadata);
                 const cardStyle = {
                   padding: '0.9rem', borderRadius: '10px', textAlign: 'center' as const,
                   border: '1px solid rgba(255,230,236,0.2)', transition: 'border-color 0.15s',
@@ -550,20 +552,28 @@ export function DoneStep() {
                       Trakt is optional, but recommended. You can connect it directly to avoid manual configuration later.
                     </p>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: target === 'stremio' && !!aiometadata ? '1fr 1fr' : '1fr', gap: '0.6rem', ...(target !== 'stremio' && !!aiometadata ? { width: '30%', margin: '0 auto' } : {}) }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: traktCardCount > 1 ? '1fr 1fr' : '1fr', gap: '0.6rem' }}>
 
-                      {/* Scrobbling card — Stremio only */}
-                      {target === 'stremio' && (
+                      {/* Scrobbling card */}
+                      {(target === 'stremio' || target === 'nuvio') && (
                         <div style={{ ...cardStyle, background: scrobbleStatus === 'connected' ? 'rgba(167,243,208,0.08)' : 'rgba(255,255,255,0.05)', borderColor: scrobbleStatus === 'connected' ? 'rgba(167,243,208,0.4)' : 'rgba(255,230,236,0.2)' }}>
-                          {stremioLogo && <img src={stremioLogo} alt="Stremio" style={{ height: '22px', objectFit: 'contain', marginBottom: '0.5rem', display: 'block', margin: '0 auto 0.5rem' }} />}
+                          {(target === 'stremio' ? stremioLogo : nuvioLogo) && (
+                            <img
+                              src={target === 'stremio' ? stremioLogo : nuvioLogo}
+                              alt={target === 'stremio' ? 'Stremio' : 'Nuvio'}
+                              style={{ height: '22px', objectFit: 'contain', marginBottom: '0.5rem', display: 'block', margin: '0 auto 0.5rem' }}
+                            />
+                          )}
                           <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                             Scrobbling
                             {scrobbleStatus === 'connected' && connectedBadge}
                           </div>
                           <p style={{ fontSize: '0.75rem', opacity: 0.8, lineHeight: 1.45, margin: '0 0 0.6rem' }}>
-                            Automatically log what you watch in Stremio to your Trakt history.
+                            {target === 'stremio'
+                              ? 'Automatically log what you watch in Stremio to your Trakt history.'
+                              : 'You need to go to Nuvio app settings to integrate Trakt.'}
                           </p>
-                          {scrobbleStatus !== 'connected' && (
+                          {target === 'stremio' && scrobbleStatus !== 'connected' && (
                             <>
                               <button
                                 type="button"
@@ -588,6 +598,22 @@ export function DoneStep() {
                                 </p>
                               )}
                             </>
+                          )}
+                          {target === 'nuvio' && (
+                            <button
+                              type="button"
+                              disabled
+                              style={{
+                                padding: '0.4rem 0.7rem', borderRadius: '7px',
+                                border: '1px solid rgba(255,230,236,0.2)',
+                                background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)',
+                                fontSize: '0.8rem', fontWeight: 600, cursor: 'default',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 'fit-content', margin: '0 auto', opacity: 0.75,
+                              }}
+                            >
+                              Connect
+                            </button>
                           )}
                         </div>
                       )}

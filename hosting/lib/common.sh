@@ -170,7 +170,7 @@ show_error_dialog() {
 on_exit() {
   local exit_code=$?
 
-  if (( exit_code != 0 )); then
+  if (( exit_code != 0 )) && [[ "${HOSTING_SUPPRESS_ERROR_DIALOG:-0}" != "1" ]]; then
     show_error_dialog "${exit_code}"
   fi
 

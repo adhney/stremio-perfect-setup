@@ -90,6 +90,10 @@ source "${SCRIPT_DIR}/lib/template.sh"
 
 load_defaults
 
+# Install the final EXIT/ERR handling immediately so startup failures also land
+# on the whiptail error screen instead of dropping straight back to the shell.
+setup_cleanup_trap
+
 WORK_ROOT_ABS="${HOSTING_ROOT}/${WORK_ROOT:-.work}"
 TEMPLATE_DIR_ABS="${HOSTING_ROOT}/${TEMPLATE_DIR:-.work/docker}"
 CONFIG_DIR_ABS="${HOSTING_ROOT}/${CONFIG_DIR:-.work/config}"
@@ -467,7 +471,7 @@ run_local_remote_deploy() {
   require_commands ssh scp tar
 
   if is_interactive; then
-    show_message "🖥️  Local-to-VPS Setup" "You are running this on your local computer, so the script will take care of the connection for you. First we prepare an SSH key and a connection alias for your VPS. Then it copies the hosting files up to your server and runs the rest of the setup there over SSH."
+    show_message "🖥️  Local-to-VPS Setup" "You are running this on your local computer, so the script will take care of the connection for you. First it will prepare SSH access for your VPS, either by setting up a key and alias or by reusing an alias you already have. Then it copies the hosting files up to your server and runs the rest of the setup there over SSH."
   fi
 
   section "SSH setup"
@@ -568,6 +572,13 @@ run_local_remote_deploy() {
     ssh "${ssh_alias}" "${remote_cmd}" || local_rc=$?
   fi
 
+  # A non-255 ssh status means the remote command ran and that remote main.sh
+  # already had a chance to show its own final error dialog. Skip a duplicate
+  # local dialog in that case, but still surface transport/auth failures here.
+  if (( local_rc != 0 && local_rc != 255 )); then
+    HOSTING_SUPPRESS_ERROR_DIALOG=1
+  fi
+
   rm -rf "${WORK_ROOT_ABS}" 2>/dev/null || true
   return "${local_rc}"
 }
@@ -634,7 +645,6 @@ prime_sudo_session "the hosting setup"
 log "Work directory: ${WORK_ROOT_ABS}"
 ensure_directory "${WORK_ROOT_ABS}"
 ensure_apt_packages python3 openssl curl
-setup_cleanup_trap
 register_cleanup_path "${WORK_ROOT_ABS}"
 
 if (( DRY_RUN )); then

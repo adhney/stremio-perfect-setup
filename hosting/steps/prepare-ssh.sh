@@ -4,9 +4,10 @@
 #
 # Purpose:
 #   This helper prepares SSH access to the VPS before the local-to-VPS deploy.
-#   It can use an explicit private key, detect an existing default key, or
-#   generate a new ed25519 key under ~/.ssh. It also writes or replaces a Host
-#   block in ~/.ssh/config.
+#   It can use an explicit private key, detect an existing default key,
+#   generate a new ed25519 key under ~/.ssh, or reuse an SSH alias that is
+#   already configured and working. When preparing a key for a new alias, it
+#   also writes or replaces a Host block in ~/.ssh/config.
 #
 # Usage:
 #   ./hosting/steps/prepare-ssh.sh
@@ -36,6 +37,7 @@ SSH_HOST=""
 SSH_USER=""
 USE_DEFAULT_KEY=0
 GENERATE_KEY=0
+USE_EXISTING_ALIAS=0
 ALIAS_SET=0
 
 while (( $# > 0 )); do
@@ -93,6 +95,25 @@ prepare_generated_key_path() {
   GENERATE_KEY=1
 }
 
+prepare_existing_alias() {
+  USE_EXISTING_ALIAS=1
+  KEY_PATH=""
+  SSH_HOST=""
+  SSH_USER=""
+}
+
+collect_existing_alias() {
+  if ! is_interactive; then
+    [[ -n "${SSH_ALIAS}" ]] || die "SSH alias cannot be empty"
+    return 0
+  fi
+
+  if (( ! ALIAS_SET )); then
+    SSH_ALIAS="$(prompt_value "Enter the SSH alias name that is already configured and working for this VPS [SSH_ALIAS]" "${SSH_ALIAS}")"
+  fi
+  [[ -n "${SSH_ALIAS}" ]] || die "SSH alias cannot be empty"
+}
+
 find_default_key() {
   local candidates=()
   local candidate=""
@@ -131,10 +152,11 @@ select_key() {
     if [[ -n "${detected_key}" ]]; then
       key_mode="$(prompt_choice \
         "SSH Key" \
-        "Choose how the SSH helper should prepare your local SSH private key for VPS access. This key is needed so you can connect to the server securely from this machine." \
+        "Choose how the SSH helper should prepare SSH access for this VPS. You can reuse a detected key, point to another key, create a new key, or continue with an SSH alias that is already configured and working." \
         "use-default" \
         "use-default" "Use the detected key at ${detected_key}" \
         "existing-path" "Enter a different existing private key path" \
+        "existing-alias" "Use an existing SSH alias that is already configured" \
         "generate-new" "Create a new ed25519 key in ${SSH_DIR}")"
       case "${key_mode}" in
         use-default)
@@ -144,6 +166,10 @@ select_key() {
         existing-path)
           KEY_PATH="$(prompt_value "Enter the existing SSH private key path so the script can reference it in your SSH client config [SSH_KEY_PATH]")"
           [[ -f "${KEY_PATH}" ]] || die "SSH key does not exist: ${KEY_PATH}"
+          return 0
+          ;;
+        existing-alias)
+          prepare_existing_alias
           return 0
           ;;
         generate-new)
@@ -158,14 +184,18 @@ select_key() {
 
     key_mode="$(prompt_choice \
       "SSH Key" \
-      "No default SSH key was detected. Choose whether to reuse an existing private key or generate a new one so the VPS can trust this machine." \
+      "No default SSH key was detected. Choose whether to reuse an existing private key, create a new key, or continue with an SSH alias that is already configured and working." \
       "generate-new" \
       "existing-path" "Enter an existing private key path" \
+      "existing-alias" "Use an existing SSH alias that is already configured" \
       "generate-new" "Create a new ed25519 key in ${SSH_DIR}")"
     case "${key_mode}" in
       existing-path)
         KEY_PATH="$(prompt_value "Enter the existing SSH private key path so the script can reference it in your SSH client config [SSH_KEY_PATH]")"
         [[ -f "${KEY_PATH}" ]] || die "SSH key does not exist: ${KEY_PATH}"
+        ;;
+      existing-alias)
+        prepare_existing_alias
         ;;
       generate-new)
         prepare_generated_key_path
@@ -322,6 +352,25 @@ show_final_instructions() {
   local copy_command=""
   local connect_command=""
 
+  if (( USE_EXISTING_ALIAS )); then
+    connect_command="ssh ${SSH_ALIAS}"
+    message=$(
+      cat <<EOF
+Your SSH setup is ready.
+
+This setup will reuse the existing SSH alias ${SSH_ALIAS}.
+
+Next:
+1. Make sure ${connect_command} already logs you into the VPS from this machine.
+2. Return to main.sh and continue the local-to-VPS setup with that alias.
+EOF
+    )
+
+    show_message "SSH Setup Complete" "${message}"
+    log "Reusing existing SSH alias: ${SSH_ALIAS}"
+    return 0
+  fi
+
   copy_command="cat ${KEY_PATH}.pub"
   if [[ -n "${SSH_HOST}" && -n "${SSH_USER}" ]]; then
     copy_command="ssh-copy-id -i ${KEY_PATH}.pub ${SSH_USER}@${SSH_HOST}"
@@ -352,12 +401,16 @@ if (( ALIAS_SET )); then
 fi
 
 select_key
-ensure_key_exists
-show_key_install_guidance
-collect_connection_details
-configure_ssh_alias
-update_ssh_config
-try_ssh_copy_id
+if (( USE_EXISTING_ALIAS )); then
+  collect_existing_alias
+else
+  ensure_key_exists
+  show_key_install_guidance
+  collect_connection_details
+  configure_ssh_alias
+  update_ssh_config
+  try_ssh_copy_id
+fi
 
 if [[ -n "${HOSTING_SSH_TARGET_FILE:-}" ]]; then
   {
@@ -368,6 +421,10 @@ if [[ -n "${HOSTING_SSH_TARGET_FILE:-}" ]]; then
   } > "${HOSTING_SSH_TARGET_FILE}"
 fi
 
-log "SSH key ready: ${KEY_PATH}"
-log "Public key: ${KEY_PATH}.pub"
+if (( USE_EXISTING_ALIAS )); then
+  log "SSH alias ready: ${SSH_ALIAS}"
+else
+  log "SSH key ready: ${KEY_PATH}"
+  log "Public key: ${KEY_PATH}.pub"
+fi
 show_final_instructions

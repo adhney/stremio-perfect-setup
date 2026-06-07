@@ -40,7 +40,7 @@ Important: the setup itself always runs on the Linux machine that will host Dock
 
 ## Step 1: Prepare an SSH Alias
 
-If you already have a clean SSH alias for this VPS and it works, you can skip to Step 2.
+If you already have a clean SSH alias for this VPS and it works, you can skip to Step 2. You can also still run the helper and choose the existing-alias option so the rest of the local setup keeps using that alias.
 
 If not, run the SSH helper from a machine where you normally open your terminal:
 
@@ -50,18 +50,19 @@ If not, run the SSH helper from a machine where you normally open your terminal:
 
 What it will ask you:
 
-- whether to use an existing SSH key or generate a new one
+- whether to use an existing SSH key, generate a new one, or reuse an SSH alias that is already configured
 - if you generate a new key before you already picked an alias, what local key file name to create under `~/.ssh/`
-- a reminder to add that public key while creating the VPS, through the provider's SSH-key flow, or later with `ssh-copy-id`
-- the VPS IP address or hostname
-- the SSH username for that VPS, often `root`
-- what alias name you want, for example `streaming`
+- if you reuse an existing alias, what that alias name is
+- if the helper is managing the alias for you, a reminder to add that public key while creating the VPS, through the provider's SSH-key flow, or later with `ssh-copy-id`
+- if the helper is managing the alias for you, the VPS IP address or hostname
+- if the helper is managing the alias for you, the SSH username for that VPS, often `root`
+- if the helper is managing the alias for you, what alias name you want, for example `streaming`
 
 What it writes:
 
 - your private key under `~/.ssh/` if you chose to generate one
-- a `Host` block inside `~/.ssh/config`
-- `HostName`, `User`, and `IdentityFile` entries for the alias
+- a `Host` block inside `~/.ssh/config` if you are creating or updating an alias through the helper
+- `HostName`, `User`, and `IdentityFile` entries for that alias when the helper manages it
 
 When it finishes, it will show you what to do next. This step only prepares your local SSH client. It does not magically install the key on the server for you.
 
