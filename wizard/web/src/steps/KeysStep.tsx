@@ -16,7 +16,7 @@ type CredentialFieldId = 'tmdbApiKey' | 'tmdbAccessToken' | 'tvdbApiKey' | 'gemi
 
 const SHARED_INSTRUCTIONS_WALKTHROUGH = 'For a longer walkthrough with screenshots and service-specific notes, open [📝 Accounts Preparation](guide/1-Accounts).';
 
-const SHARED_INSTRUCTIONS_KEY_DISCLAIMER = 'Using your own API key is usually the most reliable option for long-term use. If you leave a field empty, the wizard will use a shared fallback key when one is available for that service, but shared keys can reach their limits sooner and are not guaranteed on every screen.';
+const SHARED_INSTRUCTIONS_KEY_DISCLAIMER = 'Using your own API key is usually the most reliable option for long-term use. If you leave a field empty, the wizard will use a shared fallback key (except Gemini) when one is available for that service, but shared keys can reach their limits sooner and are not guaranteed on every screen.';
 
 interface CredentialField {
   id: CredentialFieldId;
