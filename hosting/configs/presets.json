@@ -3,14 +3,14 @@
     {
       "id": "minimal",
       "name": "Essentials",
-      "description": "Just the core Stremio addons to get streaming working.",
+      "description": "Just the core AIO addons for independent hosting.",
       "modules": ["aiostreams", "aiometadata", "aiomanager","watchtower"]
     },
     {
       "id": "perfect",
-      "name": "Perfect Setup",
-      "description": "Core addons plus a dashboard and dynamic DNS.",
-      "modules": ["aiostreams", "aiometadata", "aiomanager", "honey", "cloudflare-ddns", "stremthru", "watchly", "altmount","dash","dozzle","nzbdav","nzbhydra2","uptime-kuma","warp","watchtower"]
+      "name": "Usenet Perfect Setup",
+      "description": "Core general and Usenet addons, plus a dashboard and dynamic DNS.",
+      "modules": ["aiostreams", "aiometadata", "aiomanager", "honey", "cloudflare-ddns", "stremthru", "watchly", "altmount","dash","dozzle","nzbdav","nzbhydra2","uptime-kuma","usenet-ultimate","warp","watchtower"]
     }
   ]
 }
