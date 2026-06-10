@@ -74,6 +74,7 @@ title: "📜 Changelog"
 ### 1.0.1 (2026-06-10)
 
 - Added **Elite Badges** to Nuvio Settings template.
+- Added the **Perfect Setup Formatter** configuration in Nuvio Settings for Connected Services (Instant Debrid).
 - Added center text alignment to **Done Step** notifications.
 
 ## 🖥️ Hosting
