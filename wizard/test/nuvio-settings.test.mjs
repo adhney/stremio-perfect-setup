@@ -33,7 +33,10 @@ console.log('\n# Nuvio settings template resolution');
 
   ok('Template resolves TV platform blob', !!tv);
   ok('Template resolves mobile platform blob when TMDB key is present', !!mobile);
+  ok('TV template includes stream badge settings', typeof tv?.settingsJson?.features?.stream_badge_settings?.stream_badge_rules?.value === 'string');
+  ok('Mobile template includes stream badge settings', typeof mobile?.settingsJson?.features?.stream_badge_settings?.stream_badge_rules?.value === 'string');
   ok('Template substitutes tmdb_api_key placeholder', mobile?.settingsJson?.features?.tmdb_settings?.tmdb_api_key?.value === 'TMDB-KEY-123');
+  ok('Badge rules keep the Elite-Badges source URL', mobile?.settingsJson?.features?.stream_badge_settings?.stream_badge_rules?.value?.includes('https://raw.githubusercontent.com/leonevz/Elite-Badges/main/badges.json') === true);
   ok('Template does not skip platforms when placeholders are resolved', skipped.length === 0);
 }
 
@@ -66,6 +69,8 @@ console.log('\n# Nuvio TV settings merge');
   ok('TV merge preserves unrelated theme settings', merged.features.theme_settings.selected_theme.value === 'dark');
   ok('TV merge enables follow_addons_order', merged.features.layout_settings.follow_addons_order.value === true);
   ok('TV merge enables prefer_external_meta_addon_detail', merged.features.layout_settings.prefer_external_meta_addon_detail.value === true);
+  ok('TV merge enables stream badge file size badges', merged.features.stream_badge_settings.show_file_size_badges.value === true);
+  ok('TV merge sets stream badge placement to bottom', merged.features.stream_badge_settings.stream_badge_placement.value === 'BOTTOM');
   ok('TV merge forces tmdb_use_artwork on', merged.features.tmdb_settings.tmdb_use_artwork.value === true);
   ok('TV merge preserves tmdb_language', merged.features.tmdb_settings.tmdb_language.value === 'de');
   ok('TV merge enables tmdb_use_release_dates', merged.features.tmdb_settings.tmdb_use_release_dates.value === true);
@@ -87,6 +92,7 @@ console.log('\n# Nuvio mobile TMDB merge');
   }, mobileTemplate, 3);
 
   ok('Mobile merge preserves unrelated theme settings', merged.features.theme_settings.selected_theme.value === 'light');
+  ok('Mobile merge carries stream badge rules', merged.features.stream_badge_settings.stream_badge_rules.value.includes('Elite-Badges/main/badges.json'));
   ok('Mobile merge reuses tmdb_api_key', merged.features.tmdb_settings.tmdb_api_key.value === 'TMDB-KEY-123');
   ok('Mobile merge enables tmdb_enabled', merged.features.tmdb_settings.tmdb_enabled.value === true);
   ok('Mobile merge enables tmdb_use_season_posters', merged.features.tmdb_settings.tmdb_use_season_posters.value === true);
