@@ -116,6 +116,8 @@ interface WizardState {
   wizardConfig: WizardConfig | null;
   watchly: WatchlyState;
   setWatchly: (w: Partial<WatchlyState>) => void;
+  nuvioInstantDebrid: boolean;
+  setNuvioInstantDebrid: (enabled: boolean) => void;
 
   setStep: (step: number) => void;
   nextStep: () => void;
@@ -169,6 +171,7 @@ export const useWizard = create<WizardState>((set) => ({
   aioSections: [],
   wizardConfig: null,
   watchly: { enabled: false, nuvioStremioLogin: null },
+  nuvioInstantDebrid: false,
 
   setStep: (step) => set(s => ({
     step,
@@ -239,6 +242,21 @@ export const useWizard = create<WizardState>((set) => ({
   setAioSections: (aioSections) => set({ aioSections }),
   setInstallResult: (r) => set(s => ({ installResult: { ...s.installResult, ...r } })),
   setWatchly: (w) => set(s => ({ watchly: { ...s.watchly, ...w } })),
+  setNuvioInstantDebrid: (enabled) => set(s => {
+    if (enabled) {
+      const INSTANT_DEBRID_SERVICE_IDS = ['torbox', 'premiumize'];
+      return {
+        nuvioInstantDebrid: true,
+        credentials: {
+          ...s.credentials,
+          debridServices: s.credentials.debridServices.filter(d =>
+            INSTANT_DEBRID_SERVICE_IDS.includes(d.id)
+          ),
+        },
+      };
+    }
+    return { nuvioInstantDebrid: false };
+  }),
   setWizardConfig: (cfg) => set({
     wizardConfig: cfg,
     aioStreamsInstance: cfg?.instances.aiostreams[0] ?? '',
