@@ -223,7 +223,10 @@ export function KeysStep({ keyIndex }: Props) {
   const hasQualifyingService = credentials.debridServices.some(
     (d) => (INSTANT_DEBRID_SERVICE_IDS as readonly string[]).includes(d.id)
   );
-  const showInstantDebridToggle = isNuvio && screen.id === 'debrid' && hasQualifyingService;
+  const hasNonQualifyingService = credentials.debridServices.some(
+    (d) => !(INSTANT_DEBRID_SERVICE_IDS as readonly string[]).includes(d.id)
+  );
+  const showInstantDebridToggle = isNuvio && screen.id === 'debrid' && hasQualifyingService && !hasNonQualifyingService;
 
   const fallbackAvailable = screen.id === 'debrid'
     ? false
@@ -437,31 +440,63 @@ export function KeysStep({ keyIndex }: Props) {
           )}
 
           {showInstantDebridToggle && (
-            <div style={{
-              border: '1px solid var(--border)',
-              borderRadius: '10px',
-              padding: '0.85rem',
-              background: 'var(--panel)',
-              marginBottom: '0.5rem',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: nuvioInstantDebrid ? '0.75rem' : 0 }}>
-                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text)' }}>
-                  ⚡ Instant Debrid
-                </span>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={nuvioInstantDebrid}
-                    onChange={(e) => setNuvioInstantDebrid(e.target.checked)}
-                    style={{ width: '1rem', height: '1rem', cursor: 'pointer' }}
-                  />
-                </label>
-              </div>
-              {nuvioInstantDebrid && (
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--muted)', lineHeight: 1.55 }}>
+            <div
+              className={`wizard-hover-lift${nuvioInstantDebrid ? '' : ' wizard-hover-lift--guide'}`}
+              style={{
+                '--wizard-hover-selected-bg': 'var(--panel-2)',
+                '--wizard-hover-selected-border': 'var(--accent)',
+                '--wizard-hover-selected-color': 'var(--text)',
+                borderRadius: '14px',
+                border: `2px solid ${nuvioInstantDebrid ? 'var(--accent)' : 'var(--border)'}`,
+                background: nuvioInstantDebrid ? 'var(--panel-2)' : 'var(--panel)',
+                transition: 'all 0.15s',
+                overflow: 'hidden',
+                marginBottom: '0.5rem',
+              } as CSSProperties}
+            >
+              <button
+                type="button"
+                onClick={() => setNuvioInstantDebrid(!nuvioInstantDebrid)}
+                aria-pressed={nuvioInstantDebrid}
+                style={{
+                  width: '100%', border: 'none', background: 'transparent',
+                  color: 'var(--text)', cursor: 'pointer', textAlign: 'left',
+                  padding: '0.95rem 1rem', display: 'flex',
+                  alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem',
+                }}
+              >
+                <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>⚡ Instant Debrid</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.45rem', flex: '0 0 auto' }}>
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      width: '3rem', height: '1.7rem', borderRadius: '999px',
+                      background: nuvioInstantDebrid ? 'var(--accent)' : 'color-mix(in srgb, var(--border) 70%, var(--panel) 30%)',
+                      border: `1px solid ${nuvioInstantDebrid ? 'var(--accent)' : 'var(--border)'}`,
+                      padding: '0.12rem', display: 'flex', alignItems: 'center',
+                      justifyContent: nuvioInstantDebrid ? 'flex-end' : 'flex-start',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <span style={{ width: '1.2rem', height: '1.2rem', borderRadius: '999px', background: '#fff', display: 'block' }} />
+                  </div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: nuvioInstantDebrid ? 'var(--accent)' : 'var(--muted)' }}>
+                    {nuvioInstantDebrid ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+              </button>
+              <div style={{
+                borderTop: `1px solid ${nuvioInstantDebrid ? 'var(--accent)' : 'var(--border)'}`,
+                padding: '0.65rem 1rem',
+                background: 'var(--panel-2)',
+              }}>
+                <div className="wizard-notice__title" style={{ marginBottom: '0.3rem' }}>ℹ️ Note</div>
+                <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text)', lineHeight: 1.6 }}>
                   This feature is still new. It may deliver results slightly faster, but typically returns fewer and less well-organized streams than the standard mode. Unlike the standard mode, it does not definitively exclude P2P streams.
                 </p>
-              )}
+              </div>
             </div>
           )}
         </>
