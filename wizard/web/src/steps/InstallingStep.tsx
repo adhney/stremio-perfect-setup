@@ -7,11 +7,25 @@ import { resolveSharedKeySelection, hasConfiguredKeyArray } from '../lib/sharedK
 
 // @ts-ignore
 import { runStremioSetup, runNuvioSetup } from '@core/orchestrator.js';
+import { buildInstantDebridSettingsPatch } from '../lib/instantDebrid';
 
 interface LogEntry {
   id: number;
   type: 'info' | 'success' | 'warning' | 'error';
   message: string;
+}
+
+function deepMerge(base: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
+  const result = { ...base };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value !== null && typeof value === 'object' && !Array.isArray(value) &&
+        result[key] !== null && typeof result[key] === 'object' && !Array.isArray(result[key])) {
+      result[key] = deepMerge(result[key] as Record<string, unknown>, value as Record<string, unknown>);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
 }
 
 const STEP_LABELS: Record<string, string> = {
@@ -49,7 +63,7 @@ export function InstallingStep() {
     try {
       const {
         target, stremioAccount, nuvioAccount, credentials, aioStreamsInputs,
-        catalogSelection, templates, wizardConfig, watchly,
+        catalogSelection, templates, wizardConfig, watchly, nuvioInstantDebrid,
       } = wizard;
 
       if (!templates) {
@@ -101,10 +115,11 @@ export function InstallingStep() {
 
       push('Building your personalised AIOStreams configuration…');
 
+      const useInstantDebrid = target === 'nuvio' && nuvioInstantDebrid;
       const aiostreamsParams = {
         template: templates.aiostreams,
         inputs: aioStreamsInputs,
-        services: credentials.debridServices.map((d: { id: string }) => d.id),
+        services: useInstantDebrid ? [] : credentials.debridServices.map((d: { id: string }) => d.id),
         credentials: {
           tmdbApiKey: effectiveCredentials.tmdbApiKey,
           tmdbAccessToken: effectiveCredentials.tmdbAccessToken,
@@ -112,7 +127,7 @@ export function InstallingStep() {
           geminiApiKey: effectiveCredentials.geminiApiKey,
           rpdbApiKey: effectiveCredentials.rpdbApiKey,
         },
-        serviceCredentials: Object.fromEntries(
+        serviceCredentials: useInstantDebrid ? {} : Object.fromEntries(
           credentials.debridServices.map((service) => [
             service.id,
             Object.fromEntries(
@@ -244,10 +259,17 @@ export function InstallingStep() {
       if (target === 'nuvio' && !templates.settings) {
         throw new Error('The Nuvio settings template is missing from the active config. Check wizard/config.json and try again.');
       }
+      let nuvioSettingsTemplate = templates.settings as Record<string, unknown>;
+      if (useInstantDebrid) {
+        const patch = buildInstantDebridSettingsPatch(credentials.debridServices);
+        if (patch) {
+          nuvioSettingsTemplate = deepMerge(nuvioSettingsTemplate, patch);
+        }
+      }
       const extraParams = target === 'nuvio'
         ? {
             collectionsJson: templates.collections as object[],
-            nuvioSettingsTemplate: templates.settings as Record<string, unknown>,
+            nuvioSettingsTemplate,
           }
         : {};
 

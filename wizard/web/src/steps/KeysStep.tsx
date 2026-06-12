@@ -183,7 +183,6 @@ function getContinueIcon(screenId: KeyScreenId, label: string, canContinue: bool
   if (/shared|free|p2p|http/i.test(label)) return <Users size={16} />;
   if (/default/i.test(label)) return <Gift size={16} />;
   if (/without ai-powered search/i.test(label)) return <Search size={16} />;
-  if (screenId !== 'debrid') return <KeyRound size={16} />;
   return <KeyRound size={16} />;
 }
 
@@ -317,18 +316,7 @@ export function KeysStep({ keyIndex }: Props) {
                   <button
                     type="button"
                     className="debrid-card__select"
-                    onClick={() => {
-                      const isCurrentlySelected = credentials.debridServices.some(d => d.id === service.id);
-                      if (isCurrentlySelected) {
-                        const remainingQualifying = credentials.debridServices.filter(
-                          d => (INSTANT_DEBRID_SERVICE_IDS as readonly string[]).includes(d.id) && d.id !== service.id
-                        );
-                        if (remainingQualifying.length === 0 && nuvioInstantDebrid) {
-                          setNuvioInstantDebrid(false);
-                        }
-                      }
-                      toggleDebridService(service.id);
-                    }}
+                    onClick={() => toggleDebridService(service.id)}
                     aria-pressed={selected}
                     disabled={isInstantDebridLocked}
                     style={{
