@@ -466,7 +466,7 @@ export function KeysStep({ keyIndex }: Props) {
                 }}
               >
                 <div style={{ minWidth: 0, flex: '1 1 auto' }}>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>⚡ Instant Debrid (Connected Services)</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>⚡ Instant Debrid / Connected Services</div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.45rem', flex: '0 0 auto' }}>
                   <div
