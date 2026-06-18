@@ -7,6 +7,10 @@ title: "📜 Changelog"
 
 ## 📚 AIOStreams
 
+### 2.0.9 (2026-06-18)
+
+- Changed the *Colored Icons* for size into 💾 in the **Formatter**.
+
 ### 2.0.8 (2026-06-10)
 
 - Made the **~ðŸ§** symbols showing when using Zyclops Proxy for Usenet hidden.
@@ -65,12 +69,23 @@ title: "📜 Changelog"
 
 ## 🍿 Guide
 
+### 2.0.2 (2026-06-18)
+
+- Removed the *Audio and Video Tags* from **Nuvio Formatter** in *Additional Stuff* because badges already show them.
+
 ### 2.0.1 (2026-06-10)
 
 - Added the **Nuvio Formatter** section with alternatives in *Additional Stuff*.
 - Updated the **AIOStreams Formatter** to make the **~ðŸ§** symbols showing when using Zyclops Proxy for Usenet hidden.
 
 ## 🔮 Wizard
+
+### 1.0.4 (2026-06-18)
+
+- Removed the *Audio and Video Tags* from **Nuvio Formatter** because badges already show them.
+- Set the *Show Addon Logo* option to disabled in **Nuvio Settings** to allow more badges to show.
+- Set the *Size Badges* to disabled in **Nuvio Settings** and added it in the *Formatter* instead.
+- Made the **Nuvio Formatter** icons colored as default.
 
 ### 1.0.3 (2026-06-12)
 

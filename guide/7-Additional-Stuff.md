@@ -57,7 +57,7 @@ The formatting templates are designed to let you evaluate a stream easily before
 * ☊ / 🎧 → Audio Channels (5.1, 7.1…)
 
 **File & Availability**
-* ◧ / 📦 or ⧉ / 📚 → Single File / Season Pack
+* ◧ / 💾 or ⧉ / 📚 → Single File / Season Pack
 * **Size** · **Bitrateᴹᵇᵖˢ** → File Size & Density (helps estimate quality vs bandwidth needs)
 * ⟳ / 🕒 → Upload Age (newer is often better seeded)
 
@@ -93,7 +93,7 @@ If you went with the ***Flat Monochrome Icons*** for the formatter and want inst
 {stream.editions::exists["🎬  {stream.editions::join(' · ')} "||""]}
 {stream.encode::exists["📼  {stream.encode}  "||""]}{stream.visualTags::exists["🎥  {stream.visualTags::join(' · ')}  "||""]}
 {stream.audioTags::exists["🎵  {stream.audioTags::join(' · ')}  "||""]}{stream.audioChannels::exists["🎧  {stream.audioChannels::join(' · ')} "||""]}
-{stream.size::>0::and::stream.seasonPack::istrue["📚  "||""]}{stream.size::>0::and::stream.seasonPack::isfalse["📦  "||""]}{stream.size::>0["{stream.size::sbytes}"||""]}{stream.bitrate::exists[" · {stream.bitrate::sbitrate::replace('Mbps','ᴹᵇᵖˢ')::replace('Kbps','ᴷᵇᵖˢ')}  "||""]}{stream.message::~Download["{tools.removeLine}"||""]}{stream.age::exists["🕒 {stream.age}"||""]}
+{stream.size::>0::and::stream.seasonPack::istrue["📚  "||""]}{stream.size::>0::and::stream.seasonPack::isfalse["💾  "||""]}{stream.size::>0["{stream.size::sbytes}"||""]}{stream.bitrate::exists[" · {stream.bitrate::sbitrate::replace('Mbps','ᴹᵇᵖˢ')::replace('Kbps','ᴷᵇᵖˢ')}  "||""]}{stream.message::~Download["{tools.removeLine}"||""]}{stream.age::exists["🕒 {stream.age}"||""]}
 {stream.proxied::istrue["🔐 "||"🔧 "]}{service.shortName::exists["[{service.shortName}] "||""]}{addon.name}{stream.type::replace('debrid',' ')::exists[" · {stream.type::replace('debrid',' ')::replace('stremio-usenet','nntp')::smallcaps}"||""]}{service.cached::isfalse::or::stream.type::=p2p::and::stream.seeders::>0["  ⇋ {stream.seeders}🌱  "||""]}
 {stream.languages::exists["🔊  {stream.languageEmojis::join(' · ')::replace('ᴅᴜᴀʟ ᴀᴜᴅɪᴏ','ᴅᴜᴀʟ')::replace('ᴅᴜʙʙᴇᴅ','ᴅᴜʙ')}  "||""]}{stream.uSubtitles::exists["💬  {stream.uSubtitleEmojis::join(' · ')}  "||""]}{stream.seadex["»  "||""]}{stream.seadexBest::istrue["[ʙᴇsᴛ] "||""]}{stream.seadex::istrue::and::stream.seadexBest::isfalse["[ᴀʟᴛ] "||""]}
 {stream.message::exists["ℹ️ {stream.message::smallcaps}  "||""]}{stream.message::~ðŸ§["{tools.removeLine}"||""]}
@@ -141,23 +141,18 @@ Similar to the **AIOStreams** formatting for the stream information, you can do 
 **Name Template**:
 ```
 {service.cached::istrue["⚡ "||""]}{service.cached::isfalse["⏳ "||""]}{stream.type::=p2p["🧲 "||""]}{stream.type::=http["🌐 "||""]}{stream.type::=live["📺 "||""]}{stream.type::=youtube["▶️ "||""]}{stream.type::=archive["🗄️ "||""]}{stream.type::=external["↗️ "||""]}{stream.type::=statistic["📊 "||""]}{stream.type::=info["ℹ️ "||""]}{stream.type::=error["⛔ "||""]}{stream.resolution::exists["{stream.resolution::replace('2160p','UHD⁴ᴷ')::replace('1440p','QHD²ᴷ')::replace('1080p','FHD')::replace('p','P')}    "||""]}
-{stream.quality::exists["⌜{stream.quality::title::replace('Bluray Remux','Remux')::upper}⌟    "||""]}
-{service.shortName::exists["[{service.shortName}]    "||""]}
+{stream.quality::exists["⌜{stream.quality::title::replace('Bluray Remux','Remux')::upper}⌟    "||""]}{service.shortName::exists["[{service.shortName}]    "||""]}
 ```
 
 **Decription Template [*Colorful Icons*]**:
 ```
-{stream.edition::exists["🎬  {stream.edition::upper} "||""]}
-{stream.encode::exists["📼  {stream.encode}  "||""]}{stream.visualTags::exists["🎥  {stream.visualTags::join(' · ')}  "||""]}
-{stream.audioTags::exists["🎵  {stream.audioTags::join(' · ')}  "||""]}{stream.audioChannels::exists["🎧  {stream.audioChannels::join(' · ')} "||""]}
-{stream.languages::exists["🔊  {stream.languageEmojis::join(' · ')::upper}  "||""]}
+{stream.size::>0["💾  {stream.size::sbytes}  "||""]}{stream.edition::exists["🎬  {stream.edition::upper}  "||""]}
+{stream.languages::exists["🔊  {stream.languages::join(' · ')::upper}  "||""]}
 ```
 
 **Decription Template [*Flat Monochrome Icons*]**:
 ```
-{stream.edition::exists["▶︎  {stream.edition::upper} "||""]}
-{stream.encode::exists["▣  {stream.encode}  "||""]}{stream.visualTags::exists["✦  {stream.visualTags::join(' · ')}  "||""]}
-{stream.audioTags::exists["♬  {stream.audioTags::join(' · ')}  "||""]}{stream.audioChannels::exists["☊  {stream.audioChannels::join(' · ')} "||""]}
+{stream.size::>0["◧  {stream.size::sbytes}  "||""]}{stream.edition::exists["▶︎  {stream.edition::upper}  "||""]}
 {stream.languages::exists["⚐  {stream.languages::join(' · ')::upper}  "||""]}
 ```
 

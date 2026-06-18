@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.9 (2026-06-18)
+
+- Changed the *Colored Icons* for size into 💾 in the **Formatter**.
+
 ## 2.0.8 (2026-06-10)
 
 - Made the **~ðŸ§** symbols showing when using Zyclops Proxy for Usenet hidden.
