@@ -42,7 +42,7 @@ function apiKeyField(serviceName: string): ServiceCredentialField {
 }
 
 export const SERVICES: Service[] = [
-  { id: 'torbox',          name: 'TorBox',         logo: 'services/torbox.svg',      isDebrid: true,  isUsenet: false, url: 'https://torbox.app/subscription?referral=6e80077e-c232-4b71-8914-5b87202b9577',      credentialsUrl: 'https://torbox.app/settings', credentialFields: [apiKeyField('TorBox')] },
+  { id: 'torbox',          name: 'TorBox',         logo: 'services/torbox.svg',      isDebrid: true,  isUsenet: false, url: 'https://torbox.app/subscription?referral=f7feee59-8c0d-4842-b53a-07738c37f7f1',      credentialsUrl: 'https://torbox.app/settings', credentialFields: [apiKeyField('TorBox')] },
   { id: 'realdebrid',     name: 'Real-Debrid',    logo: 'services/realdebrid.png',  isDebrid: true,  isUsenet: false, url: 'http://real-debrid.com/?id=8801126', credentialsUrl: 'https://real-debrid.com/apitoken', credentialFields: [apiKeyField('Real-Debrid')] },
   { id: 'alldebrid',      name: 'AllDebrid',      logo: 'services/alldebrid.png',   isDebrid: true,  isUsenet: false, url: 'https://alldebrid.com',   credentialsUrl: 'https://alldebrid.com/apikeys/', credentialFields: [apiKeyField('AllDebrid')] },
   { id: 'debridlink',     name: 'Debrid-Link',    logo: 'services/debridlink.svg',  isDebrid: true,  isUsenet: false, url: 'https://debrid-link.com', credentialsUrl: 'https://debrid-link.com/webapp/apikey', credentialFields: [apiKeyField('Debrid-Link')] },
