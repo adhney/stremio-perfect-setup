@@ -157,5 +157,12 @@ function StepRouter() {
 }
 
 export default function App() {
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {
+      // Fall back to config.json proxyBase when service workers are unavailable.
+    });
+  }, []);
+
   return <StepRouter />;
 }

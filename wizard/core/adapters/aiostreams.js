@@ -163,8 +163,18 @@ export function createAioStreamsAdapter(instanceUrl, { proxyBase = '' } = {}) {
       }
       if (res.status !== 201) {
         let detail = '';
-        try { detail = (await res.json())?.error?.message || ''; } catch { /* ignore */ }
+        try {
+          const body = await res.clone().json();
+          detail = body?.error?.message || body?.error || '';
+        } catch { /* ignore */ }
         if (!detail) detail = await res.text().catch(() => '');
+        if (res.status === 403 && /origin not allowed/i.test(detail)) {
+          throw new Error(
+            `[CORS] The configured CORS proxy (${proxyBase}) rejected this wizard origin. ` +
+            `On GitHub Pages, reload after the update so the built-in wizard proxy can register, ` +
+            `or use the wizard hosted at https://numb3rs.stream/wizard/.`
+          );
+        }
         throw new Error(
           `AIOStreams ${base}: configuration rejected by the server (HTTP ${res.status}).` +
           (detail ? ` Details: ${detail.slice(0, 300)}` : '')
