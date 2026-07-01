@@ -305,9 +305,15 @@ async function promptApiKeys(ask, shared, autoYes) {
   console.log('Press Enter to use built-in shared keys from config.json where available.\n');
 
   const askKey = async (label, sharedValue, required = true) => {
-    if (autoYes && sharedValue) {
-      logInfo(`${label}: using shared key`);
-      return sharedValue;
+    if (autoYes) {
+      if (sharedValue) {
+        logInfo(`${label}: using shared key`);
+        return sharedValue;
+      }
+      if (!required) {
+        logInfo(`${label}: skipped`);
+        return '';
+      }
     }
     const hint = sharedValue ? ' [shared key available]' : '';
     const value = (await ask(`${label}${hint}: `)).trim();
