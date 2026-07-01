@@ -11,6 +11,8 @@
  *   --token <jwt>       Nuvio access_token from nuvio.tv localStorage
  *   --config <name>     Config block in wizard/config.json (default: main)
  *   --yes, -y           Accept defaults for catalogs & AIOStreams options
+ *   --torbox-key <key>  Configure TorBox debrid (skips debrid prompts)
+ *   --profile <name>    Profile name or number (default: first profile)
  *   --dry-run           Load config and print plan only
  */
 
@@ -85,12 +87,21 @@ const STEP_LABELS = {
 // ---------------------------------------------------------------------------
 
 function parseArgs(argv) {
-  const opts = { token: process.env.NUVIO_TOKEN ?? '', config: 'main', yes: false, dryRun: false };
+  const opts = {
+    token: process.env.NUVIO_TOKEN ?? '',
+    config: 'main',
+    yes: false,
+    dryRun: false,
+    torboxKey: process.env.TORBOX_API_KEY ?? '',
+    profile: process.env.NUVIO_PROFILE ?? '',
+  };
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--yes' || arg === '-y') opts.yes = true;
     else if (arg === '--dry-run') opts.dryRun = true;
     else if (arg === '--token') opts.token = argv[++i] ?? '';
+    else if (arg === '--torbox-key') opts.torboxKey = argv[++i] ?? '';
+    else if (arg === '--profile') opts.profile = argv[++i] ?? '';
     else if (arg === '--config') opts.config = argv[++i] ?? 'main';
     else if (arg === '--help' || arg === '-h') {
       console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(0, 14).join('\n'));
@@ -224,7 +235,7 @@ async function promptToken(ask, initial) {
   return parseNuvioBrowserSession(raw);
 }
 
-async function promptProfile(ask, adapter, token) {
+async function promptProfile(ask, adapter, token, preferred = '') {
   heading('Profile');
   const profiles = await adapter.getProfiles(token);
   if (!profiles.length) throw new Error('No Nuvio profiles found on this account.');
@@ -234,7 +245,17 @@ async function promptProfile(ask, adapter, token) {
   });
 
   let profile = profiles[0];
-  if (profiles.length > 1) {
+  const pref = String(preferred ?? '').trim();
+  if (pref) {
+    const byIndex = Number(pref);
+    if (Number.isFinite(byIndex) && byIndex >= 1 && byIndex <= profiles.length) {
+      profile = profiles[byIndex - 1];
+    } else {
+      const byName = profiles.find((p) => p.name.toLowerCase() === pref.toLowerCase());
+      if (!byName) throw new Error(`Profile "${pref}" not found.`);
+      profile = byName;
+    }
+  } else if (profiles.length > 1) {
     const answer = (await ask(`\nSelect profile [1-${profiles.length}] (default 1): `)).trim();
     const idx = answer ? Number(answer) - 1 : 0;
     if (!Number.isFinite(idx) || idx < 0 || idx >= profiles.length) {
@@ -247,7 +268,13 @@ async function promptProfile(ask, adapter, token) {
   return profile;
 }
 
-async function promptDebridServices(ask) {
+async function promptDebridServices(ask, torboxKey = '') {
+  if (torboxKey.trim()) {
+    heading('Debrid services');
+    logInfo('TorBox configured from --torbox-key');
+    return [{ id: 'torbox', credentials: { apiKey: torboxKey.trim() } }];
+  }
+
   heading('Debrid services (optional)');
   console.log('Pick debrid providers for AIOStreams. Enter numbers comma-separated, or press Enter to skip.\n');
   DEBRID_SERVICES.forEach((s, i) => console.log(`  ${i + 1}. ${s.name}`));
@@ -385,15 +412,16 @@ async function main() {
     const email = getEmailFromNuvioToken(token) ?? '(unknown)';
     logStep('account', `Signed in as ${email}`);
 
-    const profile = await promptProfile(ask, adapter, token);
+    const profile = await promptProfile(ask, adapter, token, opts.profile);
     const addonPassword = await promptAddonPassword(ask, opts.yes);
     const shared = resolveSharedKeys(config);
-    const credentials = await promptApiKeys(ask, shared, opts.yes);
-    const debridServices = await promptDebridServices(ask);
-    const instantDebrid = await promptInstantDebrid(ask, debridServices, opts.yes);
+    const credentials = await promptApiKeys(ask, shared, opts.yes || Boolean(opts.torboxKey));
+    const debridServices = await promptDebridServices(ask, opts.torboxKey);
+    const instantDebrid = await promptInstantDebrid(ask, debridServices, opts.yes || Boolean(opts.torboxKey));
     const aioStreamsInputs = buildDefaultAioInputs(templates.aiostreams);
 
-    if (!opts.yes) {
+    const useDefaults = opts.yes || Boolean(opts.torboxKey);
+    if (!useDefaults) {
       const sections = listAioSections(templates.aiostreams);
       console.log(`\nAIOStreams: using template defaults (${sections.length} sections).`);
       const custom = (await ask('Customize AIOStreams options interactively? [y/N]: ')).trim().toLowerCase();
@@ -409,7 +437,7 @@ async function main() {
       templates.aiometadata,
       templates.collections,
       config.catalogSelectionExceptions ?? [],
-      opts.yes,
+      useDefaults,
     );
 
     const aiometadataParams = {
