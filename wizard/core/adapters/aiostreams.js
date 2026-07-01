@@ -175,6 +175,12 @@ export function createAioStreamsAdapter(instanceUrl, { proxyBase = '' } = {}) {
             `or use the wizard hosted at https://numb3rs.stream/wizard/.`
           );
         }
+        if (res.status === 405 && /<title>405 Not Allowed<\/title>/i.test(detail)) {
+          throw new Error(
+            `[CORS] The wizard CORS proxy is not active yet (GitHub Pages blocked the POST). ` +
+            `Reload this page once, then run setup again so the service worker can intercept API calls.`
+          );
+        }
         throw new Error(
           `AIOStreams ${base}: configuration rejected by the server (HTTP ${res.status}).` +
           (detail ? ` Details: ${detail.slice(0, 300)}` : '')

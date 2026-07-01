@@ -5,6 +5,20 @@ const ALLOWED_TARGET_SUFFIXES = [
   '.elfhosted.com',
 ];
 
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 function corsProxyPrefix() {
   return new URL('cors-proxy/', self.registration.scope).pathname;
 }

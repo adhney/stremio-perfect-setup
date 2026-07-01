@@ -4,7 +4,7 @@ import { RotateCcw } from 'lucide-react';
 import { WizardShell } from '../components/WizardShell';
 import { useWizard } from '../store/wizard';
 import { resolveSharedKeySelection, hasConfiguredKeyArray } from '../lib/sharedKeys';
-import { resolveProxyBase } from '../lib/proxyBase';
+import { resolveProxyBase, ensureCorsProxyReady } from '../lib/proxyBase';
 
 // @ts-ignore
 import { runStremioSetup, runNuvioSetup } from '@core/orchestrator.js';
@@ -112,6 +112,7 @@ export function InstallingStep() {
       }
 
       const effectiveInstances = wizardConfig.instances;
+      await ensureCorsProxyReady();
       const proxyBase = resolveProxyBase(wizardConfig);
 
       push('Building your personalised AIOStreams configuration…');
