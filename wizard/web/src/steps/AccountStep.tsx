@@ -30,7 +30,8 @@ export function AccountStep() {
   const account = target === 'stremio' ? stremioAccount : nuvioAccount;
   const appName = target === 'stremio' ? 'Stremio' : 'Nuvio';
   const isNuvio = target === 'nuvio';
-  const isBrowserTokenSignIn = isNuvio && account.mode === 'signin' && account.signInMethod === 'browser-token';
+  const nuvioSignInMethod = account.signInMethod ?? 'password';
+  const isBrowserTokenSignIn = isNuvio && account.mode === 'signin' && nuvioSignInMethod === 'browser-token';
   const nuvioProfiles = isNuvio ? (account.profiles ?? []) : [];
   const hasLoadedNuvioProfileStep = isNuvio
     && account.mode === 'signin'
@@ -262,7 +263,7 @@ export function AccountStep() {
             <button
               key={id}
               type="button"
-              className={`wizard-hover-lift${account.signInMethod === id ? '' : ' wizard-hover-lift--guide'}`}
+              className={`wizard-hover-lift${nuvioSignInMethod === id ? '' : ' wizard-hover-lift--guide'}`}
               onClick={() => {
                 setNuvioAccount({
                   signInMethod: id,
@@ -278,10 +279,10 @@ export function AccountStep() {
                 '--wizard-hover-selected-border': 'var(--accent)',
                 '--wizard-hover-selected-color': '#fff',
                 padding: '0.7rem 1rem', borderRadius: '10px', fontSize: '0.875rem',
-                fontWeight: 600, border: `1px solid ${account.signInMethod === id ? 'var(--accent)' : 'var(--border)'}`,
+                fontWeight: 600, border: `1px solid ${nuvioSignInMethod === id ? 'var(--accent)' : 'var(--border)'}`,
                 cursor: 'pointer', transition: 'all 0.15s',
-                background: account.signInMethod === id ? 'var(--accent)' : 'var(--panel-2)',
-                color: account.signInMethod === id ? '#fff' : 'var(--muted)',
+                background: nuvioSignInMethod === id ? 'var(--accent)' : 'var(--panel-2)',
+                color: nuvioSignInMethod === id ? '#fff' : 'var(--muted)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
                 flex: 1,
               } as CSSProperties}
@@ -369,7 +370,7 @@ export function AccountStep() {
         </>
       )}
 
-      {isNuvio && account.mode === 'signin' && account.signInMethod === 'password' && (
+      {isNuvio && account.mode === 'signin' && nuvioSignInMethod === 'password' && (
         <div style={{
           background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px',
           padding: '0.65rem 0.8rem', marginBottom: '0.75rem', fontSize: '0.8rem',
