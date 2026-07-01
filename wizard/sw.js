@@ -78,10 +78,21 @@ self.addEventListener('fetch', (event) => {
     upstreamHeaders.delete('origin');
     upstreamHeaders.delete('referer');
 
+    let body;
+    if (event.request.method !== 'GET' && event.request.method !== 'HEAD') {
+      const buffered = await event.request.clone().arrayBuffer();
+      body = buffered.byteLength > 0 ? buffered : undefined;
+      if (body) {
+        upstreamHeaders.set('content-length', String(body.byteLength));
+      } else {
+        upstreamHeaders.delete('content-length');
+      }
+    }
+
     const upstream = await fetch(targetUrl, {
       method: event.request.method,
       headers: upstreamHeaders,
-      body: event.request.method === 'GET' || event.request.method === 'HEAD' ? undefined : event.request.body,
+      body,
       redirect: 'follow',
     });
 
