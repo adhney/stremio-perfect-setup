@@ -1,7 +1,8 @@
 // Nuvio adapter: talks to the Supabase-backed Nuvio Public API.
 
 const SUPABASE_BASE = 'https://dpyhjjcoabcglfmgecug.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRweWhqamNvYWJjZ2xmbWdlY3VnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA3ODYyNDcsImV4cCI6MjA4NjM2MjI0N30.U-3QSNDdpsnvRk_7ZL419AFTOtggHJJcmkodxeXjbkg';
+// Publishable key (sb_publishable_…); legacy JWT anon key also works for this project.
+const SUPABASE_ANON_KEY = 'sb_publishable_zcNkgqGJjBtj8GoRlMvl9A_zkdmXhf5';
 const DEFAULT_PROFILE_COLOR = '#1E88E5';
 
 function anonHeaders() {
@@ -205,6 +206,69 @@ function isApiKeyError(detail, code) {
   return /api key|missing_api_key|invalid_api_key|unauthorized/i.test(`${code} ${detail}`);
 }
 
+const JWT_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
+function decodeJwtPayload(token) {
+  const parts = String(token || '').split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const json = atob(padded);
+    const payload = JSON.parse(json);
+    return isPlainObject(payload) ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Extract email claim from a Nuvio/Supabase access_token JWT. */
+export function getEmailFromNuvioToken(token) {
+  const payload = decodeJwtPayload(token);
+  const email = String(payload?.email || '').trim();
+  return email.includes('@') ? email : null;
+}
+
+/**
+ * Accept a raw JWT access_token or the full supabase.auth.token JSON from nuvio.tv.
+ * @returns {string} access_token JWT
+ */
+export function parseNuvioBrowserSession(raw) {
+  const trimmed = String(raw ?? '').trim();
+  if (!trimmed) {
+    throw new Error('Paste your Nuvio browser session from nuvio.tv (supabase.auth.token or access_token).');
+  }
+
+  if (JWT_PATTERN.test(trimmed)) {
+    return trimmed;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error(
+      'Could not parse the pasted session. Copy the full supabase.auth.token value from nuvio.tv Local Storage, or paste only the access_token JWT.'
+    );
+  }
+
+  if (typeof parsed === 'string') {
+    return parseNuvioBrowserSession(parsed);
+  }
+
+  const token = parsed?.access_token
+    ?? parsed?.currentSession?.access_token
+    ?? parsed?.session?.access_token;
+
+  if (typeof token === 'string' && JWT_PATTERN.test(token)) {
+    return token;
+  }
+
+  throw new Error(
+    'The pasted session did not contain a valid access_token. In DevTools → Application → Local Storage → nuvio.tv, copy the full supabase.auth.token value.'
+  );
+}
+
 function formatAuthError(service, action, status, detail, code) {
   if (isApiKeyError(detail, code)) {
     return `${service} ${action} is temporarily unavailable because the public API key configured in the wizard is invalid. Please update the Nuvio Supabase anon key and try again.`;
@@ -303,6 +367,16 @@ export function createNuvioAdapter() {
       }
 
       return { token: payload.access_token, userId: payload.user?.id };
+    },
+
+    /** Verify an existing browser session token by loading profiles (no password grant). */
+    async validateToken(rawSession) {
+      const token = parseNuvioBrowserSession(rawSession);
+      await this.getProfiles(token);
+      return {
+        token,
+        email: getEmailFromNuvioToken(token) ?? undefined,
+      };
     },
 
     async login(email, password) {

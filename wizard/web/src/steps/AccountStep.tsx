@@ -30,6 +30,7 @@ export function AccountStep() {
   const account = target === 'stremio' ? stremioAccount : nuvioAccount;
   const appName = target === 'stremio' ? 'Stremio' : 'Nuvio';
   const isNuvio = target === 'nuvio';
+  const isBrowserTokenSignIn = isNuvio && account.mode === 'signin' && account.signInMethod === 'browser-token';
   const nuvioProfiles = isNuvio ? (account.profiles ?? []) : [];
   const hasLoadedNuvioProfileStep = isNuvio
     && account.mode === 'signin'
@@ -38,12 +39,13 @@ export function AccountStep() {
   const isCreatingNuvioProfile = hasLoadedNuvioProfileStep && !!account.createNewProfile;
   const minPasswordLength = MIN_PASSWORD_LENGTHS[target ?? 'stremio'][account.mode];
 
-  const isValidEmail    = account.email.includes('@');
-  const isValidPassword = account.password.length >= minPasswordLength;
+  const isValidEmail    = isBrowserTokenSignIn || account.email.includes('@');
+  const isValidPassword = isBrowserTokenSignIn || account.password.length >= minPasswordLength;
+  const isValidBrowserSession = !isBrowserTokenSignIn || (account.browserSession?.trim().length ?? 0) > 20;
   const requiresProfileName = isNuvio && (account.mode === 'create' || isCreatingNuvioProfile);
   const isValidProfileName = !requiresProfileName || !!account.profileName?.trim();
   const hasSelectedProfile = !hasLoadedNuvioProfileStep || isCreatingNuvioProfile || Number.isFinite(account.profileId);
-  const canAttempt = isValidEmail && isValidPassword && isValidProfileName && hasSelectedProfile && !loading;
+  const canAttempt = isValidEmail && isValidPassword && isValidBrowserSession && isValidProfileName && hasSelectedProfile && !loading;
   const buttonLabel = loading
     ? (
       account.mode === 'create'
@@ -53,7 +55,9 @@ export function AccountStep() {
         : hasLoadedNuvioProfileStep
         ? 'Continuing...'
         : isNuvio
-        ? 'Loading profiles...'
+        ? isBrowserTokenSignIn
+          ? 'Verifying session...'
+          : 'Loading profiles...'
         : 'Signing in...'
     )
     : hasLoadedNuvioProfileStep
@@ -86,6 +90,7 @@ export function AccountStep() {
       profileId: undefined,
       createNewProfile: false,
       profiles: [],
+      ...(next.mode === 'create' ? { signInMethod: 'password' as const } : {}),
     });
   }
 
@@ -135,6 +140,23 @@ export function AccountStep() {
             });
           }
           nextStep();
+          return;
+        } else if (isBrowserTokenSignIn) {
+          const validated = await adapter.validateToken(account.browserSession ?? '');
+          const profiles = await adapter.getProfiles(validated.token);
+          const selectedProfileId = profiles.some(profile => profile.profile_index === account.profileId)
+            ? account.profileId
+            : profiles[0]?.profile_index;
+          const selectedProfile = profiles.find((profile) => profile.profile_index === selectedProfileId);
+
+          setNuvioAccount({
+            authToken: validated.token,
+            email: validated.email || account.email,
+            profiles,
+            profileId: profiles.length ? selectedProfileId : undefined,
+            profileName: selectedProfile?.name ?? account.profileName,
+            createNewProfile: profiles.length === 0,
+          });
           return;
         } else {
           const auth = await adapter.login(account.email, account.password);
@@ -231,6 +253,95 @@ export function AccountStep() {
         ))}
       </div>
 
+      {isNuvio && account.mode === 'signin' && (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+          {([
+            { id: 'password' as const, label: 'Email & password' },
+            { id: 'browser-token' as const, label: 'Browser session' },
+          ]).map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              className={`wizard-hover-lift${account.signInMethod === id ? '' : ' wizard-hover-lift--guide'}`}
+              onClick={() => {
+                setNuvioAccount({
+                  signInMethod: id,
+                  authToken: undefined,
+                  profileId: undefined,
+                  createNewProfile: false,
+                  profiles: [],
+                });
+                setError('');
+              }}
+              style={{
+                '--wizard-hover-selected-bg': 'var(--accent)',
+                '--wizard-hover-selected-border': 'var(--accent)',
+                '--wizard-hover-selected-color': '#fff',
+                padding: '0.7rem 1rem', borderRadius: '10px', fontSize: '0.875rem',
+                fontWeight: 600, border: `1px solid ${account.signInMethod === id ? 'var(--accent)' : 'var(--border)'}`,
+                cursor: 'pointer', transition: 'all 0.15s',
+                background: account.signInMethod === id ? 'var(--accent)' : 'var(--panel-2)',
+                color: account.signInMethod === id ? '#fff' : 'var(--muted)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem',
+                flex: 1,
+              } as CSSProperties}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {isBrowserTokenSignIn ? (
+        <>
+          <div style={{
+            background: 'var(--panel-2)', border: '1px solid var(--border)', borderRadius: '8px',
+            padding: '0.75rem 0.85rem', marginBottom: '0.75rem', fontSize: '0.8125rem',
+            color: 'var(--muted)', lineHeight: 1.55,
+          }}>
+            <strong style={{ display: 'block', color: 'var(--text)', marginBottom: '0.35rem' }}>
+              Use your existing nuvio.tv browser session
+            </strong>
+            Sign in at{' '}
+            <a href="https://nuvio.tv" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
+              nuvio.tv
+            </a>
+            , then open DevTools → Application → Local Storage → nuvio.tv and copy the full{' '}
+            <code style={{ fontSize: '0.78rem' }}>supabase.auth.token</code> value.
+            You can also run in the Console:{' '}
+            <code style={{ fontSize: '0.78rem', display: 'block', marginTop: '0.35rem', wordBreak: 'break-all' }}>
+              copy(JSON.parse(localStorage.getItem('supabase.auth.token')).currentSession.access_token)
+            </code>
+          </div>
+
+          <label style={{ display: 'block', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>Browser session token</span>
+            <textarea
+              value={account.browserSession ?? ''}
+              onChange={e => {
+                setNuvioAccount({
+                  browserSession: e.target.value,
+                  authToken: undefined,
+                  profileId: undefined,
+                  createNewProfile: false,
+                  profiles: [],
+                });
+                setError('');
+              }}
+              placeholder="Paste supabase.auth.token JSON or access_token JWT..."
+              rows={4}
+              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'ui-monospace, monospace', fontSize: '0.8rem' }}
+            />
+          </label>
+
+          {account.email && (
+            <p style={{ marginBottom: '0.75rem', color: 'var(--muted)', fontSize: '0.8125rem' }}>
+              Signed in as <strong style={{ color: 'var(--text)' }}>{account.email}</strong>
+            </p>
+          )}
+        </>
+      ) : (
+        <>
       <label style={{ display: 'block', marginBottom: '0.75rem' }}>
         <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>Email address</span>
         <input
@@ -255,6 +366,18 @@ export function AccountStep() {
           style={inputStyle}
         />
       </label>
+        </>
+      )}
+
+      {isNuvio && account.mode === 'signin' && account.signInMethod === 'password' && (
+        <div style={{
+          background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px',
+          padding: '0.65rem 0.8rem', marginBottom: '0.75rem', fontSize: '0.8rem',
+          color: '#1e40af', lineHeight: 1.5,
+        }}>
+          Password sign-in failing after Nuvio maintenance? Switch to <strong>Browser session</strong> above and paste your token from nuvio.tv.
+        </div>
+      )}
 
       {isNuvio && (account.mode === 'create' || isCreatingNuvioProfile) && (
         <label style={{ display: 'block', marginBottom: '0.5rem' }}>

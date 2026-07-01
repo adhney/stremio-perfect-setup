@@ -4,6 +4,7 @@ import type { AioSection } from '../lib/aioSections.ts';
 
 export type Target = WizardTarget;
 export type AccountMode = 'create' | 'signin';
+export type NuvioSignInMethod = 'password' | 'browser-token';
 
 export interface NuvioProfileOption {
   profile_index: number;
@@ -17,6 +18,10 @@ export interface AccountInfo {
   mode: AccountMode;
   email: string;
   password: string;
+  /** Nuvio sign-in only: password grant vs browser session token */
+  signInMethod?: NuvioSignInMethod;
+  /** Nuvio sign-in only: pasted supabase.auth.token JSON or access_token JWT */
+  browserSession?: string;
   profileName?: string;
   profileId?: number;
   createNewProfile?: boolean;
@@ -143,7 +148,7 @@ export const useWizard = create<WizardState>((set) => ({
   maxReachedStep: 0,
   target: null,
   stremioAccount: { mode: 'create', email: '', password: '' },
-  nuvioAccount:   { mode: 'create', email: '', password: '', profileName: 'Profile 1', createNewProfile: false, profiles: [] },
+  nuvioAccount:   { mode: 'create', email: '', password: '', signInMethod: 'password', browserSession: '', profileName: 'Profile 1', createNewProfile: false, profiles: [] },
   credentials: {
     debridServices: [],
     tmdbApiKey: '', tmdbAccessToken: '', tvdbApiKey: '',
