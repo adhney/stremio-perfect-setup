@@ -149,8 +149,16 @@ export function createAioStreamsAdapter(instanceUrl, { proxyBase = '' } = {}) {
         });
       } catch (err) {
         const message = String(err?.message || err);
+        const usingBuiltInProxy = /cors-proxy/i.test(proxyBase);
         const isCors = /Failed to fetch|NetworkError|Load failed|CORS/i.test(message);
         if (isCors) {
+          if (usingBuiltInProxy) {
+            throw new Error(
+              `[CORS] The wizard CORS proxy is not intercepting requests yet. ` +
+              `Reload this page once, wait a few seconds, then run setup again. ` +
+              `If it still fails, use https://numb3rs.stream/wizard/.`
+            );
+          }
           throw new Error(
             `[CORS] AIOStreams at ${base} is unreachable from your browser, this is a CORS issue. ` +
             `The instance is online and reachable, but its server does not send the ` +
@@ -179,6 +187,12 @@ export function createAioStreamsAdapter(instanceUrl, { proxyBase = '' } = {}) {
           throw new Error(
             `[CORS] The wizard CORS proxy is not active yet (GitHub Pages blocked the POST). ` +
             `Reload this page once, then run setup again so the service worker can intercept API calls.`
+          );
+        }
+        if (res.status === 502 && /cors-proxy/i.test(proxyBase)) {
+          throw new Error(
+            `[CORS_PROXY] AIOStreams at ${base} could not be reached through the wizard proxy. ` +
+            `The instance may be temporarily offline. Try again in a moment.`
           );
         }
         throw new Error(
@@ -317,6 +331,15 @@ export async function createWithFallbacks(instances, params) {
     const allCors = results.every((r) => r.error?.includes('[CORS]'));
     const errors = results.map((r) => r.error?.replace('[CORS] ', '')).join('\n\n');
     if (allCors) {
+      const usingBuiltInProxy = /cors-proxy/i.test(proxyBase || '');
+      if (usingBuiltInProxy) {
+        throw new Error(
+          `[CORS_ALL] Unable to create your AIOStreams configuration, all ${results.length} instance${results.length !== 1 ? 's' : ''} ` +
+          `failed because the wizard CORS proxy is not active yet.\n\n` +
+          `Reload this page once, wait a few seconds for the proxy to register, then run setup again. ` +
+          `If it still fails, use the wizard at https://numb3rs.stream/wizard/ instead.`
+        );
+      }
       throw new Error(
         `[CORS_ALL] Unable to create your AIOStreams configuration, all ${results.length} instance${results.length !== 1 ? 's' : ''} ` +
         `blocked the browser request due to missing CORS headers.\n\n` +

@@ -112,6 +112,7 @@ export function InstallingStep() {
       }
 
       const effectiveInstances = wizardConfig.instances;
+      push('Preparing secure connection to AIOStreams…');
       await ensureCorsProxyReady();
       const proxyBase = resolveProxyBase(wizardConfig);
 

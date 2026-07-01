@@ -19,8 +19,8 @@ self.addEventListener('message', (event) => {
   }
 });
 
-function corsProxyPrefix() {
-  return new URL('cors-proxy/', self.registration.scope).pathname;
+function corsProxyPathname() {
+  return new URL('cors-proxy', self.registration.scope).pathname.replace(/\/$/, '');
 }
 
 function isAllowedTarget(targetUrl) {
@@ -46,12 +46,30 @@ function corsHeaders(request) {
   };
 }
 
+function parseProxyTarget(requestUrl) {
+  const proxyPath = corsProxyPathname();
+  if (requestUrl.pathname !== proxyPath && requestUrl.pathname !== `${proxyPath}/`) {
+    const pathPrefix = `${proxyPath}/`;
+    if (!requestUrl.pathname.startsWith(pathPrefix)) return null;
+    return requestUrl.pathname.slice(pathPrefix.length) + requestUrl.search;
+  }
+
+  const fromQuery = requestUrl.searchParams.get('url');
+  if (fromQuery) return fromQuery;
+
+  const pathPrefix = `${proxyPath}/`;
+  if (requestUrl.pathname.startsWith(pathPrefix)) {
+    return requestUrl.pathname.slice(pathPrefix.length) + requestUrl.search;
+  }
+
+  return null;
+}
+
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
-  const prefix = corsProxyPrefix();
-  if (!requestUrl.pathname.startsWith(prefix)) return;
+  const targetUrl = parseProxyTarget(requestUrl);
+  if (!targetUrl) return;
 
-  const targetUrl = requestUrl.pathname.slice(prefix.length) + requestUrl.search;
   if (!targetUrl.startsWith('https://')) {
     event.respondWith(new Response(JSON.stringify({ error: 'Invalid cors-proxy target URL' }), {
       status: 400,
@@ -74,37 +92,48 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith((async () => {
-    const upstreamHeaders = new Headers(event.request.headers);
-    upstreamHeaders.delete('origin');
-    upstreamHeaders.delete('referer');
+    try {
+      const upstreamHeaders = new Headers(event.request.headers);
+      upstreamHeaders.delete('origin');
+      upstreamHeaders.delete('referer');
 
-    let body;
-    if (event.request.method !== 'GET' && event.request.method !== 'HEAD') {
-      const buffered = await event.request.clone().arrayBuffer();
-      body = buffered.byteLength > 0 ? buffered : undefined;
-      if (body) {
-        upstreamHeaders.set('content-length', String(body.byteLength));
-      } else {
-        upstreamHeaders.delete('content-length');
+      let body;
+      if (event.request.method !== 'GET' && event.request.method !== 'HEAD') {
+        const buffered = await event.request.clone().arrayBuffer();
+        body = buffered.byteLength > 0 ? buffered : undefined;
+        if (body) {
+          upstreamHeaders.set('content-length', String(body.byteLength));
+        } else {
+          upstreamHeaders.delete('content-length');
+        }
       }
+
+      const upstream = await fetch(targetUrl, {
+        method: event.request.method,
+        headers: upstreamHeaders,
+        body,
+        redirect: 'follow',
+      });
+
+      const responseHeaders = new Headers(upstream.headers);
+      for (const [key, value] of Object.entries(corsHeaders(event.request))) {
+        responseHeaders.set(key, value);
+      }
+
+      return new Response(upstream.body, {
+        status: upstream.status,
+        statusText: upstream.statusText,
+        headers: responseHeaders,
+      });
+    } catch (err) {
+      return new Response(JSON.stringify({
+        error: 'Upstream request failed',
+        message: String(err?.message || err),
+        targetUrl,
+      }), {
+        status: 502,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders(event.request) },
+      });
     }
-
-    const upstream = await fetch(targetUrl, {
-      method: event.request.method,
-      headers: upstreamHeaders,
-      body,
-      redirect: 'follow',
-    });
-
-    const responseHeaders = new Headers(upstream.headers);
-    for (const [key, value] of Object.entries(corsHeaders(event.request))) {
-      responseHeaders.set(key, value);
-    }
-
-    return new Response(upstream.body, {
-      status: upstream.status,
-      statusText: upstream.statusText,
-      headers: responseHeaders,
-    });
   })());
 });

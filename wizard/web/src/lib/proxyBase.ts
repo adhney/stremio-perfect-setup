@@ -1,5 +1,7 @@
 import type { WizardConfig } from './constants.ts';
 
+const RELOAD_KEY = 'wizard-cors-proxy-reload';
+
 function isNumb3rsHost(hostname: string) {
   const host = hostname.toLowerCase();
   return host === 'numb3rs.stream' || host.endsWith('.numb3rs.stream');
@@ -20,26 +22,41 @@ export function resolveProxyBase(config: WizardConfig | null): string {
   }
 
   if (usesBuiltInCorsProxy()) {
-    return new URL('cors-proxy/', window.location.href).href.replace(/\/$/, '');
+    // Query-style proxy avoids embedding https:// in the path and works with buildUrl's ?url= mode.
+    return new URL('cors-proxy?url=', window.location.href).href;
   }
 
   return configured;
+}
+
+export function isCorsProxyControlling() {
+  return usesBuiltInCorsProxy() && Boolean(navigator.serviceWorker.controller);
 }
 
 /** Register and activate the wizard CORS proxy service worker before API calls. */
 export async function ensureCorsProxyReady(): Promise<void> {
   if (!usesBuiltInCorsProxy()) return;
 
-  const registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-
   if (navigator.serviceWorker.controller) {
     await navigator.serviceWorker.ready;
+    sessionStorage.removeItem(RELOAD_KEY);
     return;
   }
 
+  const registration = await navigator.serviceWorker.register('./sw.js', {
+    scope: './',
+    updateViaCache: 'none',
+  });
+
   await new Promise<void>((resolve) => {
-    const timeout = window.setTimeout(() => resolve(), 8000);
+    if (navigator.serviceWorker.controller) {
+      resolve();
+      return;
+    }
+
+    const timeout = window.setTimeout(() => resolve(), 5000);
     const finish = () => {
+      if (!navigator.serviceWorker.controller) return;
       window.clearTimeout(timeout);
       navigator.serviceWorker.removeEventListener('controllerchange', finish);
       resolve();
@@ -48,11 +65,26 @@ export async function ensureCorsProxyReady(): Promise<void> {
 
     registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
     registration.installing?.addEventListener('statechange', () => {
-      if (registration.waiting) {
-        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      }
+      registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
     });
   });
 
   await navigator.serviceWorker.ready;
+
+  if (navigator.serviceWorker.controller) {
+    sessionStorage.removeItem(RELOAD_KEY);
+    return;
+  }
+
+  if (!sessionStorage.getItem(RELOAD_KEY)) {
+    sessionStorage.setItem(RELOAD_KEY, '1');
+    window.location.reload();
+    await new Promise(() => {});
+  }
+
+  throw new Error(
+    '[CORS_PROXY] The wizard CORS proxy could not start in your browser. ' +
+    'Reload this page, wait a few seconds, then run setup again. ' +
+    'If it still fails, use https://numb3rs.stream/wizard/ instead.'
+  );
 }
