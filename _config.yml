@@ -11,7 +11,12 @@ kramdown:
 permalink: pretty
 
 exclude:
-  - wizard
+  - wizard/README.md
+  - wizard/config.json
+  - wizard/integration.config.json
+  - wizard/core
+  - wizard/test
+  - wizard/web
 
 defaults:
   - scope:
