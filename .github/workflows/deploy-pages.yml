@@ -52,6 +52,24 @@ jobs:
           rm -rf .pages-source
           scripts/prepare-site-source.sh .pages-source
 
+      - name: Configure Jekyll for GitHub Pages
+        run: |
+          CONFIG=".pages-source/_config.yml"
+          REPO_NAME="${{ github.event.repository.name }}"
+          OWNER="${{ github.repository_owner }}"
+          BASEURL="${PAGES_BASEURL:-/${REPO_NAME}}"
+          SITE_URL="${PAGES_URL:-https://${OWNER}.github.io}"
+
+          sed -i "s|^baseurl:.*|baseurl: \"${BASEURL}\"|" "$CONFIG"
+          if grep -q '^url:' "$CONFIG"; then
+            sed -i "s|^url:.*|url: \"${SITE_URL}\"|" "$CONFIG"
+          else
+            printf '\nurl: "%s"\n' "$SITE_URL" >> "$CONFIG"
+          fi
+        env:
+          PAGES_BASEURL: ${{ vars.PAGES_BASEURL }}
+          PAGES_URL: ${{ vars.PAGES_URL }}
+
       - name: Set up GitHub Pages
         uses: actions/configure-pages@v5
 

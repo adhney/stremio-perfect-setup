@@ -1,12 +1,17 @@
 title: Streaming Perfect Setup
 description: Full and Easy Total Beginner's Guide
-baseurl: ""
+# GitHub Pages project site (adhney.github.io/stremio-perfect-setup). Upstream uses a custom domain with baseurl "".
+baseurl: "/stremio-perfect-setup"
+url: "https://adhney.github.io"
 google_analytics: G-PWNJZLBKC0
 markdown: kramdown
 kramdown:
   input: GFM
   hard_wrap: false
 permalink: pretty
+
+exclude:
+  - wizard
 
 defaults:
   - scope:
