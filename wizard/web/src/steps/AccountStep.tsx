@@ -307,12 +307,15 @@ export function AccountStep() {
             <a href="https://nuvio.tv" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>
               nuvio.tv
             </a>
-            , then open DevTools → Application → Local Storage → nuvio.tv and copy the full{' '}
-            <code style={{ fontSize: '0.78rem' }}>supabase.auth.token</code> value.
+            , then open DevTools → Application → Local Storage → nuvio.tv and copy the{' '}
+            <code style={{ fontSize: '0.78rem' }}>access_token</code> value.
             You can also run in the Console:{' '}
             <code style={{ fontSize: '0.78rem', display: 'block', marginTop: '0.35rem', wordBreak: 'break-all' }}>
-              copy(JSON.parse(localStorage.getItem('supabase.auth.token')).currentSession.access_token)
+              copy(localStorage.getItem('access_token'))
             </code>
+            <span style={{ display: 'block', marginTop: '0.35rem', fontSize: '0.78rem' }}>
+              Tokens expire after about an hour — paste a fresh one if validation fails.
+            </span>
           </div>
 
           <label style={{ display: 'block', marginBottom: '0.75rem' }}>
@@ -329,7 +332,7 @@ export function AccountStep() {
                 });
                 setError('');
               }}
-              placeholder="Paste supabase.auth.token JSON or access_token JWT..."
+              placeholder="Paste access_token JWT from nuvio.tv..."
               rows={4}
               style={{ ...inputStyle, resize: 'vertical', fontFamily: 'ui-monospace, monospace', fontSize: '0.8rem' }}
             />

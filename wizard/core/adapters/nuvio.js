@@ -1,21 +1,21 @@
-// Nuvio adapter: talks to the Supabase-backed Nuvio Public API.
+// Nuvio adapter: talks to the Nuvio Cloud API (api.nuvio.tv proxy over Supabase).
 
-const SUPABASE_BASE = 'https://dpyhjjcoabcglfmgecug.supabase.co';
-// Publishable key (sb_publishable_…); legacy JWT anon key also works for this project.
-const SUPABASE_ANON_KEY = 'sb_publishable_zcNkgqGJjBtj8GoRlMvl9A_zkdmXhf5';
+const NUVIO_API_BASE = 'https://api.nuvio.tv';
+// Public anon key shipped with nuvio.tv (2026-07); required for api.nuvio.tv gateway auth.
+const NUVIO_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxNTIxMzQ2LCJleHAiOjE5MzkyMDEzNDZ9.tmQaj682pwzehpqlgCDMnySOqiUvpgRbrE43T4VJpDI';
 const DEFAULT_PROFILE_COLOR = '#1E88E5';
 
 function anonHeaders() {
   return {
     'Content-Type': 'application/json',
-    'apikey': SUPABASE_ANON_KEY,
+    'apikey': NUVIO_ANON_KEY,
   };
 }
 
 function authHeaders(token) {
   return {
     'Content-Type': 'application/json',
-    'apikey': SUPABASE_ANON_KEY,
+    'apikey': NUVIO_ANON_KEY,
     'Authorization': `Bearer ${token}`,
   };
 }
@@ -230,13 +230,14 @@ export function getEmailFromNuvioToken(token) {
 }
 
 /**
- * Accept a raw JWT access_token or the full supabase.auth.token JSON from nuvio.tv.
+ * Accept a raw access_token JWT or session JSON from nuvio.tv Local Storage.
+ * Current nuvio.tv stores the token in the `access_token` key (ES256 JWT).
  * @returns {string} access_token JWT
  */
 export function parseNuvioBrowserSession(raw) {
   const trimmed = String(raw ?? '').trim();
   if (!trimmed) {
-    throw new Error('Paste your Nuvio browser session from nuvio.tv (supabase.auth.token or access_token).');
+    throw new Error('Paste your Nuvio browser session from nuvio.tv (access_token or session JSON).');
   }
 
   if (JWT_PATTERN.test(trimmed)) {
@@ -248,7 +249,7 @@ export function parseNuvioBrowserSession(raw) {
     parsed = JSON.parse(trimmed);
   } catch {
     throw new Error(
-      'Could not parse the pasted session. Copy the full supabase.auth.token value from nuvio.tv Local Storage, or paste only the access_token JWT.'
+      'Could not parse the pasted session. In DevTools → Application → Local Storage → nuvio.tv, copy the access_token value, or run: copy(localStorage.getItem("access_token"))'
     );
   }
 
@@ -265,7 +266,7 @@ export function parseNuvioBrowserSession(raw) {
   }
 
   throw new Error(
-    'The pasted session did not contain a valid access_token. In DevTools → Application → Local Storage → nuvio.tv, copy the full supabase.auth.token value.'
+    'The pasted session did not contain a valid access_token. In DevTools → Application → Local Storage → nuvio.tv, copy the access_token value (refresh the page first if you just signed in).'
   );
 }
 
@@ -293,22 +294,32 @@ function formatAuthError(service, action, status, detail, code) {
   return `${service} ${action} failed (HTTP ${status}). Please try again.`;
 }
 
+function formatRpcError(path, status, txt) {
+  if (/PGRST301|No suitable key was found to decode the JWT|wrong key type/i.test(txt)) {
+    return 'This Nuvio session token cannot be used with the sync API. Sign in at nuvio.tv, then copy a fresh access_token from Local Storage (tokens expire after about an hour).';
+  }
+  if (/JWT expired|token is expired|expired/i.test(txt)) {
+    return 'Your Nuvio session token has expired. Sign in at nuvio.tv again and paste a fresh access_token from Local Storage.';
+  }
+  return `Nuvio ${path} failed: HTTP ${status} ${txt.slice(0, 200)}`;
+}
+
 async function rpc(path, token, body) {
-  const res = await fetch(`${SUPABASE_BASE}${path}`, {
+  const res = await fetch(`${NUVIO_API_BASE}${path}`, {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
-    throw new Error(`Nuvio ${path} failed: HTTP ${res.status} ${txt.slice(0, 200)}`);
+    throw new Error(formatRpcError(path, res.status, txt));
   }
   return readResponseBody(res);
 }
 
 async function rest(path, token, options = {}) {
   const { method = 'GET', headers = {}, body } = options;
-  const res = await fetch(`${SUPABASE_BASE}${path}`, {
+  const res = await fetch(`${NUVIO_API_BASE}${path}`, {
     method,
     headers: {
       ...authHeaders(token),
@@ -319,7 +330,7 @@ async function rest(path, token, options = {}) {
 
   if (!res.ok) {
     const txt = await res.text().catch(() => '');
-    throw new Error(`Nuvio ${path} failed: HTTP ${res.status} ${txt.slice(0, 200)}`);
+    throw new Error(formatRpcError(path, res.status, txt));
   }
 
   if (res.status === 204) return null;
@@ -339,7 +350,7 @@ export function createNuvioAdapter() {
     async signup(email, password) {
       let res;
       try {
-        res = await fetch(`${SUPABASE_BASE}/auth/v1/signup`, {
+        res = await fetch(`${NUVIO_API_BASE}/auth/v1/signup`, {
           method: 'POST',
           headers: anonHeaders(),
           body: JSON.stringify({ email, password }),
@@ -382,7 +393,7 @@ export function createNuvioAdapter() {
     async login(email, password) {
       let res;
       try {
-        res = await fetch(`${SUPABASE_BASE}/auth/v1/token?grant_type=password`, {
+        res = await fetch(`${NUVIO_API_BASE}/auth/v1/token?grant_type=password`, {
           method: 'POST',
           headers: anonHeaders(),
           body: JSON.stringify({ email, password }),

@@ -20,7 +20,7 @@ export interface AccountInfo {
   password: string;
   /** Nuvio sign-in only: password grant vs browser session token */
   signInMethod?: NuvioSignInMethod;
-  /** Nuvio sign-in only: pasted supabase.auth.token JSON or access_token JWT */
+  /** Nuvio sign-in only: pasted access_token JWT or session JSON from nuvio.tv */
   browserSession?: string;
   profileName?: string;
   profileId?: number;

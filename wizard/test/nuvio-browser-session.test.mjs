@@ -62,8 +62,10 @@ console.log('\n# validateToken');
 {
   const adapter = createNuvioAdapter();
   const originalFetch = globalThis.fetch;
+  let calledUrl = '';
 
   globalThis.fetch = async (url) => {
+    calledUrl = String(url);
     if (String(url).includes('/rest/v1/rpc/sync_pull_profiles')) {
       return new Response(JSON.stringify([{ profile_index: 1, name: 'Profile 1' }]), {
         headers: { 'Content-Type': 'application/json' },
@@ -75,6 +77,7 @@ console.log('\n# validateToken');
 
   try {
     const result = await adapter.validateToken(sampleJwt);
+    ok('validateToken calls api.nuvio.tv', calledUrl.startsWith('https://api.nuvio.tv/rest/v1/rpc/sync_pull_profiles'));
     ok('validateToken returns access token', result?.token === sampleJwt);
     ok('validateToken returns email from JWT', result?.email === 'user@example.com');
   } catch (err) {
