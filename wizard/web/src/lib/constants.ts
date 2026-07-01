@@ -80,6 +80,7 @@ export interface WizardConfig {
   instances: WizardInstances;
   templates: WizardTemplates;
   proxyBase?: string;
+  githubPagesProxyBase?: string;
 }
 
 export interface WizardConfigFile {

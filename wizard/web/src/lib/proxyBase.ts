@@ -1,15 +1,12 @@
 import type { WizardConfig } from './constants.ts';
 
-const RELOAD_KEY = 'wizard-cors-proxy-reload';
-
 function isNumb3rsHost(hostname: string) {
   const host = hostname.toLowerCase();
   return host === 'numb3rs.stream' || host.endsWith('.numb3rs.stream');
 }
 
-export function usesBuiltInCorsProxy() {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return false;
-  return !isNumb3rsHost(window.location.hostname);
+function isGitHubPagesHost(hostname: string) {
+  return hostname.toLowerCase().endsWith('.github.io');
 }
 
 /** Pick the CORS proxy base URL for browser-side AIOStreams API calls. */
@@ -21,70 +18,34 @@ export function resolveProxyBase(config: WizardConfig | null): string {
     return configured;
   }
 
-  if (usesBuiltInCorsProxy()) {
-    // Query-style proxy avoids embedding https:// in the path and works with buildUrl's ?url= mode.
-    return new URL('cors-proxy?url=', window.location.href).href;
+  const pagesProxy = config?.githubPagesProxyBase?.trim() ?? '';
+  if (isGitHubPagesHost(window.location.hostname)) {
+    if (pagesProxy) return pagesProxy;
+    return configured;
   }
 
   return configured;
 }
 
-export function isCorsProxyControlling() {
-  return usesBuiltInCorsProxy() && Boolean(navigator.serviceWorker.controller);
-}
+/** Validate that GitHub Pages has a server-side CORS proxy configured. */
+export function assertProxyConfigured(config: WizardConfig | null): void {
+  if (typeof window === 'undefined') return;
+  if (!isGitHubPagesHost(window.location.hostname)) return;
 
-/** Register and activate the wizard CORS proxy service worker before API calls. */
-export async function ensureCorsProxyReady(): Promise<void> {
-  if (!usesBuiltInCorsProxy()) return;
-
-  if (navigator.serviceWorker.controller) {
-    await navigator.serviceWorker.ready;
-    sessionStorage.removeItem(RELOAD_KEY);
-    return;
-  }
-
-  const registration = await navigator.serviceWorker.register('./sw.js', {
-    scope: './',
-    updateViaCache: 'none',
-  });
-
-  await new Promise<void>((resolve) => {
-    if (navigator.serviceWorker.controller) {
-      resolve();
-      return;
-    }
-
-    const timeout = window.setTimeout(() => resolve(), 5000);
-    const finish = () => {
-      if (!navigator.serviceWorker.controller) return;
-      window.clearTimeout(timeout);
-      navigator.serviceWorker.removeEventListener('controllerchange', finish);
-      resolve();
-    };
-    navigator.serviceWorker.addEventListener('controllerchange', finish);
-
-    registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
-    registration.installing?.addEventListener('statechange', () => {
-      registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
-    });
-  });
-
-  await navigator.serviceWorker.ready;
-
-  if (navigator.serviceWorker.controller) {
-    sessionStorage.removeItem(RELOAD_KEY);
-    return;
-  }
-
-  if (!sessionStorage.getItem(RELOAD_KEY)) {
-    sessionStorage.setItem(RELOAD_KEY, '1');
-    window.location.reload();
-    await new Promise(() => {});
-  }
+  const pagesProxy = config?.githubPagesProxyBase?.trim() ?? '';
+  if (pagesProxy) return;
 
   throw new Error(
-    '[CORS_PROXY] The wizard CORS proxy could not start in your browser. ' +
-    'Reload this page, wait a few seconds, then run setup again. ' +
-    'If it still fails, use https://numb3rs.stream/wizard/ instead.'
+    '[CORS_PROXY] This GitHub Pages wizard needs a server-side CORS proxy for AIOStreams.\n\n' +
+    'Browsers cannot POST to AIOStreams directly from github.io, and the in-browser service worker proxy cannot work around that.\n\n' +
+    'Your options:\n' +
+    '  • Use the hosted wizard at https://numb3rs.stream/wizard/ (recommended)\n' +
+    '  • Deploy the included Cloudflare Worker from hosting/apps/proxy/ and set "githubPagesProxyBase" in wizard/config.json\n' +
+    '  • Ask the owner of https://proxy.numb3rs.stream to allow your github.io origin'
   );
+}
+
+/** Kept for compatibility with earlier builds; no-op now that SW proxy was removed. */
+export async function ensureCorsProxyReady(): Promise<void> {
+  return;
 }

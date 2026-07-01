@@ -14,8 +14,5 @@ rm -rf "${PUBLISH_DIR}/assets"
 mkdir -p "${PUBLISH_DIR}/assets"
 cp "${WIZARD_WEB_DIR}/dist/index.html" "${PUBLISH_DIR}/index.html"
 cp -R "${WIZARD_WEB_DIR}/dist/assets/." "${PUBLISH_DIR}/assets/"
-if [[ -f "${WIZARD_WEB_DIR}/dist/sw.js" ]]; then
-  cp "${WIZARD_WEB_DIR}/dist/sw.js" "${PUBLISH_DIR}/sw.js"
-fi
 
 echo "Published wizard static files to ${PUBLISH_DIR}"

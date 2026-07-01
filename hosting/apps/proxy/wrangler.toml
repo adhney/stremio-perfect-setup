@@ -1,0 +1,7 @@
+name = "stremio-perfect-setup-cors"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://numb3rs.stream,https://*.numb3rs.stream,https://*.github.io"
+ALLOWED_TARGET_HOSTS = ".midnightignite.me,.fortheweak.cloud,.viren070.me,.elfhosted.com"

@@ -149,22 +149,11 @@ export function createAioStreamsAdapter(instanceUrl, { proxyBase = '' } = {}) {
         });
       } catch (err) {
         const message = String(err?.message || err);
-        const usingBuiltInProxy = /cors-proxy/i.test(proxyBase);
         const isCors = /Failed to fetch|NetworkError|Load failed|CORS/i.test(message);
         if (isCors) {
-          if (usingBuiltInProxy) {
-            throw new Error(
-              `[CORS] The wizard CORS proxy is not intercepting requests yet. ` +
-              `Reload this page once, wait a few seconds, then run setup again. ` +
-              `If it still fails, use https://numb3rs.stream/wizard/.`
-            );
-          }
           throw new Error(
-            `[CORS] AIOStreams at ${base} is unreachable from your browser, this is a CORS issue. ` +
-            `The instance is online and reachable, but its server does not send the ` +
-            `Access-Control-Allow-Origin header required for browser requests. ` +
-            `To work around this, set a CORS proxy URL in config.json under "proxyBase" ` +
-            `(e.g. "https://proxy.numb3rs.stream") and rebuild the wizard.`
+            `[CORS] AIOStreams at ${base} is unreachable from your browser due to missing CORS headers. ` +
+            `On GitHub Pages, use https://numb3rs.stream/wizard/ or configure githubPagesProxyBase in config.json.`
           );
         }
         throw new Error(`AIOStreams ${base}: network error: ${message}`);
@@ -189,10 +178,15 @@ export function createAioStreamsAdapter(instanceUrl, { proxyBase = '' } = {}) {
             `Reload this page once, then run setup again so the service worker can intercept API calls.`
           );
         }
-        if (res.status === 502 && /cors-proxy/i.test(proxyBase)) {
+        if (res.status === 502 && /cors-proxy|workers\.dev|proxy\./i.test(proxyBase)) {
+          let proxyDetail = '';
+          try {
+            const body = await res.clone().json();
+            proxyDetail = body?.message || body?.detail || body?.error || '';
+          } catch { /* ignore */ }
           throw new Error(
-            `[CORS_PROXY] AIOStreams at ${base} could not be reached through the wizard proxy. ` +
-            `The instance may be temporarily offline. Try again in a moment.`
+            `[CORS_PROXY] AIOStreams at ${base} could not be reached through the CORS proxy.` +
+            (proxyDetail ? ` Details: ${proxyDetail}` : ' The proxy or instance may be temporarily offline.')
           );
         }
         throw new Error(
@@ -331,24 +325,15 @@ export async function createWithFallbacks(instances, params) {
     const allCors = results.every((r) => r.error?.includes('[CORS]'));
     const errors = results.map((r) => r.error?.replace('[CORS] ', '')).join('\n\n');
     if (allCors) {
-      const usingBuiltInProxy = /cors-proxy/i.test(proxyBase || '');
-      if (usingBuiltInProxy) {
-        throw new Error(
-          `[CORS_ALL] Unable to create your AIOStreams configuration, all ${results.length} instance${results.length !== 1 ? 's' : ''} ` +
-          `failed because the wizard CORS proxy is not active yet.\n\n` +
-          `Reload this page once, wait a few seconds for the proxy to register, then run setup again. ` +
-          `If it still fails, use the wizard at https://numb3rs.stream/wizard/ instead.`
-        );
-      }
       throw new Error(
         `[CORS_ALL] Unable to create your AIOStreams configuration, all ${results.length} instance${results.length !== 1 ? 's' : ''} ` +
         `blocked the browser request due to missing CORS headers.\n\n` +
-        `This is a server-side configuration issue on the AIOStreams instances, not a problem with your setup. ` +
+        `On GitHub Pages, use https://numb3rs.stream/wizard/ or deploy the Cloudflare Worker in hosting/apps/proxy/ ` +
+        `and set "githubPagesProxyBase" in wizard/config.json.\n\n` +
         `Your options are:\n` +
-        `  • Ask the instance owner to enable CORS on their server.\n` +
-        `  • Set "proxyBase" in config.json to route through a CORS proxy ` +
-        `(e.g. "https://proxy.numb3rs.stream") and rebuild.\n` +
-        `  • Use the AIOStreams web interface directly at the instance URL and paste your manifest URL into the wizard.`
+        `  • Use the hosted wizard at https://numb3rs.stream/wizard/\n` +
+        `  • Deploy hosting/apps/proxy/worker.js to Cloudflare Workers and configure githubPagesProxyBase\n` +
+        `  • Ask the instance owner to enable CORS on their server`
       );
     }
     throw new Error(`All AIOStreams instances failed:\n\n${errors}`);

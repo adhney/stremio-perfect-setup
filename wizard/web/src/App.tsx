@@ -21,7 +21,6 @@ import {
 import { WizardShell } from './components/WizardShell';
 import { ensureAnalytics, getStepMeta, trackWizardStepView } from './lib/analytics';
 import { resolveRepoUrl } from './lib/integration';
-import { ensureCorsProxyReady } from './lib/proxyBase';
 
 // config.json is bundled at build time from the root wizard/config.json.
 import bundledConfig from '../../config.json';
@@ -158,9 +157,5 @@ function StepRouter() {
 }
 
 export default function App() {
-  useEffect(() => {
-    void ensureCorsProxyReady();
-  }, []);
-
   return <StepRouter />;
 }
