@@ -13,6 +13,7 @@
  *   --yes, -y           Accept defaults for catalogs & AIOStreams options
  *   --torbox-key <key>  Configure TorBox debrid (skips debrid prompts)
  *   --profile <name>    Profile name or number (default: first profile)
+ *   --instant-debrid    Enable Nuvio Instant Debrid (TorBox/Premiumize in Nuvio, P2P AIOStreams)
  *   --dry-run           Load config and print plan only
  */
 
@@ -94,11 +95,13 @@ function parseArgs(argv) {
     dryRun: false,
     torboxKey: process.env.TORBOX_API_KEY ?? '',
     profile: process.env.NUVIO_PROFILE ?? '',
+    instantDebrid: process.env.NUVIO_INSTANT_DEBRID === '1' || process.env.NUVIO_INSTANT_DEBRID === 'true',
   };
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--yes' || arg === '-y') opts.yes = true;
     else if (arg === '--dry-run') opts.dryRun = true;
+    else if (arg === '--instant-debrid') opts.instantDebrid = true;
     else if (arg === '--token') opts.token = argv[++i] ?? '';
     else if (arg === '--torbox-key') opts.torboxKey = argv[++i] ?? '';
     else if (arg === '--profile') opts.profile = argv[++i] ?? '';
@@ -305,9 +308,15 @@ async function promptApiKeys(ask, shared, autoYes) {
   console.log('Press Enter to use built-in shared keys from config.json where available.\n');
 
   const askKey = async (label, sharedValue, required = true) => {
-    if (autoYes && sharedValue) {
-      logInfo(`${label}: using shared key`);
-      return sharedValue;
+    if (autoYes) {
+      if (sharedValue) {
+        logInfo(`${label}: using shared key`);
+        return sharedValue;
+      }
+      if (!required) {
+        logInfo(`${label}: skipped`);
+        return '';
+      }
     }
     const hint = sharedValue ? ' [shared key available]' : '';
     const value = (await ask(`${label}${hint}: `)).trim();
@@ -329,14 +338,18 @@ async function promptApiKeys(ask, shared, autoYes) {
   };
 }
 
-async function promptInstantDebrid(ask, debridServices, autoYes) {
+async function promptInstantDebrid(ask, debridServices, { autoYes = false, wantInstant = false } = {}) {
   const qualifying = debridServices.filter((d) => ['torbox', 'premiumize'].includes(d.id) && d.credentials.apiKey);
   if (!qualifying.length) return false;
 
   heading('Instant Debrid (Nuvio)');
   console.log('Routes streams through your debrid account inside Nuvio (skips AIOStreams debrid scrapers).\n');
+  if (wantInstant) {
+    logInfo('Instant Debrid: enabled');
+    return true;
+  }
   if (autoYes) {
-    logInfo('Instant Debrid: disabled (default)');
+    logInfo('Instant Debrid: disabled (default — pass --instant-debrid to enable)');
     return false;
   }
   const answer = (await ask('Enable Instant Debrid? [y/N]: ')).trim().toLowerCase();
@@ -417,7 +430,10 @@ async function main() {
     const shared = resolveSharedKeys(config);
     const credentials = await promptApiKeys(ask, shared, opts.yes || Boolean(opts.torboxKey));
     const debridServices = await promptDebridServices(ask, opts.torboxKey);
-    const instantDebrid = await promptInstantDebrid(ask, debridServices, opts.yes || Boolean(opts.torboxKey));
+    const instantDebrid = await promptInstantDebrid(ask, debridServices, {
+      autoYes: opts.yes || Boolean(opts.torboxKey),
+      wantInstant: opts.instantDebrid,
+    });
     const aioStreamsInputs = buildDefaultAioInputs(templates.aiostreams);
 
     const useDefaults = opts.yes || Boolean(opts.torboxKey);
